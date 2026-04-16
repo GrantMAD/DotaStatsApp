@@ -24,6 +24,7 @@ import {
   MatchDetails,
   GAME_MODES
 } from '../../src/services/opendota';
+import { getHeroImageUrl, getItemImageUrl, HEROES, LOBBY_TYPES, REGIONS } from '../../src/services/constants';
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Economy';
 
@@ -156,14 +157,24 @@ export default function DashboardScreen() {
   const renderMatch = ({ item }: { item: RecentMatch }) => {
     const isRadiant = item.player_slot < 128;
     const isWin = (isRadiant && item.radiant_win) || (!isRadiant && !item.radiant_win);
+    const heroName = HEROES[item.hero_id]?.localized_name || `Hero ${item.hero_id}`;
+    
     return (
       <TouchableOpacity 
         onPress={() => handleMatchPress(item.match_id)}
         className={`bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl border-l-4 flex-row justify-between items-center active:bg-zinc-800 ${isWin ? 'border-win' : 'border-loss'}`}
       >
-        <View>
-          <Text className={`font-bold text-lg ${isWin ? 'text-win' : 'text-loss'}`}>{isWin ? 'Victory' : 'Defeat'}</Text>
-          <Text className="text-gray-400 text-sm">Hero ID: {item.hero_id} (KDA: {item.kills}/{item.deaths}/{item.assists})</Text>
+        <View className="flex-row items-center flex-1">
+          <Image 
+            source={{ uri: getHeroImageUrl(item.hero_id) }} 
+            className="w-12 h-12 rounded-lg mr-3"
+            resizeMode="cover"
+          />
+          <View className="flex-1">
+            <Text className={`font-bold text-lg ${isWin ? 'text-win' : 'text-loss'}`}>{isWin ? 'Victory' : 'Defeat'}</Text>
+            <Text className="text-gray-300 text-sm font-semibold">{heroName}</Text>
+            <Text className="text-gray-500 text-xs">KDA: {item.kills}/{item.deaths}/{item.assists}</Text>
+          </View>
         </View>
         <View className="items-end">
           <Text className="text-gray-300 font-semibold">{Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, '0')}</Text>
@@ -176,30 +187,65 @@ export default function DashboardScreen() {
   const renderPlayerRow = (p: MatchDetails['players'][0], index: number) => {
     const isLocalUser = p.account_id?.toString() === accountId;
     const isAnonymous = !p.account_id;
+    const mainItems = [p.item_0, p.item_1, p.item_2, p.item_3, p.item_4, p.item_5];
+
     return (
       <TouchableOpacity 
         key={index} 
         onPress={() => !isAnonymous && handlePlayerPress(p.account_id)}
         disabled={isAnonymous}
-        className={`flex-row items-center py-3 border-b border-zinc-800 active:bg-zinc-700 ${isLocalUser ? 'bg-zinc-800/50' : ''}`}
+        className={`py-3 border-b border-zinc-800 active:bg-zinc-700 ${isLocalUser ? 'bg-zinc-800/50' : ''}`}
       >
-        <View className="w-10 items-center">
-          <Text className="text-gray-500 text-[10px]">{p.hero_id}</Text>
+        <View className="flex-row items-center px-1">
+          <View className="w-12 items-center">
+            <Image 
+              source={{ uri: getHeroImageUrl(p.hero_id) }} 
+              className="w-10 h-7 rounded-sm shadow-sm"
+              resizeMode="cover"
+            />
+            <Text className="text-gray-500 text-[8px] mt-1">LVL {p.level}</Text>
+          </View>
+          <View className="flex-1 ml-2">
+            <Text className={`text-xs font-bold ${isLocalUser ? 'text-gamingAccent' : 'text-white'}`} numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
+            <Text className="text-[10px] text-gray-500">NW: {(p.net_worth / 1000).toFixed(1)}k • G/X: {p.gold_per_min}/{p.xp_per_min}</Text>
+          </View>
+          <View className="w-16 items-center">
+            <Text className="text-white text-[10px] font-bold">{p.kills}/{p.deaths}/{p.assists}</Text>
+            <Text className="text-gray-500 text-[9px]">{p.last_hits}/{p.denies}</Text>
+          </View>
+          <View className="w-20 items-end pr-2">
+            <Text className="text-red-500 text-[9px] font-bold leading-tight">{p.hero_damage.toLocaleString()} HD</Text>
+            <Text className="text-orange-500 text-[8px] font-bold leading-tight">{p.tower_damage.toLocaleString()} TD</Text>
+            {p.hero_healing > 0 && <Text className="text-blue-500 text-[8px] font-bold leading-tight">{p.hero_healing.toLocaleString()} HH</Text>}
+          </View>
+          <View className="w-3">
+            {!isAnonymous && <Ionicons name="chevron-forward" size={10} color="#4b5563" />}
+          </View>
         </View>
-        <View className="flex-1 ml-2">
-          <Text className={`text-xs font-bold ${isLocalUser ? 'text-gamingAccent' : 'text-white'}`} numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
-          <Text className="text-[10px] text-gray-500">LVL {p.level} • NW: {(p.net_worth / 1000).toFixed(1)}k</Text>
-        </View>
-        <View className="w-16 items-center">
-          <Text className="text-white text-[10px] font-bold">{p.kills}/{p.deaths}/{p.assists}</Text>
-          <Text className="text-gray-500 text-[9px]">{p.last_hits}/{p.denies}</Text>
-        </View>
-        <View className="w-20 items-end pr-2">
-          <Text className="text-red-500 text-[9px] font-bold">{p.hero_damage.toLocaleString()} HD</Text>
-          <Text className="text-green-500 text-[9px] font-bold">{p.tower_damage.toLocaleString()} TD</Text>
-        </View>
-        <View className="w-4">
-          {!isAnonymous && <Ionicons name="chevron-forward" size={10} color="#4b5563" />}
+
+        {/* Items Row */}
+        <View className="flex-row items-center ml-14 mt-2">
+          <View className="flex-row items-center bg-black/20 p-1 rounded-md border border-white/5">
+            {/* Main Inventory */}
+            <View className="flex-row">
+              {mainItems.map((itemId, i) => (itemId > 0 || i < 6) && (
+                <Image 
+                  key={i}
+                  source={{ uri: getItemImageUrl(itemId) }} 
+                  className="w-7 h-5 mr-1 rounded-[1px] bg-zinc-900/50"
+                  resizeMode="cover"
+                />
+              ))}
+            </View>
+            {/* Neutral Item */}
+            <View className="ml-1 border-l border-zinc-700 pl-2">
+              <Image 
+                source={{ uri: getItemImageUrl(p.item_neutral) }} 
+                className="w-6 h-5 rounded-full bg-zinc-900 border border-zinc-600"
+                resizeMode="cover"
+              />
+            </View>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -209,7 +255,8 @@ export default function DashboardScreen() {
     const topDamage = [...match.players].sort((a, b) => b.hero_damage - a.hero_damage)[0];
     const topNetWorth = [...match.players].sort((a, b) => b.net_worth - a.net_worth)[0];
     const topTowers = [...match.players].sort((a, b) => b.tower_damage - a.tower_damage)[0];
-    return { topDamage, topNetWorth, topTowers };
+    const topHealing = [...match.players].sort((a, b) => b.hero_healing - a.hero_healing)[0];
+    return { topDamage, topNetWorth, topTowers, topHealing };
   };
 
   return (
@@ -230,8 +277,15 @@ export default function DashboardScreen() {
           <Pressable className="bg-[#1e1e1e] h-[95%] rounded-t-3xl overflow-hidden" onPress={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <View className="flex-row justify-between items-center p-4 border-b border-zinc-800">
-              <View>
-                <Text className="text-white text-xl font-bold">Match Overview</Text>
+              <View className="flex-1">
+                <View className="flex-row items-center">
+                  <Text className="text-white text-xl font-bold">Match Overview</Text>
+                  {selectedMatch?.version && (
+                    <View className="bg-gamingAccent/20 px-2 py-0.5 rounded ml-2 border border-gamingAccent/30">
+                      <Text className="text-gamingAccent text-[8px] font-bold">ADVANCED STATS</Text>
+                    </View>
+                  )}
+                </View>
                 {selectedMatch && <Text className="text-gray-500 text-[10px]">{GAME_MODES[selectedMatch.game_mode] || 'Standard'} • ID: {selectedMatch.match_id}</Text>}
               </View>
               <TouchableOpacity onPress={() => setModalVisible(false)}>
@@ -285,10 +339,10 @@ export default function DashboardScreen() {
                         <Text className="text-win font-bold uppercase text-[10px] mb-2 pl-1 tracking-widest">Radiant Team</Text>
                         <View className="bg-[#222] rounded-xl overflow-hidden border border-zinc-800 shadow-sm">
                           <View className="flex-row bg-zinc-800/80 py-1.5 px-2">
-                            <Text className="w-10 text-[9px] text-gray-400 font-bold">HERO</Text>
-                            <Text className="flex-1 text-[9px] text-gray-400 font-bold ml-2">PLAYER / NW</Text>
+                            <Text className="w-12 text-[9px] text-gray-400 font-bold text-center">H</Text>
+                            <Text className="flex-1 text-[9px] text-gray-400 font-bold ml-2">PLAYER / NW / G/X</Text>
                             <Text className="w-16 text-[9px] text-gray-400 font-bold text-center">KDA / LH</Text>
-                            <Text className="w-20 text-[9px] text-gray-400 font-bold text-right pr-2">DMG (H/T)</Text>
+                            <Text className="w-28 text-[9px] text-gray-400 font-bold text-right pr-2">ITEMS / DMG</Text>
                           </View>
                           {selectedMatch.players.filter(p => p.player_slot < 128).map((p, i) => renderPlayerRow(p, i))}
                         </View>
@@ -298,10 +352,10 @@ export default function DashboardScreen() {
                         <Text className="text-loss font-bold uppercase text-[10px] mb-2 pl-1 tracking-widest">Dire Team</Text>
                         <View className="bg-[#222] rounded-xl overflow-hidden border border-zinc-800 shadow-sm">
                           <View className="flex-row bg-zinc-800/80 py-1.5 px-2">
-                            <Text className="w-10 text-[9px] text-gray-400 font-bold">HERO</Text>
-                            <Text className="flex-1 text-[9px] text-gray-400 font-bold ml-2">PLAYER / NW</Text>
+                            <Text className="w-12 text-[9px] text-gray-400 font-bold text-center">H</Text>
+                            <Text className="flex-1 text-[9px] text-gray-400 font-bold ml-2">PLAYER / NW / G/X</Text>
                             <Text className="w-16 text-[9px] text-gray-400 font-bold text-center">KDA / LH</Text>
-                            <Text className="w-20 text-[9px] text-gray-400 font-bold text-right pr-2">DMG (H/T)</Text>
+                            <Text className="w-28 text-[9px] text-gray-400 font-bold text-right pr-2">ITEMS / DMG</Text>
                           </View>
                           {selectedMatch.players.filter(p => p.player_slot >= 128).map((p, i) => renderPlayerRow(p, i))}
                         </View>
@@ -342,15 +396,66 @@ export default function DashboardScreen() {
                                 <Text className="text-gray-400 text-xs">{h.topTowers.tower_damage.toLocaleString()} tower damage</Text>
                               </View>
                             </View>
+
+                            {h.topHealing.hero_healing > 0 && (
+                              <View className="bg-[#2a2a2a] p-4 rounded-xl mb-3 flex-row items-center border border-blue-900/20">
+                                <View className="bg-blue-500/10 p-2 rounded-full mr-4"><Ionicons name="medkit" size={24} color="#3b82f6" /></View>
+                                <View className="flex-1">
+                                  <Text className="text-blue-500 text-[10px] font-bold uppercase">Top Support Impact</Text>
+                                  <Text className="text-white font-bold">{h.topHealing.personaname || 'Anonymous'}</Text>
+                                  <Text className="text-gray-400 text-xs">{h.topHealing.hero_healing.toLocaleString()} total healing provided</Text>
+                                </View>
+                              </View>
+                            )}
                           </View>
                         );
                       })()}
 
                       <View className="bg-[#2a2a2a] p-4 rounded-xl mt-4">
                         <Text className="text-gray-400 text-[10px] font-bold uppercase mb-2">Match Metadata</Text>
+                        
+                        {(() => {
+                          const localPlayer = selectedMatch.players.find(p => p.account_id?.toString() === accountId);
+                          if (localPlayer?.benchmarks) {
+                            return (
+                              <View className="mb-4 pb-4 border-b border-zinc-800">
+                                <Text className="text-gamingAccent text-[10px] font-bold uppercase mb-3">Your Performance Percentiles</Text>
+                                <View className="flex-row flex-wrap justify-between">
+                                  {[
+                                    { label: 'GPM', val: localPlayer.benchmarks.gold_per_min.pct },
+                                    { label: 'XPM', val: localPlayer.benchmarks.xp_per_min.pct },
+                                    { label: 'Damage', val: localPlayer.benchmarks.hero_damage_per_min.pct },
+                                    { label: 'Last Hits', val: localPlayer.benchmarks.last_hits_per_min.pct },
+                                  ].map((b, i) => (
+                                    <View key={i} className="w-[48%] bg-zinc-800/50 p-2 rounded-lg mb-2">
+                                      <Text className="text-gray-500 text-[8px] font-bold uppercase">{b.label}</Text>
+                                      <Text className={`text-sm font-bold ${b.val >= 0.8 ? 'text-win' : b.val >= 0.5 ? 'text-white' : 'text-loss'}`}>
+                                        Top {(100 - (b.val * 100)).toFixed(0)}%
+                                      </Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              </View>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         <View className="flex-row justify-between py-2 border-b border-zinc-800">
                           <Text className="text-gray-500 text-xs">First Blood Time</Text>
                           <Text className="text-white text-xs">{Math.floor(selectedMatch.first_blood_time / 60)}:{String(selectedMatch.first_blood_time % 60).padStart(2, '0')}</Text>
+                        </View>
+                        <View className="flex-row justify-between py-2 border-b border-zinc-800">
+                          <Text className="text-gray-500 text-xs">Lobby Type</Text>
+                          <Text className="text-white text-xs">{LOBBY_TYPES[selectedMatch.lobby_type] || 'Standard'}</Text>
+                        </View>
+                        <View className="flex-row justify-between py-2 border-b border-zinc-800">
+                          <Text className="text-gray-500 text-xs">Region</Text>
+                          <Text className="text-white text-xs">{REGIONS[selectedMatch.region] || `Cluster ${selectedMatch.region}`}</Text>
+                        </View>
+                        <View className="flex-row justify-between py-2 border-b border-zinc-800">
+                          <Text className="text-gray-500 text-xs">Patch</Text>
+                          <Text className="text-white text-xs">{selectedMatch.patch ? `Patch ${selectedMatch.patch}` : 'Unknown'}</Text>
                         </View>
                         <View className="flex-row justify-between py-2">
                           <Text className="text-gray-500 text-xs">Start Time</Text>

@@ -38,6 +38,8 @@ export interface MatchDetails {
   dire_score: number;
   game_mode: number;
   lobby_type: number;
+  region: number;
+  patch: number;
   first_blood_time: number;
   radiant_gold_adv: number[];
   radiant_xp_adv: number[];
@@ -65,7 +67,20 @@ export interface MatchDetails {
     item_5: number;
     item_neutral: number;
     player_slot: number;
+    // Advanced/Parsed fields
+    benchmarks?: {
+      gold_per_min: { raw: number; pct: number };
+      xp_per_min: { raw: number; pct: number };
+      hero_damage_per_min: { raw: number; pct: number };
+      hero_healing_per_min: { raw: number; pct: number };
+      tower_damage: { raw: number; pct: number };
+      last_hits_per_min: { raw: number; pct: number };
+    };
+    stuns?: number;
+    lane_efficiency_pct?: number;
+    buyback_count?: number;
   }[];
+  version?: number; // Present if match is parsed
 }
 
 /**
