@@ -169,6 +169,24 @@ export const REGIONS: Record<number, string> = {
 };
 
 /**
+ * Mapping for Lane IDs
+ */
+export const LANES: Record<number, string> = {
+  1: "Safe",
+  2: "Mid",
+  3: "Off",
+  4: "Jungle",
+};
+
+/**
+ * Mapping for Lane Role IDs
+ */
+export const LANE_ROLES: Record<number, string> = {
+  1: "Core",
+  2: "Support",
+};
+
+/**
  * Helper to map Item IDs to internal names.
  * Data source: https://api.opendota.com/api/constants/item_ids
  */

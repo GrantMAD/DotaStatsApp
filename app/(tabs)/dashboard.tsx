@@ -24,7 +24,7 @@ import {
   MatchDetails,
   GAME_MODES
 } from '../../src/services/opendota';
-import { getHeroImageUrl, getItemImageUrl, HEROES, LOBBY_TYPES, REGIONS } from '../../src/services/constants';
+import { getHeroImageUrl, getItemImageUrl, HEROES, LOBBY_TYPES, REGIONS, LANES, LANE_ROLES } from '../../src/services/constants';
 import { LineChart } from "react-native-chart-kit"; // Added import
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Economy';
@@ -207,8 +207,23 @@ export default function DashboardScreen() {
             <Text className="text-gray-500 text-[8px] mt-1">LVL {p.level}</Text>
           </View>
           <View className="flex-1 ml-2">
-            <Text className={`text-xs font-bold ${isLocalUser ? 'text-gamingAccent' : 'text-white'}`} numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
-            <Text className="text-[10px] text-gray-500">NW: {(p.net_worth / 1000).toFixed(1)}k • G/X: {p.gold_per_min}/{p.xp_per_min}</Text>
+            <View className="flex-row items-center">
+              <Text className={`text-xs font-bold ${isLocalUser ? 'text-gamingAccent' : 'text-white'}`} numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
+              {p.lane && (
+                <View className="bg-zinc-700 px-1 rounded ml-1">
+                  <Text className="text-[7px] text-gray-300 font-bold uppercase">{LANES[p.lane] || 'Unknown'}</Text>
+                </View>
+              )}
+              {p.is_roaming && (
+                <View className="bg-blue-900/40 px-1 rounded ml-1 border border-blue-500/30">
+                  <Text className="text-[7px] text-blue-400 font-bold uppercase">Roaming</Text>
+                </View>
+              )}
+            </View>
+            <Text className="text-[10px] text-gray-500">
+              {p.lane_role && `${LANE_ROLES[p.lane_role]} • `}
+              NW: {(p.net_worth / 1000).toFixed(1)}k • G/X: {p.gold_per_min}/{p.xp_per_min}
+            </Text>
           </View>
           <View className="w-16 items-center">
             <Text className="text-white text-[10px] font-bold">{p.kills}/{p.deaths}/{p.assists}</Text>

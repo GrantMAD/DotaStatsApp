@@ -10,6 +10,15 @@ export interface PlayerProfile {
   };
   rank_tier: number | null;
   leaderboard_rank: number | null;
+  last_match_time?: string;
+}
+
+export interface SearchResult {
+  account_id: number;
+  personaname: string;
+  avatarfull: string;
+  last_match_time?: string;
+  similarity?: number;
 }
 
 export interface WinLossStats {
@@ -79,6 +88,9 @@ export interface MatchDetails {
     stuns?: number;
     lane_efficiency_pct?: number;
     buyback_count?: number;
+    lane?: number;
+    lane_role?: number;
+    is_roaming?: boolean;
   }[];
   version?: number; // Present if match is parsed
 }
@@ -96,6 +108,71 @@ export const GAME_MODES: Record<number, string> = {
   22: "Ranked All Pick",
   23: "Turbo",
 };
+
+/**
+ * Converts a Steam64 ID to a Steam32 Account ID.
+ * Dota 2 API uses Steam32 IDs.
+ */
+function convertSteam64To32(steam64: string): string {
+  try {
+    const bigInt64 = BigInt(steam64);
+    const offset = BigInt('76561197960265728');
+    return (bigInt64 - offset).toString();
+  } catch {
+    return steam64;
+  }
+}
+
+/**
+ * Searches for players by name or ID.
+ */
+export async function searchPlayers(query: string): Promise<SearchResult[]> {
+  console.log(`[OpenDota] Searching for: "${query}"`);
+  
+  let processedQuery = query.trim();
+
+  // If the query is a long number (likely Steam64), convert it
+  if (/^\d{17}$/.test(processedQuery)) {
+    console.log('[OpenDota] Detected Steam64 ID, converting to Steam32');
+    processedQuery = convertSteam64To32(processedQuery);
+  }
+
+  // If the query is now a valid Account ID, try to fetch the profile directly
+  if (/^\d+$/.test(processedQuery) && processedQuery.length < 12) {
+    console.log(`[OpenDota] Performing direct ID lookup for: ${processedQuery}`);
+    const profile = await getPlayerProfile(processedQuery);
+    if (profile && profile.profile) {
+      return [{
+        account_id: profile.profile.account_id,
+        personaname: profile.profile.personaname,
+        avatarfull: profile.profile.avatarfull,
+        last_match_time: profile.last_match_time
+      }];
+    }
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for fuzzy search
+
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/search?q=${encodeURIComponent(query)}`, {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) throw new Error(`Search failed with status: ${response.status}`);
+    const data = await response.json();
+    console.log(`[OpenDota] Search successful, found ${data.length} results`);
+    return data;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Search request timed out. OpenDota servers are under heavy load. Try using a Steam ID for instant results.');
+    }
+    throw error;
+  }
+}
 
 /**
  * Fetches the core profile data for a specific account.

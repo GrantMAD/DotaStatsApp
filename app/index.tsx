@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSteamAuth } from '../src/hooks/useSteamAuth';
-import { Redirect } from 'expo-router';
+import { Redirect, Link } from 'expo-router';
 
 export default function LandingScreen() {
   const { accountId, isLoading, login } = useSteamAuth();
@@ -31,6 +31,12 @@ export default function LandingScreen() {
       >
         <Text className="text-white text-lg font-bold">Sign in with Steam</Text>
       </TouchableOpacity>
+
+      <Link href="/search" asChild>
+        <TouchableOpacity className="mt-6">
+          <Text className="text-gray-400 font-semibold border-b border-gray-600 pb-1">Continue without signing in</Text>
+        </TouchableOpacity>
+      </Link>
     </View>
   );
 }
