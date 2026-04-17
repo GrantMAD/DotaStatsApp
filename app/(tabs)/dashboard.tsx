@@ -25,6 +25,7 @@ import {
   GAME_MODES
 } from '../../src/services/opendota';
 import { getHeroImageUrl, getItemImageUrl, HEROES, LOBBY_TYPES, REGIONS } from '../../src/services/constants';
+import { LineChart } from "react-native-chart-kit"; // Added import
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Economy';
 
@@ -513,9 +514,75 @@ export default function DashboardScreen() {
                         </View>
                       </View>
 
-                      <View className="bg-zinc-900/50 p-4 rounded-xl items-center border border-zinc-800">
-                        <Ionicons name="bar-chart" size={40} color="#333" />
-                        <Text className="text-gray-500 text-xs mt-2 text-center">Advantage graphs and minute-by-minute breakdown coming soon in next version.</Text>
+                      {/* Chart Component */}
+                      <View className="bg-[#2a2a2a] p-4 rounded-xl border border-zinc-800">
+                        <Text className="text-white font-bold mb-4 text-center">Match Trends (Gold/XP Advantage)</Text>
+                        {selectedMatch.radiant_gold_adv && selectedMatch.radiant_xp_adv && (selectedMatch.radiant_gold_adv.length > 1 || selectedMatch.radiant_xp_adv.length > 1) ? (
+                          (() => {
+                            const chartLabels = selectedMatch.radiant_gold_adv.map((_, index) => `${index}`);
+                            const goldData = selectedMatch.radiant_gold_adv;
+                            const xpData = selectedMatch.radiant_xp_adv;
+
+                            const chartData = {
+                              labels: chartLabels,
+                              datasets: [
+                                {
+                                  data: goldData,
+                                  color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`, // Red for Gold Advantage
+                                  strokeWidth: 2
+                                },
+                                {
+                                  data: xpData,
+                                  color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`, // Blue for XP Advantage
+                                  strokeWidth: 2
+                                }
+                              ]
+                            };
+
+                            const chartConfig = {
+                              backgroundColor: "#1e1e1e",
+                              backgroundGradientFrom: "#2a2a2a",
+                              backgroundGradientTo: "#2a2a2a",
+                              decimalPlaces: 0,
+                              color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                              labelColor: (opacity = 1) => `rgba(156, 163, 175, ${opacity})`,
+                              style: {
+                                borderRadius: 16
+                              },
+                              propsForDots: {
+                                r: "3",
+                                strokeWidth: "1",
+                              },
+                              useShadow: false,
+                            };
+
+                            const screenWidth = 350; // Adjust as needed, or use Dimensions API
+                            const chartHeight = 220;
+
+                            return (
+                              <LineChart
+                                data={chartData}
+                                width={screenWidth}
+                                height={chartHeight}
+                                chartConfig={chartConfig}
+                                bezier
+                                style={{ marginVertical: 8, borderRadius: 16 }}
+                                withDots={false}
+                                withInnerLines={true}
+                                withOuterLines={true}
+                                withHorizontalLabels={true}
+                                withVerticalLabels={true}
+                                yAxisSuffix=""
+                                xLabelsOffset={-5}
+                                yAxisInterval={1}
+                              />
+                            );
+                          })()
+                        ) : (
+                          <View className="items-center justify-center py-10">
+                            <Text className="text-gray-500">Not enough data to display trend.</Text>
+                          </View>
+                        )}
                       </View>
                     </View>
                   )}
