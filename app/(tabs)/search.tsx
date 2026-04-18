@@ -36,6 +36,7 @@ import {
   LANE_ROLES,
   HERO_NAME_TO_ID
 } from '../../src/services/constants';
+import { RankBadge } from '../../src/components/RankBadge';
 import { LineChart } from "react-native-chart-kit";
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Combat' | 'Economy';
@@ -294,12 +295,17 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, zIndex }: {
             <View className="flex-1">
               {/* Player Header */}
               <View className="flex-row justify-between items-start p-6 border-b border-zinc-800">
-                <View className="flex-row items-center">
+                <View className="flex-row items-center flex-1">
                   <Image source={{ uri: playerData.profile?.profile.avatarfull }} className="w-16 h-16 rounded-full border-2 border-gamingAccent" />
-                  <View className="ml-4">
+                  <View className="ml-4 flex-1">
                     <Text className="text-white text-xl font-bold" numberOfLines={1}>{playerData.profile?.profile.personaname}</Text>
                     <Text className="text-gray-500 text-xs">ID: {playerData.profile?.profile.account_id}</Text>
                   </View>
+                  <RankBadge 
+                    rankTier={playerData.profile?.rank_tier || null} 
+                    leaderboardRank={playerData.profile?.leaderboard_rank || null} 
+                    size={50} 
+                  />
                 </View>
                 <TouchableOpacity onPress={onClose}><Ionicons name="close" size={28} color="white" /></TouchableOpacity>
               </View>
@@ -311,7 +317,7 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, zIndex }: {
                   <View className="items-center">
                     <Text className="text-gray-500 text-[10px] font-bold uppercase">Win Rate</Text>
                     <Text className="text-white text-lg font-bold">
-                      {playerData.wl && (playerData.wl.win + playerData.wl.lose > 0) ? Math.round((playerData.wl.win / (playerData.wl.win + playerData.wl.lose)) * 100) : 0}%
+                      {playerData.wl && (playerData.wl.win + playerData.wl.lose > 0) ? ((playerData.wl.win / (playerData.wl.win + playerData.wl.lose)) * 100).toFixed(2) : '0.00'}%
                     </Text>
                   </View>
                 </View>
@@ -443,7 +449,7 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, zIndex }: {
                             </View>
                             <View className="flex-row justify-between py-2 border-b border-zinc-800">
                               <Text className="text-gray-500 text-xs">Region</Text>
-                              <Text className="text-white text-xs">{REGIONS[matchData.region] || `Cluster ${matchData.region}`}</Text>
+                              <Text className="text-white text-xs">{REGIONS[matchData.region] || `Region ${matchData.region}`}</Text>
                             </View>
                             <View className="flex-row justify-between py-2 border-b border-zinc-800">
                               <Text className="text-gray-500 text-xs">Patch</Text>

@@ -26,6 +26,21 @@ export interface WinLossStats {
   lose: number;
 }
 
+export interface PlayerTotal {
+  field: string;
+  n: number;
+  sum: number;
+}
+
+export interface PlayerCounts {
+  leaver_status: Record<string, { games: number; win: number }>;
+  game_mode: Record<string, { games: number; win: number }>;
+  lobby_type: Record<string, { games: number; win: number }>;
+  lane_role: Record<string, { games: number; win: number }>;
+  region: Record<string, { games: number; win: number }>;
+  patch: Record<string, { games: number; win: number }>;
+}
+
 export interface RecentMatch {
   match_id: number;
   player_slot: number;
@@ -196,13 +211,43 @@ export async function getPlayerProfile(accountId: string): Promise<PlayerProfile
 /**
  * Fetches the user's overall win/loss record.
  */
-export async function getPlayerWinLoss(accountId: string): Promise<WinLossStats | null> {
+export async function getPlayerWinLoss(accountId: string, params: Record<string, string> = {}): Promise<WinLossStats | null> {
   try {
-    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/wl`);
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/wl${query ? `?${query}` : ''}`);
     if (!response.ok) throw new Error('Failed to fetch W/L stats');
     return await response.json();
   } catch (error) {
     console.error('Error fetching win/loss stats:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches cumulative stats for a player across all matches.
+ */
+export async function getPlayerTotals(accountId: string, params: Record<string, string> = {}): Promise<PlayerTotal[]> {
+  try {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/totals${query ? `?${query}` : ''}`);
+    if (!response.ok) throw new Error('Failed to fetch player totals');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching player totals:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetches aggregated counts for various categories (region, game_mode, etc.)
+ */
+export async function getPlayerCounts(accountId: string): Promise<PlayerCounts | null> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/counts`);
+    if (!response.ok) throw new Error('Failed to fetch player counts');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching player counts:', error);
     return null;
   }
 }

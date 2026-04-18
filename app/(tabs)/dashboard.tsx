@@ -18,16 +18,29 @@ import {
   getPlayerWinLoss, 
   getRecentMatches, 
   getMatchDetails,
+  getPlayerTotals,
+  getPlayerCounts,
   PlayerProfile, 
   WinLossStats, 
   RecentMatch,
   MatchDetails,
+  PlayerTotal,
+  PlayerCounts,
   GAME_MODES
 } from '../../src/services/opendota';
 import { getHeroImageUrl, getItemImageUrl, HEROES, LOBBY_TYPES, REGIONS, LANES, LANE_ROLES, HERO_NAME_TO_ID } from '../../src/services/constants';
+import { RankBadge } from '../../src/components/RankBadge';
 import { LineChart } from "react-native-chart-kit"; // Added import
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Combat' | 'Economy';
+type DashboardTab = 'Recent' | 'Lifetime';
+
+interface CategoryStats {
+  label: string;
+  win: number;
+  lose: number;
+  total: number;
+}
 
 export default function DashboardScreen() {
   const { accountId } = useSteamAuth();
@@ -37,6 +50,17 @@ export default function DashboardScreen() {
   const [matches, setMatches] = useState<RecentMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<DashboardTab>('Recent');
+
+  // Lifetime Stats State
+  const [totals, setTotals] = useState<PlayerTotal[]>([]);
+  const [lobbyStats, setLobbyStats] = useState<CategoryStats[]>([]);
+  const [modeStats, setModeStats] = useState<CategoryStats[]>([]);
+  const [regionStats, setRegionStats] = useState<CategoryStats[]>([]);
+  const [sideStats, setSideStats] = useState<CategoryStats[]>([]);
+  const [statsLoading, setStatsLoading] = useState(false);
   
   // Match Details Modal State
   const [selectedMatch, setSelectedMatch] = useState<MatchDetails | null>(null);
@@ -54,19 +78,70 @@ export default function DashboardScreen() {
   const loadData = async () => {
     if (!accountId) return;
     try {
-      const [profData, wlData, matchData] = await Promise.all([
+      setStatsLoading(true);
+      const [profData, wlData, matchData, totalsData, countsData] = await Promise.all([
         getPlayerProfile(accountId),
         getPlayerWinLoss(accountId),
-        getRecentMatches(accountId)
+        getRecentMatches(accountId),
+        getPlayerTotals(accountId),
+        getPlayerCounts(accountId)
       ]);
       setProfile(profData);
       setWl(wlData);
       setMatches(matchData);
+      setTotals(totalsData);
+
+      // Parallel fetch for Lifetime categories
+      const [normalWL, rankedWL, allPickWL, turboWL, radiantWL, direWL] = await Promise.all([
+        getPlayerWinLoss(accountId, { lobby_type: '0' }),
+        getPlayerWinLoss(accountId, { lobby_type: '7' }),
+        getPlayerWinLoss(accountId, { game_mode: '1' }),
+        getPlayerWinLoss(accountId, { game_mode: '23' }),
+        getPlayerWinLoss(accountId, { is_radiant: '1' }),
+        getPlayerWinLoss(accountId, { is_radiant: '0' }),
+      ]);
+
+      const createStat = (label: string, data: WinLossStats | null) => ({
+        label,
+        win: data?.win || 0,
+        lose: data?.lose || 0,
+        total: (data?.win || 0) + (data?.lose || 0)
+      });
+
+      setLobbyStats([
+        createStat('Normal MM', normalWL),
+        createStat('Ranked MM', rankedWL)
+      ]);
+
+      setModeStats([
+        createStat('All Pick', allPickWL),
+        createStat('Turbo', turboWL)
+      ]);
+
+      setSideStats([
+        createStat('Radiant', radiantWL),
+        createStat('Dire', direWL)
+      ]);
+
+      if (countsData?.region) {
+        const sortedRegions = Object.entries(countsData.region)
+          .map(([id, data]) => ({
+            label: REGIONS[Number(id)] || `Region ${id}`,
+            win: data.win,
+            lose: data.games - data.win,
+            total: data.games
+          }))
+          .sort((a, b) => b.total - a.total)
+          .slice(0, 5);
+        setRegionStats(sortedRegions);
+      }
+
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setStatsLoading(false);
     }
   };
 
@@ -123,20 +198,21 @@ export default function DashboardScreen() {
 
   const renderHeader = () => (
     <View className="bg-[#1e1e1e] p-6 rounded-b-3xl shadow-lg mb-4">
-      <View className="flex-row items-center mb-4">
+      <View className="flex-row items-center mb-6">
         {profile?.profile?.avatarfull ? (
           <Image source={{ uri: profile.profile.avatarfull }} className="w-20 h-20 rounded-full border-2 border-gamingAccent mr-4" />
         ) : (
           <View className="w-20 h-20 rounded-full bg-gray-600 mr-4" />
         )}
-        <View>
-          <Text className="text-2xl text-white font-bold">{profile?.profile?.personaname || 'Unknown Player'}</Text>
+        <View className="flex-1">
+          <Text className="text-2xl text-white font-bold" numberOfLines={1}>{profile?.profile?.personaname || 'Unknown Player'}</Text>
           <Text className="text-gray-400">Account ID: {accountId}</Text>
-          {profile?.rank_tier && <Text className="text-gamingAccent font-semibold mt-1">Rank Tier: {profile.rank_tier}</Text>}
         </View>
+        <RankBadge rankTier={profile?.rank_tier || null} leaderboardRank={profile?.leaderboard_rank || null} size={60} />
       </View>
-      {wl && (
-        <View className="flex-row justify-between bg-[#2a2a2a] p-4 rounded-xl">
+      
+      {activeTab === 'Recent' && wl && (
+        <View className="flex-row justify-between bg-[#2a2a2a] p-4 rounded-xl mb-6">
           <View className="items-center">
             <Text className="text-gray-400 text-xs uppercase tracking-widest">Wins</Text>
             <Text className="text-win text-xl font-bold">{wl.win}</Text>
@@ -147,12 +223,123 @@ export default function DashboardScreen() {
           </View>
           <View className="items-center">
             <Text className="text-gray-400 text-xs uppercase tracking-widest">Win Rate</Text>
-            <Text className="text-white text-xl font-bold">{wl.win + wl.lose > 0 ? Math.round((wl.win / (wl.win + wl.lose)) * 100) : 0}%</Text>
+            <Text className="text-white text-xl font-bold">{wl.win + wl.lose > 0 ? ((wl.win / (wl.win + wl.lose)) * 100).toFixed(2) : '0.00'}%</Text>
           </View>
         </View>
       )}
-      <Text className="text-white text-lg font-bold mt-6 mb-2">Recent Matches</Text>
+
+      {activeTab === 'Lifetime' && totals.length > 0 && (
+        <View className="flex-col bg-[#2a2a2a] p-4 rounded-xl mb-6">
+          <View className="flex-row justify-between mb-4 pb-4 border-b border-white/5">
+            <View className="items-center flex-1">
+              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Total Matches</Text>
+              <Text className="text-white text-xl font-bold">{wl ? wl.win + wl.lose : 0}</Text>
+            </View>
+            <View className="items-center flex-1 border-x border-white/5">
+              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Win Rate</Text>
+              <Text className={`text-xl font-bold ${wl && wl.win / (wl.win + wl.lose) >= 0.5 ? 'text-win' : 'text-loss'}`}>
+                {wl && wl.win + wl.lose > 0 ? ((wl.win / (wl.win + wl.lose)) * 100).toFixed(2) : '0.00'}%
+              </Text>
+            </View>
+            <View className="items-center flex-1">
+              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">K/D/A</Text>
+              <Text className="text-white text-xl font-bold">
+                {(() => {
+                  const k = totals.find(t => t.field === 'kills')?.sum || 0;
+                  const d = totals.find(t => t.field === 'deaths')?.sum || 0;
+                  const a = totals.find(t => t.field === 'assists')?.sum || 0;
+                  const n = totals.find(t => t.field === 'kills')?.n || 1;
+                  return `${(k/n).toFixed(1)}/${(d/n).toFixed(1)}/${(a/n).toFixed(1)}`;
+                })()}
+              </Text>
+            </View>
+          </View>
+          <View className="flex-row justify-around">
+            <View className="items-center">
+              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Avg GPM</Text>
+              <Text className="text-yellow-500 text-lg font-bold">
+                {Math.round((totals.find(t => t.field === 'gold_per_min')?.sum || 0) / (totals.find(t => t.field === 'gold_per_min')?.n || 1))}
+              </Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Avg XPM</Text>
+              <Text className="text-blue-500 text-lg font-bold">
+                {Math.round((totals.find(t => t.field === 'xp_per_min')?.sum || 0) / (totals.find(t => t.field === 'xp_per_min')?.n || 1))}
+              </Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Impact</Text>
+              <Text className="text-red-500 text-lg font-bold">
+                {Math.round((totals.find(t => t.field === 'hero_damage')?.sum || 0) / (totals.find(t => t.field === 'hero_damage')?.n || 1)).toLocaleString()}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Dashboard Tabs */}
+      <View className="flex-row bg-[#2a2a2a] rounded-xl p-1">
+        {(['Recent', 'Lifetime'] as DashboardTab[]).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
+          >
+            <Text className={`font-bold text-sm ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
+              {tab === 'Recent' ? 'RECENT MATCHES' : 'LIFETIME STATS'}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
+  );
+
+  const renderStatSection = (title: string, icon: string, stats: CategoryStats[]) => (
+    <View className="mx-4 mb-6 bg-[#1e1e1e] rounded-2xl overflow-hidden border border-white/5">
+      <View className="flex-row items-center bg-zinc-800/50 p-4 border-b border-white/5">
+        <Ionicons name={icon as any} size={20} color="#8b5cf6" />
+        <Text className="text-white font-bold ml-3 uppercase tracking-widest text-xs">{title}</Text>
+      </View>
+      <View className="p-4">
+        {stats.map((stat, i) => (
+          <View key={i} className={`flex-row justify-between items-center ${i !== stats.length - 1 ? 'mb-4 pb-4 border-b border-white/5' : ''}`}>
+            <View>
+              <Text className="text-white font-semibold">{stat.label}</Text>
+              <Text className="text-gray-500 text-xs mt-1">{stat.total} Matches • {stat.win}W - {stat.lose}L</Text>
+            </View>
+            <View className="items-end">
+              <Text className={`text-lg font-bold ${stat.win / stat.total >= 0.5 ? 'text-win' : 'text-loss'}`}>
+                {stat.total > 0 ? ((stat.win / stat.total) * 100).toFixed(2) : '0.00'}%
+              </Text>
+              <Text className="text-gray-600 text-[10px] uppercase font-bold">Win Rate</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  const renderLifetimeContent = () => (
+    <ScrollView 
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />}
+      className="flex-1"
+    >
+      {renderHeader()}
+      {statsLoading ? (
+        <View className="py-20 items-center">
+          <ActivityIndicator color="#8b5cf6" />
+          <Text className="text-gray-500 mt-4">Analyzing lifetime data...</Text>
+        </View>
+      ) : (
+        <>
+          {renderStatSection('Lobby Type', 'globe-outline', lobbyStats)}
+          {renderStatSection('Game Mode', 'game-controller-outline', modeStats)}
+          {renderStatSection('Region', 'navigate-outline', regionStats)}
+          {renderStatSection('Side of Map', 'map-outline', sideStats)}
+          <View className="h-10" />
+        </>
+      )}
+    </ScrollView>
   );
 
   const renderMatch = ({ item }: { item: RecentMatch }) => {
@@ -278,15 +465,19 @@ export default function DashboardScreen() {
 
   return (
     <View className="flex-1 bg-gamingDark">
-      <FlatList
-        data={matches}
-        keyExtractor={(item) => item.match_id.toString()}
-        renderItem={renderMatch}
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={<View style={{ height: 80 }} />}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />}
-        contentContainerStyle={{ paddingBottom: 20 }}
-      />
+      {activeTab === 'Recent' ? (
+        <FlatList
+          data={matches}
+          keyExtractor={(item) => item.match_id.toString()}
+          renderItem={renderMatch}
+          ListHeaderComponent={renderHeader()}
+          ListFooterComponent={<View style={{ height: 80 }} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
+      ) : (
+        renderLifetimeContent()
+      )}
 
       {/* Match Details Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent={true} onRequestClose={() => setModalVisible(false)}>
@@ -458,8 +649,9 @@ export default function DashboardScreen() {
                                     <View key={i} className="w-[48%] bg-zinc-800/50 p-2 rounded-lg mb-2">
                                       <Text className="text-gray-500 text-[8px] font-bold uppercase">{b.label}</Text>
                                       <Text className={`text-sm font-bold ${b.val >= 0.8 ? 'text-win' : b.val >= 0.5 ? 'text-white' : 'text-loss'}`}>
-                                        Top {(100 - (b.val * 100)).toFixed(0)}%
+                                        Top {(100 - (b.val * 100)).toFixed(2)}%
                                       </Text>
+
                                     </View>
                                   ))}
                                 </View>
@@ -479,7 +671,7 @@ export default function DashboardScreen() {
                         </View>
                         <View className="flex-row justify-between py-2 border-b border-zinc-800">
                           <Text className="text-gray-500 text-xs">Region</Text>
-                          <Text className="text-white text-xs">{REGIONS[selectedMatch.region] || `Cluster ${selectedMatch.region}`}</Text>
+                          <Text className="text-white text-xs">{REGIONS[selectedMatch.region] || `Region ${selectedMatch.region}`}</Text>
                         </View>
                         <View className="flex-row justify-between py-2 border-b border-zinc-800">
                           <Text className="text-gray-500 text-xs">Patch</Text>
@@ -754,10 +946,15 @@ export default function DashboardScreen() {
                 <View className="flex-row justify-between items-start mb-6">
                   <View className="flex-row items-center">
                     <Image source={{ uri: selectedPlayerProfile.profile.avatarfull }} className="w-16 h-16 rounded-full border-2 border-gamingAccent" />
-                    <View className="ml-4">
+                    <View className="ml-4 flex-1">
                       <Text className="text-white text-xl font-bold" numberOfLines={1}>{selectedPlayerProfile.profile.personaname}</Text>
                       <Text className="text-gray-500 text-xs">ID: {selectedPlayerProfile.profile.account_id}</Text>
                     </View>
+                    <RankBadge 
+                      rankTier={selectedPlayerProfile.rank_tier} 
+                      leaderboardRank={selectedPlayerProfile.leaderboard_rank} 
+                      size={50} 
+                    />
                   </View>
                   <TouchableOpacity onPress={() => setPlayerModalVisible(false)}><Ionicons name="close" size={28} color="white" /></TouchableOpacity>
                 </View>
@@ -767,7 +964,7 @@ export default function DashboardScreen() {
                     <View className="items-center"><Text className="text-gray-500 text-[10px] font-bold uppercase">Losses</Text><Text className="text-loss text-lg font-bold">{selectedPlayerWL?.lose}</Text></View>
                     <View className="items-center">
                       <Text className="text-gray-500 text-[10px] font-bold uppercase">Win Rate</Text>
-                      <Text className="text-white text-lg font-bold">{selectedPlayerWL && (selectedPlayerWL.win + selectedPlayerWL.lose > 0) ? Math.round((selectedPlayerWL.win / (selectedPlayerWL.win + selectedPlayerWL.lose)) * 100) : 0}%</Text>
+                      <Text className="text-white text-lg font-bold">{selectedPlayerWL && (selectedPlayerWL.win + selectedPlayerWL.lose > 0) ? ((selectedPlayerWL.win / (selectedPlayerWL.win + selectedPlayerWL.lose)) * 100).toFixed(2) : '0.00'}%</Text>
                     </View>
                   </View>
                   <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3">Recent Matches</Text>
