@@ -130,6 +130,14 @@ export const HEROES: Record<number, { name: string; localized_name: string }> = 
 };
 
 /**
+ * Reverse mapping for hero names to IDs.
+ */
+export const HERO_NAME_TO_ID: Record<string, number> = Object.entries(HEROES).reduce((acc, [id, hero]) => {
+  acc[hero.name] = Number(id);
+  return acc;
+}, {} as Record<string, number>);
+
+/**
  * Helper to map Lobby Type IDs to names.
  * Data source: https://api.opendota.com/api/constants/lobby_type
  */

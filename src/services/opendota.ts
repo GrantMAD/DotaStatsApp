@@ -86,6 +86,11 @@ export interface MatchDetails {
       last_hits_per_min: { raw: number; pct: number };
     };
     stuns?: number;
+    multi_kills?: Record<string, number>;
+    kill_streaks?: Record<string, number>;
+    hero_damage_targets?: Record<string, number>;
+    kill_log?: { time: number; key: string }[];
+    camps_stacked?: number;
     lane_efficiency_pct?: number;
     buyback_count?: number;
     lane?: number;
