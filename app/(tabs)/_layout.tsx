@@ -1,4 +1,4 @@
-import { Tabs, Redirect } from 'expo-router';
+import { Tabs, Redirect, usePathname } from 'expo-router';
 import { TouchableOpacity, View, Text, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
@@ -7,8 +7,10 @@ import { useState } from 'react';
 export default function TabsLayout() {
   const { logout, accountId, isLoading } = useSteamAuth();
   const [menuVisible, setMenuVisible] = useState(false);
+  const pathname = usePathname();
 
-  if (!isLoading && !accountId) {
+  // Redirect to landing if not logged in and not on search screen
+  if (!isLoading && !accountId && pathname !== '/search') {
     return <Redirect href="/" />;
   }
 
@@ -44,6 +46,7 @@ export default function TabsLayout() {
         <Tabs.Screen 
           name="dashboard" 
           options={{ 
+            href: accountId ? '/dashboard' : null,
             headerTitle: '',
             headerLeft: () => (
               <TouchableOpacity 
@@ -53,7 +56,16 @@ export default function TabsLayout() {
                 <Ionicons name="menu" size={28} color="white" />
               </TouchableOpacity>
             ),
-            tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={24} color={color} />
+            tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={24} color={color} />,
+            tabBarLabel: 'Dashboard'
+          }} 
+        />
+        <Tabs.Screen 
+          name="search" 
+          options={{ 
+            headerShown: false,
+            tabBarIcon: ({ color }) => <Ionicons name="search" size={24} color={color} />,
+            tabBarLabel: 'Search'
           }} 
         />
       </Tabs>

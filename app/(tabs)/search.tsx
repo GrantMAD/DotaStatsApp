@@ -25,7 +25,7 @@ import {
   RecentMatch,
   MatchDetails,
   GAME_MODES
-} from '../src/services/opendota';
+} from '../../src/services/opendota';
 import { 
   getHeroImageUrl, 
   getItemImageUrl, 
@@ -34,7 +34,7 @@ import {
   REGIONS, 
   LANES, 
   LANE_ROLES 
-} from '../src/services/constants';
+} from '../../src/services/constants';
 import { LineChart } from "react-native-chart-kit";
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Economy';
@@ -106,18 +106,6 @@ export default function SearchScreen() {
       {/* Search Header */}
       <View className="pt-12 px-6 pb-6 bg-[#1e1e1e] rounded-b-3xl shadow-lg">
         <View className="flex-row items-center mb-6">
-          <TouchableOpacity 
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.push("/");
-              }
-            }} 
-            className="mr-4"
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
           <Text className="text-2xl text-white font-bold">Search Players</Text>
         </View>
 
