@@ -111,6 +111,8 @@ export interface MatchDetails {
     lane?: number;
     lane_role?: number;
     is_roaming?: boolean;
+    purchase_log?: { time: number; key: string }[];
+    buyback_log?: { time: number; slot: number; type: string; player_slot: number }[];
   }[];
   version?: number; // Present if match is parsed
 }
