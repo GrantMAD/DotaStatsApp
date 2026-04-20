@@ -104,8 +104,12 @@ export interface MatchDetails {
     multi_kills?: Record<string, number>;
     kill_streaks?: Record<string, number>;
     hero_damage_targets?: Record<string, number>;
+    hero_damage_taken?: number;
     kill_log?: { time: number; key: string }[];
     camps_stacked?: number;
+    obs_placed?: number;
+    sen_placed?: number;
+    actions_per_min?: number;
     lane_efficiency_pct?: number;
     buyback_count?: number;
     lane?: number;
@@ -278,6 +282,22 @@ export async function getMatchDetails(matchId: number): Promise<MatchDetails | n
     return await response.json();
   } catch (error) {
     console.error('Error fetching match details:', error);
+    return null;
+  }
+}
+
+/**
+ * Submits a request to parse a specific match.
+ */
+export async function requestMatchParse(matchId: number): Promise<{ job: { jobId: string } } | null> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/request/${matchId}`, {
+      method: 'POST'
+    });
+    if (!response.ok) throw new Error('Failed to request match parse');
+    return await response.json();
+  } catch (error) {
+    console.error('Error requesting match parse:', error);
     return null;
   }
 }
