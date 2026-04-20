@@ -53,6 +53,15 @@ export interface RecentMatch {
   assists: number;
 }
 
+export interface ChatMessage {
+  time: number;
+  type: string;
+  unit?: string;
+  key: string;
+  slot?: number;
+  player_slot?: number;
+}
+
 export interface MatchDetails {
   match_id: number;
   radiant_win: boolean;
@@ -67,6 +76,7 @@ export interface MatchDetails {
   first_blood_time: number;
   radiant_gold_adv: number[];
   radiant_xp_adv: number[];
+  chat?: ChatMessage[];
   players: {
     account_id: number;
     personaname: string;

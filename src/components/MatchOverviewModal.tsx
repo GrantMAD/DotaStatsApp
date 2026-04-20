@@ -16,6 +16,7 @@ import {
   getMatchDetails,
   requestMatchParse,
   MatchDetails,
+  ChatMessage,
   GAME_MODES
 } from '../services/opendota';
 import { 
@@ -27,10 +28,11 @@ import {
   HERO_NAME_TO_ID,
   HEROES
 } from '../services/constants';
+import { getChatWheelPhrase } from '../services/chatwheel';
 import { RankBadge } from './RankBadge';
 import * as Linking from 'expo-linking';
 
-type MatchTab = 'Scoreboard' | 'Highlights' | 'Combat' | 'Support' | 'Economy' | 'Timeline';
+type MatchTab = 'Scoreboard' | 'Highlights' | 'Combat' | 'Support' | 'Economy' | 'Timeline' | 'Chat';
 
 interface MatchOverviewModalProps {
   visible: boolean;
@@ -46,6 +48,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
   const [isParsing, setIsParsing] = useState(false);
   const [parseRequested, setParseRequested] = useState(false);
   const [expandedCombatPlayers, setExpandedCombatPlayers] = useState<number[]>([]);
+  const [showChatWheel, setShowChatWheel] = useState(true);
   
   // Tab Scroll State
   const [scrollX, setScrollX] = useState(0);
@@ -245,7 +248,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
                   onLayout={(e) => setViewWidth(e.nativeEvent.layout.width)}
                   scrollEventThrottle={16}
                 >
-                  {(['Scoreboard', 'Highlights', 'Combat', 'Support', 'Economy', 'Timeline'] as MatchTab[]).map((tab) => (
+                  {(['Scoreboard', 'Highlights', 'Combat', 'Support', 'Economy', 'Timeline', 'Chat'] as MatchTab[]).map((tab) => (
                     <TouchableOpacity 
                       key={tab} 
                       onPress={() => setActiveTab(tab)} 
@@ -265,6 +268,82 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} className="p-4">
+                {activeTab === 'Chat' && (
+                  <View>
+                    <View className="flex-row justify-between items-center mb-3 pr-1">
+                      <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold pl-1">Match Chat Log</Text>
+                      <TouchableOpacity 
+                        onPress={() => setShowChatWheel(!showChatWheel)}
+                        className={`flex-row items-center px-2 py-1 rounded-md border ${showChatWheel ? 'bg-gamingAccent/10 border-gamingAccent/30' : 'bg-zinc-800 border-zinc-700'}`}
+                      >
+                        <Ionicons name={showChatWheel ? "eye-outline" : "eye-off-outline"} size={12} color={showChatWheel ? "#8b5cf6" : "#71717a"} />
+                        <Text className={`text-[9px] font-bold ml-1.5 ${showChatWheel ? 'text-gamingAccent' : 'text-gray-500'}`}>
+                          {showChatWheel ? 'WHEEL ON' : 'WHEEL OFF'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {matchData.chat ? (
+                      (() => {
+                        const filteredChat = showChatWheel 
+                          ? matchData.chat 
+                          : matchData.chat.filter(msg => {
+                              const phrase = getChatWheelPhrase(msg.key);
+                              return msg.type !== 'chatwheel' && phrase === msg.key;
+                            });
+
+                        if (filteredChat.length === 0) {
+                          return (
+                            <View className="bg-[#2a2a2a] p-10 rounded-xl items-center">
+                              <Ionicons name="chatbubbles-outline" size={32} color="#4b5563" className="mb-2" />
+                              <Text className="text-gray-500 text-xs">No matching messages found.</Text>
+                            </View>
+                          );
+                        }
+
+                        return (
+                          <View className="bg-[#2a2a2a] rounded-xl p-2 border border-zinc-800">
+                            {filteredChat.map((msg, idx) => {
+                              const player = matchData.players.find(p => p.player_slot === msg.player_slot);
+                              const minutes = Math.floor(msg.time / 60);
+                              const seconds = String(Math.abs(msg.time % 60)).padStart(2, '0');
+                              const isRadiant = msg.player_slot !== undefined && msg.player_slot < 128;
+                              const phrase = getChatWheelPhrase(msg.key);
+                              const isWheel = msg.type === 'chatwheel' || (phrase !== msg.key);
+                              
+                              return (
+                                <View key={idx} className={`flex-row items-start py-2 px-2 ${idx !== filteredChat.length - 1 ? 'border-b border-zinc-800/50' : ''}`}>
+                                  <View className="w-12 pt-0.5">
+                                    <Text className="text-gray-500 font-bold text-[9px]">{msg.time < 0 ? '-' : ''}{Math.abs(minutes)}:{seconds}</Text>
+                                  </View>
+                                  {player && (
+                                    <Image source={{ uri: getHeroImageUrl(player.hero_id) }} className="w-7 h-5 rounded-sm mr-2 mt-0.5" />
+                                  )}
+                                  <View className="flex-1">
+                                    <View className="flex-row items-baseline flex-wrap">
+                                      <Text className={`text-[11px] font-bold ${isRadiant ? 'text-win' : 'text-loss'}`}>
+                                        {msg.unit || player?.personaname || 'Anonymous'}:
+                                      </Text>
+                                      <View className="flex-row items-baseline flex-1 ml-1.5">
+                                        {isWheel && <Text className="text-gamingAccent font-bold text-[11px] mr-1">{'>'}</Text>}
+                                        <Text className={`text-[11px] leading-4 ${isWheel ? 'italic text-gamingAccent' : 'text-white'}`}>
+                                          {phrase}
+                                        </Text>
+                                      </View>
+                                    </View>
+                                  </View>
+                                </View>
+                              );
+                            })}
+                          </View>
+                        );
+                      })()
+                    ) : (
+                      renderParseInstructions("Chat logs are only available for parsed matches. This includes all-chat messages and chat wheel usage.")
+                    )}
+                  </View>
+                )}
+
                 {activeTab === 'Timeline' && (
                   <View>
                     <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Match Events Timeline</Text>
