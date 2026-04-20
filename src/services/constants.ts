@@ -286,6 +286,16 @@ export function getItemImageUrl(itemId: number): string {
 }
 
 /**
+ * Returns the CDN URL for an item's icon by its internal name.
+ */
+export function getItemImageUrlByName(itemName: string): string {
+  if (!itemName) return "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/emptyitembg.png";
+  // OpenDota often prefixes item names with 'item_'
+  const cleanName = itemName.startsWith("item_") ? itemName.slice(5) : itemName;
+  return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/${cleanName}.png`;
+}
+
+/**
  * Returns the URL for a rank badge image.
  */
 export function getRankBadgeUrl(rankTier: number | null): string {

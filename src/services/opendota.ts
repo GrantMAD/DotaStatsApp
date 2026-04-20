@@ -127,6 +127,8 @@ export interface MatchDetails {
     is_roaming?: boolean;
     purchase_log?: { time: number; key: string }[];
     buyback_log?: { time: number; slot: number; type: string; player_slot: number }[];
+    avatar?: string;
+    avatarfull?: string;
   }[];
   version?: number; // Present if match is parsed
 }

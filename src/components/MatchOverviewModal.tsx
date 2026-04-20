@@ -22,6 +22,7 @@ import {
 import { 
   getHeroImageUrl, 
   getItemImageUrl, 
+  getItemImageUrlByName,
   LOBBY_TYPES, 
   REGIONS, 
   LANE_ROLES,
@@ -346,91 +347,123 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
 
                 {activeTab === 'Timeline' && (
                   <View>
-                    <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Match Events Timeline</Text>
+                    <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Player Event Timeline</Text>
                     {matchData.version ? (
-                      (() => {
-                        // Aggregate all purchases and buybacks
-                        const events: { time: number; type: 'purchase' | 'buyback'; key: string; heroId: number; personaname: string }[] = [];
-                        
-                        matchData.players.forEach(p => {
-                          if (p.purchase_log) {
-                            p.purchase_log.forEach(item => {
-                              events.push({
-                                time: item.time,
-                                type: 'purchase',
-                                key: item.key,
-                                heroId: p.hero_id,
-                                personaname: p.personaname || 'Anonymous'
-                              });
-                            });
-                          }
-                          if (p.buyback_log) {
-                            p.buyback_log.forEach(bb => {
-                              events.push({
-                                time: bb.time,
-                                type: 'buyback',
-                                key: 'buyback',
-                                heroId: p.hero_id,
-                                personaname: p.personaname || 'Anonymous'
-                              });
-                            });
-                          }
-                        });
-
-                        // Sort by time, then filter for major items or buybacks
-                        // Only show items that are NOT recipe, ward, smoke, dust, clarity, flask, tango, enchanted_mango, bottle, tpscroll
-                        const filteredEvents = events
-                          .sort((a, b) => a.time - b.time)
-                          .filter(e => {
-                            if (e.type === 'buyback') return true;
-                            const minorItems = ['recipe', 'ward_observer', 'ward_sentry', 'smoke_of_deceit', 'dust', 'clarity', 'flask', 'tango', 'enchanted_mango', 'bottle', 'tpscroll', 'ward_dispenser', 'faerie_fire'];
-                            return !minorItems.some(minor => e.key.includes(minor));
-                          });
-
-                        if (filteredEvents.length === 0) {
-                          return (
-                            <View className="bg-[#2a2a2a] p-10 rounded-xl items-center">
-                              <Text className="text-gray-500">No major events recorded.</Text>
+                      <View className="bg-[#2a2a2a] rounded-xl p-4 border border-zinc-800">
+                        <ScrollView horizontal showsHorizontalScrollIndicator={true} className="mb-2">
+                          <View style={{ width: Math.max(screenWidth * 2, (matchData.duration / 60) * 60 + 300) }}>
+                            {/* Time axis */}
+                            <View className="flex-row mb-6 border-b border-zinc-800 pb-2">
+                              <View style={{ width: 200 }} /> {/* Spacer for player info */}
+                              {Array.from({ length: Math.ceil(matchData.duration / 60 / 5) + 1 }).map((_, i) => (
+                                <View key={i} style={{ position: 'absolute', left: 200 + 140 + (i * 5 * 60) }}>
+                                  <Text className="text-[10px] text-gray-500 font-bold">{i * 5}'</Text>
+                                  <View className="w-[1px] h-3 bg-zinc-800 mt-1" />
+                                </View>
+                              ))}
                             </View>
-                          );
-                        }
 
-                        return (
-                          <View className="bg-[#2a2a2a] rounded-xl p-4 border border-zinc-800">
-                            {filteredEvents.map((event, idx) => {
-                              const minutes = Math.floor(event.time / 60);
-                              const seconds = String(event.time % 60).padStart(2, '0');
-                              
+                            {/* Player Lanes */}
+                            {matchData.players.map((p, pIdx) => {
+                              const events: { time: number; type: 'purchase' | 'buyback'; key: string }[] = [];
+                              if (p.purchase_log) {
+                                p.purchase_log.forEach(item => {
+                                  const minorItems = ['recipe', 'ward_observer', 'ward_sentry', 'smoke_of_deceit', 'dust', 'clarity', 'flask', 'tango', 'enchanted_mango', 'bottle', 'tpscroll', 'ward_dispenser', 'faerie_fire'];
+                                  if (!minorItems.some(minor => item.key.includes(minor))) {
+                                    events.push({ time: item.time, type: 'purchase', key: item.key });
+                                  }
+                                });
+                              }
+                              if (p.buyback_log) {
+                                p.buyback_log.forEach(bb => events.push({ time: bb.time, type: 'buyback', key: 'buyback' }));
+                              }
+
                               return (
-                                <View key={idx} className={`flex-row items-center py-2 ${idx !== filteredEvents.length - 1 ? 'border-b border-zinc-800' : ''}`}>
-                                  <View className="w-12"><Text className="text-gamingAccent font-bold text-[10px]">{minutes}:{seconds}</Text></View>
-                                  <Image source={{ uri: getHeroImageUrl(event.heroId) }} className="w-8 h-6 rounded-sm mr-3" />
-                                  <View className="flex-1">
-                                    <View className="flex-row items-center">
-                                      <Text className="text-white text-xs font-bold" numberOfLines={1}>{event.personaname}</Text>
-                                      <Text className="text-gray-500 text-[10px] ml-2">
-                                        {event.type === 'buyback' ? 'used buyback' : 'purchased'}
-                                      </Text>
-                                    </View>
-                                    <View className="flex-row items-center mt-1">
-                                      {event.type === 'buyback' ? (
-                                        <View className="bg-orange-500/20 px-2 py-0.5 rounded border border-orange-500/30 flex-row items-center">
-                                          <Ionicons name="refresh-circle" size={12} color="#f97316" />
-                                          <Text className="text-orange-500 font-bold text-[9px] ml-1 uppercase">Buyback</Text>
+                                <View key={pIdx} className="flex-row items-center h-14 border-b border-zinc-800/30">
+                                  {/* Player Identity Column */}
+                                  <View style={{ width: 200 }} className="flex-row items-center pr-4 bg-[#2a2a2a] z-20">
+                                    <View className="relative">
+                                      <Image source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-12 h-8 rounded-sm border border-white/10" />
+                                      {p.avatar && (
+                                        <View className="absolute -bottom-1 -right-1 border border-zinc-900 rounded-full overflow-hidden">
+                                          <Image source={{ uri: p.avatar }} className="w-5 h-5" />
                                         </View>
-                                      ) : (
-                                        <Text className="text-gray-300 text-[10px] capitalize italic">{event.key.replace(/_/g, ' ')}</Text>
                                       )}
                                     </View>
+                                    <View className="ml-3 flex-1">
+                                      <Text className="text-white text-xs font-bold" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
+                                      <Text className="text-gray-500 text-[8px] uppercase font-bold">Slot {p.player_slot}</Text>
+                                    </View>
+                                  </View>
+
+                                  <View className="flex-1 relative h-full justify-center overflow-hidden">
+                                    {/* Lane grid line */}
+                                    <View className="absolute left-0 right-0 h-[1px] bg-zinc-800/50" />
+                                    
+                                    {(() => {
+                                      const usedPositions: Record<number, number> = {};
+
+                                      return events.map((event, eIdx) => {
+                                        // 140px buffer for pre-game
+                                        const baseLeft = 140 + (event.time / 60) * 60;
+                                        
+                                        const bucket = Math.round(baseLeft / 8) * 8;
+                                        const offsetCount = usedPositions[bucket] || 0;
+                                        usedPositions[bucket] = offsetCount + 1;
+                                        
+                                        const horizontalOffset = offsetCount * 22; 
+                                        const finalLeft = baseLeft + horizontalOffset;
+
+                                        const buybackIcon = 'https://www.opendota.com/assets/images/dota2/buyback_icon.png';
+                                        
+                                        return (
+                                          <View 
+                                            key={eIdx} 
+                                            style={{ 
+                                              position: 'absolute', 
+                                              left: finalLeft, 
+                                              top: '50%',
+                                              marginTop: -12, 
+                                              transform: [{ translateX: -15 }] 
+                                            }}
+                                            className="z-10 shadow-md"
+                                          >
+                                            <View className={`p-[1px] rounded-[3px] border ${event.type === 'buyback' ? 'bg-orange-500 border-orange-300' : 'bg-zinc-800 border-zinc-600'}`}>
+                                              <Image 
+                                                source={{ uri: event.type === 'buyback' ? buybackIcon : getItemImageUrlByName(event.key) }} 
+                                                className="w-7 h-5 rounded-[2px]"
+                                                resizeMode="cover"
+                                              />
+                                            </View>
+                                            {offsetCount === 0 && (
+                                              <View className="absolute -top-4 left-0 right-0 items-center">
+                                                <Text className="text-[8px] text-gray-400 font-bold">{Math.floor(event.time / 60)}'</Text>
+                                              </View>
+                                            )}
+                                          </View>
+                                        );
+                                      });
+                                    })()}
                                   </View>
                                 </View>
                               );
                             })}
                           </View>
-                        );
-                      })()
+                        </ScrollView>
+                        <View className="flex-row mt-4 pt-4 border-t border-zinc-800 justify-center">
+                          <View className="flex-row items-center mr-6">
+                            <View className="w-3 h-3 rounded-full bg-gamingAccent mr-2" />
+                            <Text className="text-gray-400 text-[10px]">Major Item</Text>
+                          </View>
+                          <View className="flex-row items-center">
+                            <View className="w-3 h-3 rounded-full bg-orange-500 mr-2" />
+                            <Text className="text-gray-400 text-[10px]">Buyback</Text>
+                          </View>
+                        </View>
+                        <Text className="text-zinc-600 text-[9px] text-center mt-3 italic">Scroll horizontally to see the full match progress</Text>
+                      </View>
                     ) : (
-                      renderParseInstructions("Timeline data includes purchase logs, buybacks, and major events which are only available for parsed matches.")
+                      renderParseInstructions("Timeline visualization requires parsed match data to track specific player events.")
                     )}
                   </View>
                 )}
