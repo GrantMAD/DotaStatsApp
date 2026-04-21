@@ -39,7 +39,7 @@ interface MatchOverviewModalProps {
   visible: boolean;
   matchId: number | null;
   onClose: () => void;
-  onPushPlayer?: (id: string) => void;
+  onPushPlayer?: (id: number) => void;
 }
 
 export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: MatchOverviewModalProps) {
@@ -157,7 +157,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
     return (
       <TouchableOpacity 
         key={index} 
-        onPress={() => !isAnonymous && onPushPlayer?.(p.account_id!.toString())}
+        onPress={() => !isAnonymous && onPushPlayer?.(p.account_id!)}
         disabled={isAnonymous || !onPushPlayer}
         className="py-3 border-b border-zinc-800 active:bg-zinc-700"
       >

@@ -9,10 +9,9 @@ export default function TabsLayout() {
   const [menuVisible, setMenuVisible] = useState(false);
   const pathname = usePathname();
 
-  // Corrected Redirect logic: Allow /search and /home when unauthenticated.
-  // Redirect to landing page '/' if not logged in and on any other path.
-  if (!isLoading && !accountId && pathname !== '/search' && pathname !== '/home') {
-    return <Redirect href="/" />;
+  // If not logged in and trying to access a protected route, redirect to home
+  if (!isLoading && !accountId && pathname !== '/search' && pathname !== '/home' && pathname !== '/pro') {
+    return <Redirect href="/(tabs)/home" />;
   }
 
   return (
@@ -49,6 +48,14 @@ export default function TabsLayout() {
           options={{
             href: '/home', // Always available
             headerTitle: '', // Set headerTitle to empty string to remove heading
+            headerLeft: () => accountId ? (
+              <TouchableOpacity
+                onPress={() => setMenuVisible(true)}
+                className="ml-4 p-2"
+              >
+                <Ionicons name="menu" size={28} color="white" />
+              </TouchableOpacity>
+            ) : null,
             tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
             tabBarLabel: 'Home'
           }}
@@ -74,9 +81,35 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="search"
           options={{
-            headerShown: false,
+            headerShown: true,
+            headerTitle: '',
+            headerLeft: () => accountId ? (
+              <TouchableOpacity
+                onPress={() => setMenuVisible(true)}
+                className="ml-4 p-2"
+              >
+                <Ionicons name="menu" size={28} color="white" />
+              </TouchableOpacity>
+            ) : null,
             tabBarIcon: ({ color }) => <Ionicons name="search" size={24} color={color} />,
             tabBarLabel: 'Search'
+          }}
+        />
+        <Tabs.Screen
+          name="pro"
+          options={{
+            headerShown: true,
+            headerTitle: '',
+            headerLeft: () => accountId ? (
+              <TouchableOpacity
+                onPress={() => setMenuVisible(true)}
+                className="ml-4 p-2"
+              >
+                <Ionicons name="menu" size={28} color="white" />
+              </TouchableOpacity>
+            ) : null,
+            tabBarIcon: ({ color }) => <Ionicons name="trophy" size={24} color={color} />,
+            tabBarLabel: 'Pro Scene'
           }}
         />
       </Tabs>

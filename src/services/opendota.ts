@@ -215,7 +215,7 @@ export async function searchPlayers(query: string): Promise<SearchResult[]> {
 /**
  * Fetches the core profile data for a specific account.
  */
-export async function getPlayerProfile(accountId: string): Promise<PlayerProfile | null> {
+export async function getPlayerProfile(accountId: string | number): Promise<PlayerProfile | null> {
   try {
     const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}`);
     if (!response.ok) throw new Error('Failed to fetch profile');
@@ -229,7 +229,7 @@ export async function getPlayerProfile(accountId: string): Promise<PlayerProfile
 /**
  * Fetches the user's overall win/loss record.
  */
-export async function getPlayerWinLoss(accountId: string, params: Record<string, string> = {}): Promise<WinLossStats | null> {
+export async function getPlayerWinLoss(accountId: string | number, params: Record<string, string> = {}): Promise<WinLossStats | null> {
   try {
     const query = new URLSearchParams(params).toString();
     const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/wl${query ? `?${query}` : ''}`);
@@ -244,7 +244,7 @@ export async function getPlayerWinLoss(accountId: string, params: Record<string,
 /**
  * Fetches cumulative stats for a player across all matches.
  */
-export async function getPlayerTotals(accountId: string, params: Record<string, string> = {}): Promise<PlayerTotal[]> {
+export async function getPlayerTotals(accountId: string | number, params: Record<string, string> = {}): Promise<PlayerTotal[]> {
   try {
     const query = new URLSearchParams(params).toString();
     const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/totals${query ? `?${query}` : ''}`);
@@ -259,7 +259,7 @@ export async function getPlayerTotals(accountId: string, params: Record<string, 
 /**
  * Fetches aggregated counts for various categories (region, game_mode, etc.)
  */
-export async function getPlayerCounts(accountId: string): Promise<PlayerCounts | null> {
+export async function getPlayerCounts(accountId: string | number): Promise<PlayerCounts | null> {
   try {
     const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/counts`);
     if (!response.ok) throw new Error('Failed to fetch player counts');
@@ -273,7 +273,7 @@ export async function getPlayerCounts(accountId: string): Promise<PlayerCounts |
 /**
  * Fetches the most recent 10 matches for the player.
  */
-export async function getRecentMatches(accountId: string, limit: number = 10): Promise<RecentMatch[]> {
+export async function getRecentMatches(accountId: string | number, limit: number = 10): Promise<RecentMatch[]> {
   try {
     const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/recentMatches?limit=${limit}`);
     if (!response.ok) throw new Error('Failed to fetch recent matches');
@@ -308,8 +308,245 @@ export async function requestMatchParse(matchId: number): Promise<{ job: { jobId
     });
     if (!response.ok) throw new Error('Failed to request match parse');
     return await response.json();
-  } catch (error) {
-    console.error('Error requesting match parse:', error);
+  } catch (e) {
+    console.error(e);
     return null;
+  }
+}
+
+/** ─── PHASE 2 GLOBAL STATS ─── **/
+
+export interface LiveGame {
+  match_id: number;
+  server_id: string;
+  lobby_id: string;
+  game_time: number;
+  average_mmr: number;
+  players: {
+    account_id: number;
+    hero_id: number;
+    name?: string;
+  }[];
+}
+
+export interface GlobalRecord {
+  match_id: number;
+  score: number;
+  start_time: number;
+}
+
+export async function getLiveGames(): Promise<LiveGame[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/live`);
+    if (!response.ok) throw new Error('Failed to fetch live games');
+    const data = await response.json();
+    // Sort by MMR and return top high-level games
+    return data
+      .filter((g: any) => g.average_mmr > 0)
+      .sort((a: any, b: any) => b.average_mmr - a.average_mmr)
+      .slice(0, 10);
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+export async function getGlobalRecords(field: string): Promise<GlobalRecord[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/records/${field}`);
+    if (!response.ok) throw new Error('Failed to fetch global records');
+    const data = await response.json();
+    return data.slice(0, 5);
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+/** ─── PRO SCENE HUB ─── **/
+
+export interface ProPlayer {
+  account_id: number;
+  steamid: string;
+  avatar: string;
+  personaname: string;
+  full_name: string;
+  team_id: number;
+  team_name: string;
+  team_tag: string;
+  country_code: string;
+}
+
+export interface ProTeam {
+  team_id: number;
+  rating: number;
+  wins: number;
+  losses: number;
+  last_match_time: number;
+  name: string;
+  tag: string;
+  logo_url?: string;
+}
+
+export interface League {
+  leagueid: number;
+  ticket: string | null;
+  banner: string | null;
+  tier: 'premium' | 'professional' | 'amateur' | 'excluded' | null;
+  name: string;
+}
+
+export async function getProPlayers(): Promise<ProPlayer[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/proPlayers`);
+    if (!response.ok) throw new Error('Failed to fetch pro players');
+    const data = await response.json();
+    // Deduplicate by account_id
+    return Array.from(new Map(data.map((p: any) => [p.account_id, p])).values()) as ProPlayer[];
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+export async function getProTeams(): Promise<ProTeam[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/teams`);
+    if (!response.ok) throw new Error('Failed to fetch pro teams');
+    const data = await response.json();
+    
+    // Deduplicate by team_id to avoid key errors in FlatLists
+    const uniqueTeams = Array.from(new Map(data.map((t: any) => [t.team_id, t])).values()) as ProTeam[];
+    
+    // Sort and slice
+    return uniqueTeams.sort((a: any, b: any) => b.rating - a.rating).slice(0, 500);
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+export async function getLeagues(): Promise<League[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/leagues`);
+    if (!response.ok) throw new Error('Failed to fetch leagues');
+    const data = await response.json();
+    // Deduplicate by leagueid
+    return Array.from(new Map(data.map((l: any) => [l.leagueid, l])).values()) as League[];
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+export async function getTeamRoster(teamId: number): Promise<ProPlayer[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/teams/${teamId}/players`);
+    if (!response.ok) throw new Error('Failed to fetch team players');
+    const data = await response.json();
+    return data.filter((p: any) => p.is_current_team_member);
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+export async function getTeamMatches(teamId: number): Promise<ProMatch[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/teams/${teamId}/matches`);
+    if (!response.ok) throw new Error('Failed to fetch team matches');
+    return await response.json();
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+export async function getLeagueMatches(leagueId: number): Promise<ProMatch[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/leagues/${leagueId}/matches`);
+    if (!response.ok) throw new Error('Failed to fetch league matches');
+    return await response.json();
+  } catch (e) {
+    console.error(e);
+    return [];
+  }
+}
+
+// ─── Global Stats Types & Functions ──────────────────────────────
+
+export interface HeroStats {
+  id: number;
+  name: string;
+  localized_name: string;
+  primary_attr: string;
+  attack_type: string;
+  roles: string[];
+  img: string;
+  icon: string;
+  // Public match stats (all ranks aggregated)
+  pub_pick: number;
+  pub_win: number;
+  // Per-bracket picks/wins (1=Herald ... 8=Immortal)
+  '1_pick': number; '1_win': number;
+  '2_pick': number; '2_win': number;
+  '3_pick': number; '3_win': number;
+  '4_pick': number; '4_win': number;
+  '5_pick': number; '5_win': number;
+  '6_pick': number; '6_win': number;
+  '7_pick': number; '7_win': number;
+  '8_pick': number; '8_win': number;
+  // Pro scene
+  pro_pick: number;
+  pro_win: number;
+  pro_ban: number;
+  // Turbo
+  turbo_picks: number;
+  turbo_wins: number;
+}
+
+export interface ProMatch {
+  match_id: number;
+  duration: number;
+  start_time: number;
+  radiant_team_id: number | null;
+  radiant_name: string | null;
+  dire_team_id: number | null;
+  dire_name: string | null;
+  leagueid: number;
+  league_name: string;
+  series_id: number;
+  series_type: number;
+  radiant_score: number;
+  dire_score: number;
+  radiant_win: boolean | null;
+}
+
+/**
+ * Fetches global hero stats including pick/win rates across all brackets.
+ */
+export async function getHeroStats(): Promise<HeroStats[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/heroStats`);
+    if (!response.ok) throw new Error('Failed to fetch hero stats');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching hero stats:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetches recent professional matches.
+ */
+export async function getProMatches(limit: number = 10): Promise<ProMatch[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/proMatches`);
+    if (!response.ok) throw new Error('Failed to fetch pro matches');
+    const data = await response.json();
+    return data.slice(0, limit);
+  } catch (error) {
+    console.error('Error fetching pro matches:', error);
+    return [];
   }
 }

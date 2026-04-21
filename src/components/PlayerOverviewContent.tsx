@@ -33,7 +33,7 @@ interface CategoryStats {
 }
 
 interface PlayerOverviewContentProps {
-  accountId: string;
+  accountId: number | string;
   profile: PlayerProfile | null;
   wl: WinLossStats | null;
   matches: RecentMatch[];

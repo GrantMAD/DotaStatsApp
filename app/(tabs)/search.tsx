@@ -43,8 +43,8 @@ import { PlayerOverviewContent } from '../../src/components/PlayerOverviewConten
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Combat' | 'Economy';
 type StackItem = 
-  | { type: 'player'; id: string; data?: { profile: PlayerProfile | null; wl: WinLossStats | null; matches: RecentMatch[] } }
-  | { type: 'match'; id: number; data?: MatchDetails | null };
+  | { type: 'player', id: number | string; data?: { profile: PlayerProfile | null; wl: WinLossStats | null; matches: RecentMatch[] } }
+  | { type: 'match', id: number; data?: MatchDetails | null };
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -72,7 +72,7 @@ export default function SearchScreen() {
     }
   };
 
-  const pushPlayer = (accountId: string) => {
+  const pushPlayer = (accountId: number | string) => {
     setModalStack(prev => [...prev, { type: 'player', id: accountId }]);
   };
 
@@ -86,7 +86,7 @@ export default function SearchScreen() {
 
   const renderResult = ({ item }: { item: SearchResult }) => (
     <TouchableOpacity 
-      onPress={() => pushPlayer(item.account_id.toString())}
+      onPress={() => pushPlayer(item.account_id)}
       className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center active:bg-zinc-800"
     >
       <Image 
@@ -109,7 +109,7 @@ export default function SearchScreen() {
   return (
     <View className="flex-1 bg-gamingDark">
       {/* Search Header */}
-      <View className="pt-12 px-6 pb-6 bg-[#1e1e1e] rounded-b-3xl shadow-lg">
+      <View className="pt-2 px-6 pb-6 bg-[#1e1e2e] rounded-b-3xl shadow-lg">
         <View className="flex-row items-center mb-6">
           {!accountId && (
             <TouchableOpacity 
@@ -199,7 +199,7 @@ export default function SearchScreen() {
 function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, zIndex }: { 
   item: StackItem; 
   onClose: () => void; 
-  onPushPlayer: (id: string) => void;
+  onPushPlayer: (id: number | string) => void;
   onPushMatch: (id: number) => void;
   zIndex: number;
 }) {
@@ -270,7 +270,7 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, zIndex }: {
           visible={true}
           matchId={item.id as number}
           onClose={onClose}
-          onPushPlayer={(id) => onPushPlayer(id)}
+          onPushPlayer={onPushPlayer}
         />
       )}
     </>
