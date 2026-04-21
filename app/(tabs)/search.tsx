@@ -8,8 +8,11 @@ import {
   Image, 
   ActivityIndicator,
   Modal,
-  Pressable
+  Pressable,
+  StyleSheet
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
@@ -19,10 +22,41 @@ import {
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
 import { useSearchPlayers, usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
+import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
+import PressableScale from '../../src/components/PressableScale';
+import GlassHeader from '../../src/components/GlassHeader';
+import GlassModal from '../../src/components/GlassModal';
 
 type StackItem = 
   | { type: 'player', id: number | string }
   | { type: 'match', id: number };
+
+function SearchSkeleton() {
+  return (
+    <View style={{ paddingVertical: 20 }}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <View key={i} style={{
+          backgroundColor: '#1e1e2e',
+          padding: 16,
+          marginHorizontal: 16,
+          marginBottom: 12,
+          borderRadius: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: '#2a2a3e'
+        }}>
+          <Skeleton width={48} height={48} borderRadius={24} style={{ marginRight: 16 }} />
+          <View style={{ flex: 1 }}>
+             <Skeleton width="50%" height={18} borderRadius={4} style={{ marginBottom: 8 }} />
+             <Skeleton width="30%" height={12} borderRadius={4} />
+          </View>
+          <Skeleton width={20} height={20} borderRadius={10} />
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -52,103 +86,96 @@ export default function SearchScreen() {
     setModalStack(prev => prev.slice(0, -1));
   };
 
-  const renderResult = ({ item }: { item: SearchResult }) => (
-    <TouchableOpacity 
-      onPress={() => pushPlayer(item.account_id)}
-      className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center active:bg-zinc-800"
-    >
-      <Image 
-        source={{ uri: item.avatarfull }} 
-        className="w-12 h-12 rounded-full border border-zinc-700 mr-4"
-      />
-      <View className="flex-1">
-        <Text className="text-white font-bold text-lg" numberOfLines={1}>{item.personaname}</Text>
-        <Text className="text-gray-500 text-xs">ID: {item.account_id}</Text>
-        {item.last_match_time && (
-          <Text className="text-gray-600 text-[10px] mt-1">
-            Last match: {new Date(item.last_match_time).toLocaleDateString()}
-          </Text>
-        )}
-      </View>
-      <Ionicons name="chevron-forward" size={20} color="#4b5563" />
-    </TouchableOpacity>
+  const renderResult = ({ item, index }: { item: SearchResult, index: number }) => (
+    <PressableScale onPress={() => pushPlayer(item.account_id)}>
+      <Animated.View 
+        entering={FadeInDown.delay(index * 50).springify()}
+        className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center"
+      >
+        <Image 
+          source={{ uri: item.avatarfull }} 
+          className="w-12 h-12 rounded-full border border-zinc-700 mr-4"
+        />
+        <View className="flex-1">
+          <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>{item.personaname}</Text>
+          <Text className="text-gray-500 text-xs font-outfit">ID: {item.account_id}</Text>
+          {item.last_match_time && (
+            <Text className="text-gray-600 text-[10px] font-outfit mt-1">
+              Last match: {new Date(item.last_match_time).toLocaleDateString()}
+            </Text>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#4b5563" />
+      </Animated.View>
+    </PressableScale>
   );
 
   return (
-    <View className="flex-1 bg-gamingDark">
-      {/* Search Header */}
-      <View className="pt-2 px-6 pb-6 bg-[#1e1e2e] rounded-b-3xl shadow-lg">
-        <View className="flex-row items-center mb-6">
-          {!accountId && (
-            <TouchableOpacity 
-              onPress={() => router.push('/')}
-              className="mr-3 p-1 rounded-full bg-zinc-800"
-            >
-              <Ionicons name="chevron-back" size={24} color="white" />
-            </TouchableOpacity>
-          )}
-          <Text className="text-2xl text-white font-bold">Search Players</Text>
-        </View>
-
-        <View className="flex-row items-center bg-[#2a2a2a] px-4 py-2 rounded-xl border border-zinc-800">
-          <Ionicons name="search" size={20} color="#9ca3af" />
-          <TextInput 
-            className="flex-1 text-white ml-3 py-2"
-            placeholder="Search by name or Steam ID..."
-            placeholderTextColor="#6b7280"
-            value={query}
-            onChangeText={setQuery}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-            autoCorrect={false}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={20} color="#6b7280" />
-            </TouchableOpacity>
-          )}
-        </View>
-        <TouchableOpacity 
-          onPress={handleSearch}
-          className="bg-gamingAccent mt-4 py-3 rounded-xl items-center shadow-md active:opacity-90"
-        >
-          <Text className="text-white font-bold">Search</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Search Results */}
-      {searching ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#8b5cf6" />
-          <Text className="text-gray-400 mt-4">Searching OpenDota database...</Text>
-        </View>
-      ) : error ? (
-        <View className="flex-1 justify-center items-center px-10">
-          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
-          <Text className="text-red-500 text-center mt-4 font-semibold text-lg">Search Error</Text>
-          <Text className="text-gray-400 text-center mt-2">{(error as any).message || 'An error occurred'}</Text>
-          <TouchableOpacity onPress={handleSearch} className="mt-6 bg-zinc-800 px-6 py-2 rounded-lg">
-            <Text className="text-white font-bold">Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      ) : results.length > 0 ? (
+    <LinearGradient 
+      colors={['#1a1a2e', '#121212']} 
+      style={{ flex: 1 }}
+    >
+      <GlassHeader title="Search Players" />
+      
+      <View className="flex-1">
         <FlatList
-          data={results}
+          data={searching ? [] : results}
           keyExtractor={(item) => item.account_id.toString()}
           renderItem={renderResult}
-          contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}
+          ListHeaderComponent={
+            <View className="pt-2 px-6 pb-6">
+              <View className="flex-row items-center bg-[#2a2a2a] px-4 py-2 rounded-xl border border-zinc-800">
+                <Ionicons name="search" size={20} color="#9ca3af" />
+                <TextInput 
+                  className="flex-1 text-white ml-3 py-2 font-outfit"
+                  placeholder="Search by name or Steam ID..."
+                  placeholderTextColor="#6b7280"
+                  value={query}
+                  onChangeText={setQuery}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                  autoCorrect={false}
+                />
+                {query.length > 0 && (
+                  <TouchableOpacity onPress={() => setQuery('')}>
+                    <Ionicons name="close-circle" size={20} color="#6b7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <PressableScale 
+                onPress={handleSearch}
+                className="bg-gamingAccent mt-4 py-3 rounded-xl items-center shadow-md"
+              >
+                <Text className="text-white font-outfit-bold">Search</Text>
+              </PressableScale>
+
+              {!results.length && !searching && (
+                <View className="py-20 justify-center items-center px-10">
+                  <Ionicons name="search-outline" size={64} color="#374151" />
+                  <Text className="text-gray-400 text-center mt-4 font-outfit-semibold text-lg">
+                    {activeQuery ? `No results found for "${activeQuery}"` : "Who are you looking for?"}
+                  </Text>
+                </View>
+              )}
+            </View>
+          }
+          ListFooterComponent={searching ? <SearchSkeleton /> : null}
+          contentContainerStyle={{ paddingBottom: 40 }}
         />
-      ) : activeQuery ? (
-        <View className="flex-1 justify-center items-center px-10">
-          <Ionicons name="search-outline" size={64} color="#374151" />
-          <Text className="text-gray-400 text-center mt-4 font-semibold text-lg">No results found for "{activeQuery}"</Text>
-        </View>
-      ) : (
-        <View className="flex-1 justify-center items-center px-10">
-          <Ionicons name="search-outline" size={64} color="#374151" />
-          <Text className="text-gray-400 text-center mt-4 font-semibold text-lg">Who are you looking for?</Text>
-        </View>
-      )}
+
+        {error && (
+          <View className="absolute inset-0 justify-center items-center px-10 bg-black/40">
+             <View className="bg-[#1e1e1e] p-6 rounded-2xl border border-red-500/30 items-center">
+                <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+                <Text className="text-red-500 text-center mt-4 font-semibold text-lg">Search Error</Text>
+                <Text className="text-gray-400 text-center mt-2">{(error as any).message || 'An error occurred'}</Text>
+                <PressableScale onPress={handleSearch} className="mt-6 bg-zinc-800 px-6 py-2 rounded-lg">
+                  <Text className="text-white font-bold">Try Again</Text>
+                </PressableScale>
+             </View>
+          </View>
+        )}
+      </View>
 
       {/* Modal Stack Rendering */}
       {modalStack.map((item, index) => (
@@ -160,7 +187,7 @@ export default function SearchScreen() {
           onPushMatch={pushMatch}
         />
       ))}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -182,18 +209,13 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch }: {
 
   return (
     <>
-      <Modal animationType="slide" transparent={true} visible={item.type === 'player'} onRequestClose={onClose}>
-        <Pressable className="flex-1 bg-black/60 justify-end" onPress={onClose}>
-          <Pressable className="bg-[#1e1e1e] h-[92%] rounded-t-3xl overflow-hidden" onPress={(e) => e.stopPropagation()}>
+      <GlassModal visible={item.type === 'player'} onClose={onClose}>
             {loading ? (
-              <View className="flex-1 justify-center items-center">
-                <ActivityIndicator size="large" color="#8b5cf6" />
-                <Text className="text-gray-400 mt-4">Fetching player data...</Text>
-              </View>
+              <PlayerProfileSkeleton />
             ) : item.type === 'player' && profile ? (
               <View className="flex-1">
                 <View className="p-4 border-b border-zinc-800 flex-row justify-between items-center bg-[#1e1e1e]">
-                   <Text className="text-white font-bold ml-2">Player Details</Text>
+                   <Text className="text-white font-outfit-bold ml-2">Player Details</Text>
                    <TouchableOpacity onPress={onClose} className="p-2">
                      <Ionicons name="close" size={28} color="white" />
                    </TouchableOpacity>
@@ -206,12 +228,8 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch }: {
                   onMatchPress={(matchId) => onPushMatch(matchId)}
                 />
               </View>
-            ) : (
-              <View className="flex-1 justify-center items-center"><Text className="text-red-500">Failed to load data.</Text><TouchableOpacity onPress={onClose} className="mt-4 bg-zinc-800 px-6 py-2 rounded-lg"><Text className="text-white font-bold">Close</Text></TouchableOpacity></View>
-            )}
-          </Pressable>
-        </Pressable>
-      </Modal>
+            ) : null}
+      </GlassModal>
 
       {item.type === 'match' && (
         <MatchOverviewModal

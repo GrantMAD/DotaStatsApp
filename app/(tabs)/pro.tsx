@@ -7,7 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { League, ProTeam, ProPlayer } from '../../src/services/opendota';
 import LeagueCard from '../../src/components/LeagueCard';
@@ -18,9 +21,39 @@ import LeagueDetailModal from '../../src/components/LeagueDetailModal';
 import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { useLeagues, useProTeams, useProPlayers } from '../../src/hooks/useOpenDota';
+import Skeleton from '../../src/components/Skeleton';
+import PressableScale from '../../src/components/PressableScale';
+import GlassHeader from '../../src/components/GlassHeader';
 
 type TabType = 'Tournaments' | 'Teams' | 'Players';
 type SubTabType = 'Premium' | 'Professional' | 'Amateur';
+
+function ProSkeleton() {
+  return (
+    <View style={{ paddingHorizontal: 20 }}>
+      {[1, 2, 3, 4, 5, 6].map(i => (
+        <View key={i} style={{
+          backgroundColor: '#1e1e2e',
+          height: 80,
+          borderRadius: 12,
+          marginBottom: 12,
+          padding: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderWidth: 1,
+          borderColor: '#2a2a3e'
+        }}>
+          <Skeleton width={50} height={50} borderRadius={8} style={{ marginRight: 12 }} />
+          <View style={{ flex: 1 }}>
+             <Skeleton width="60%" height={18} borderRadius={4} style={{ marginBottom: 8 }} />
+             <Skeleton width="40%" height={12} borderRadius={4} />
+          </View>
+          <Skeleton width={30} height={20} borderRadius={6} />
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export default function ProSceneScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('Tournaments');
@@ -138,10 +171,7 @@ export default function ProSceneScreen() {
   };
 
   const renderHeader = () => (
-    <View style={{ padding: 20, backgroundColor: '#121212' }}>
-      <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', marginBottom: 20 }}>
-        Pro Scene
-      </Text>
+    <View style={{ paddingBottom: 20, paddingTop: 10 }}>
       <View
         style={{
           flexDirection: 'row',
@@ -149,10 +179,11 @@ export default function ProSceneScreen() {
           padding: 4,
           borderRadius: 12,
           marginBottom: 16,
+          marginHorizontal: 20,
         }}
       >
         {(['Tournaments', 'Teams', 'Players'] as TabType[]).map((tab) => (
-          <TouchableOpacity
+          <PressableScale
             key={tab}
             onPress={() => {
               setActiveTab(tab);
@@ -176,12 +207,12 @@ export default function ProSceneScreen() {
             >
               {tab}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 20 }}>
         {(['Premium', 'Professional', 'Amateur'] as SubTabType[]).map((tab) => (
-          <TouchableOpacity
+          <PressableScale
             key={tab}
             onPress={() => {
               setSubTab(tab);
@@ -207,7 +238,7 @@ export default function ProSceneScreen() {
             >
               {tab}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
       <View
@@ -220,6 +251,7 @@ export default function ProSceneScreen() {
           height: 48,
           borderWidth: 1,
           borderColor: '#2a2a3e',
+          marginHorizontal: 20,
         }}
       >
         <Ionicons name="search" size={18} color="#666" />
@@ -244,17 +276,16 @@ export default function ProSceneScreen() {
       </View>
     </View>
   );
-
   return (
-    <View style={{ flex: 1, backgroundColor: '#121212' }}>
+    <LinearGradient 
+      colors={['#1a1a2e', '#121212']} 
+      style={{ flex: 1 }}
+    >
+      <GlassHeader title="Pro Scene" />
       <View style={{ flex: 1 }}>
-        {renderHeader()}
         {loading ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator color="#8b5cf6" size="large" />
-            <Text style={{ color: '#444', marginTop: 12, fontWeight: '700' }}>
-              Fetching Pro Data...
-            </Text>
+          <View style={{ marginTop: 20 }}>
+            <ProSkeleton />
           </View>
         ) : (
           <FlatList
@@ -270,7 +301,8 @@ export default function ProSceneScreen() {
               if (activeTab === 'Teams') return `t-${item.team_id}`;
               return `p-${item.account_id}`;
             }}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+            ListHeaderComponent={renderHeader()}
+            contentContainerStyle={{ paddingBottom: 40 }}
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
@@ -278,23 +310,29 @@ export default function ProSceneScreen() {
                 tintColor="#8b5cf6"
               />
             }
-            renderItem={({ item }) => {
+            renderItem={({ item, index }) => {
               if (activeTab === 'Tournaments') {
                 return (
-                  <LeagueCard league={item as League} onPress={handleLeaguePress} />
+                  <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                    <LeagueCard league={item as League} onPress={handleLeaguePress} />
+                  </Animated.View>
                 );
               } else if (activeTab === 'Teams') {
                 const team = item as ProTeam;
                 const rank = teams.indexOf(team) + 1;
                 return (
-                  <TeamListItem team={team} rank={rank} onPress={handleTeamPress} />
+                  <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                    <TeamListItem team={team} rank={rank} onPress={handleTeamPress} />
+                  </Animated.View>
                 );
               } else {
                 return (
-                  <ProPlayerItem
-                    player={item as ProPlayer}
-                    onPress={handlePlayerPress}
-                  />
+                  <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                    <ProPlayerItem
+                      player={item as ProPlayer}
+                      onPress={handlePlayerPress}
+                    />
+                  </Animated.View>
                 );
               }
             }}
@@ -332,6 +370,6 @@ export default function ProSceneScreen() {
         onClose={() => setMatchModalVisible(false)}
         onPushPlayer={handlePlayerPress}
       />
-    </View>
+    </LinearGradient>
   );
 }

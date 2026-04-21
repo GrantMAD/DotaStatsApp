@@ -4,6 +4,8 @@ import {
   View, Text, Image, TouchableOpacity, TextInput,
   ScrollView, FlatList, ActivityIndicator, RefreshControl,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { HeroStats, ProMatch, searchPlayers } from '../../src/services/opendota';
@@ -18,6 +20,9 @@ import RecordCard from '../../src/components/RecordCard';
 import { SearchResult } from '../../src/services/opendota';
 import { useHeroStats, useProMatches, useLiveGames, useGlobalRecords } from '../../src/hooks/useOpenDota';
 import { queryClient } from '../../src/services/queryClient';
+import Skeleton from '../../src/components/Skeleton';
+import PressableScale from '../../src/components/PressableScale';
+import GlassHeader from '../../src/components/GlassHeader';
 
 // Minimum picks threshold to avoid heroes with tiny sample sizes
 const MIN_PICKS = 5000;
@@ -89,15 +94,71 @@ function SectionHeader({ icon, title, color }: { icon: string; title: string; co
   );
 }
 
-function LoadingSkeleton() {
+function HeroCardSkeleton() {
   return (
     <View style={{ flexDirection: 'row', paddingHorizontal: 20 }}>
       {[1, 2, 3].map(i => (
         <View key={i} style={{
-          width: 140, height: 160, backgroundColor: '#1e1e2e',
-          borderRadius: 12, marginRight: 12,
+          width: 140, height: 180, backgroundColor: '#1e1e2e',
+          borderRadius: 12, marginRight: 12, padding: 12,
+          borderWidth: 1, borderColor: '#2a2a3e'
         }}>
-          <ActivityIndicator color="#8b5cf6" style={{ flex: 1 }} />
+          <Skeleton width="100%" height={80} borderRadius={8} />
+          <Skeleton width="80%" height={16} borderRadius={4} style={{ marginTop: 12 }} />
+          <Skeleton width="60%" height={12} borderRadius={4} style={{ marginTop: 8 }} />
+          <View style={{ flex: 1 }} />
+          <Skeleton width="100%" height={24} borderRadius={6} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ProMatchSkeleton() {
+  return (
+    <View style={{ flexDirection: 'row', paddingHorizontal: 20 }}>
+      {[1, 2].map(i => (
+        <View key={i} style={{
+          width: 280, height: 160, backgroundColor: '#1e1e2e',
+          borderRadius: 16, marginRight: 12, padding: 16,
+          borderWidth: 1, borderColor: '#2a2a3e'
+        }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+             <Skeleton width={80} height={40} borderRadius={8} />
+             <Skeleton width={40} height={20} borderRadius={4} style={{ marginTop: 10 }} />
+             <Skeleton width={80} height={40} borderRadius={8} />
+          </View>
+          <Skeleton width="100%" height={12} borderRadius={4} style={{ marginBottom: 8 }} />
+          <Skeleton width="70%" height={12} borderRadius={4} />
+          <View style={{ flex: 1 }} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+             <Skeleton width={100} height={10} borderRadius={2} />
+             <Skeleton width={60} height={10} borderRadius={2} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ProBanSkeleton() {
+  return (
+    <View style={{ paddingHorizontal: 20 }}>
+      {[1, 2, 3, 4, 5].map(i => (
+        <View key={i} style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#1e1e2e',
+          borderRadius: 10,
+          padding: 10,
+          marginBottom: 8,
+          borderWidth: 1,
+          borderColor: '#2a2a3e',
+        }}>
+          <Skeleton width={20} height={14} borderRadius={2} style={{ marginRight: 10 }} />
+          <Skeleton width={40} height={22} borderRadius={4} style={{ marginRight: 10 }} />
+          <Skeleton width="40%" height={14} borderRadius={4} style={{ flex: 1 }} />
+          <Skeleton width={60} height={20} borderRadius={6} />
         </View>
       ))}
     </View>
@@ -107,18 +168,21 @@ function LoadingSkeleton() {
 function ProBanItem({ hero, index, onPress }: { hero: ProcessedHero; index: number; onPress: () => void }) {
   const imgUrl = `https://cdn.cloudflare.steamstatic.com${hero.img}`;
   return (
-    <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#1e1e2e',
-        borderRadius: 10,
-        padding: 10,
-        marginBottom: 8,
-        marginHorizontal: 20,
-        borderWidth: 1,
-        borderColor: '#2a2a3e',
-      }}>
+    <PressableScale onPress={onPress}>
+      <Animated.View 
+        entering={FadeInDown.delay(index * 100).springify()}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#1e1e2e',
+          borderRadius: 10,
+          padding: 10,
+          marginBottom: 8,
+          marginHorizontal: 20,
+          borderWidth: 1,
+          borderColor: '#2a2a3e',
+        }}
+      >
         <Text style={{ color: '#ef4444', fontSize: 14, fontWeight: '800', width: 24 }}>
           {index + 1}
         </Text>
@@ -141,8 +205,8 @@ function ProBanItem({ hero, index, onPress }: { hero: ProcessedHero; index: numb
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={14} color="#444" style={{ marginLeft: 8 }} />
-      </View>
-    </TouchableOpacity>
+      </Animated.View>
+    </PressableScale>
   );
 }
 
@@ -235,8 +299,8 @@ export default function HomeScreen() {
     setMatchModalVisible(true);
   }, []);
 
-  const openPlayerDetails = useCallback((accountId: string) => {
-    setSelectedPlayerId(accountId);
+  const openPlayerDetails = useCallback((accountId: string | number) => {
+    setSelectedPlayerId(accountId.toString());
     setPlayerModalVisible(true);
   }, []);
 
@@ -260,111 +324,122 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: '#121212' }}
-      contentContainerStyle={{ paddingBottom: 40 }}
-      refreshControl={
-        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
-      }
+    <LinearGradient 
+      colors={['#1a1a2e', '#121212']} 
+      style={{ flex: 1 }}
     >
-      {/* Header Area */}
-      <View style={{ alignItems: 'center', paddingTop: 24, paddingHorizontal: 24 }}>
-        <Image
-          source={require('../../assets/images/dota_logo_placeholder.png')}
-          style={{ width: 48, height: 48, marginBottom: 16 }}
-          resizeMode="contain"
-        />
-        <Text style={{ fontSize: 28, color: '#fff', fontWeight: '800', marginBottom: 6, textAlign: 'center' }}>
-          Dota Stuff
-        </Text>
-        <Text style={{ color: '#888', textAlign: 'center', fontSize: 13, lineHeight: 18, marginBottom: 16 }}>
-          Hero stats, pro matches, and performance insights
-        </Text>
+      <GlassHeader>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Image
+            source={require('../../assets/images/dota_logo_placeholder.png')}
+            style={{ width: 32, height: 32, marginRight: 12 }}
+            resizeMode="contain"
+          />
+          <Text style={{ fontSize: 20, color: '#fff', fontWeight: '900', letterSpacing: 0.5 }}>
+            DOTA APP
+          </Text>
+        </View>
+      </GlassHeader>
 
-        {/* Login / Signed-in indicator */}
-        {!accountId ? (
-          <TouchableOpacity onPress={login} style={{ width: '100%', marginBottom: 16 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
+        }
+      >
+        {/* Header Content Area */}
+        <View style={{ paddingTop: 20, paddingHorizontal: 24 }}>
+          <Text style={{ fontSize: 28, color: '#fff', fontWeight: '800', marginBottom: 6 }}>
+            Dota Stuff
+          </Text>
+          <Text style={{ color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 20 }}>
+            Hero stats, pro matches, and performance insights
+          </Text>
+
+          {/* Login / Signed-in indicator */}
+          {!accountId ? (
+            <PressableScale onPress={login} style={{ width: '100%', marginBottom: 16 }}>
+              <View style={{
+                backgroundColor: '#8b5cf6',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 14,
+                borderRadius: 12,
+              }}>
+                <Ionicons name="logo-steam" size={20} color="#fff" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign in with Steam</Text>
+              </View>
+            </PressableScale>
+          ) : (
+            <PressableScale 
+              onPress={() => router.push('/dashboard')}
+              style={{ width: '100%', marginBottom: 16 }}
+            >
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#1E1E2E',
+                paddingVertical: 14,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#22c55e',
+                borderStyle: 'dashed',
+              }}>
+                <Ionicons name="person-circle" size={20} color="#22c55e" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>View My Dashboard</Text>
+                <Ionicons name="chevron-forward" size={16} color="#22c55e" style={{ marginLeft: 8 }} />
+              </View>
+            </PressableScale>
+          )}
+
+          {/* Search bar */}
+          <View style={{ width: '100%' }}>
             <View style={{
-              backgroundColor: '#8b5cf6',
               flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'center',
-              paddingVertical: 14,
-              borderRadius: 12,
-            }}>
-              <Ionicons name="logo-steam" size={20} color="#fff" style={{ marginRight: 10 }} />
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign in with Steam</Text>
-            </View>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity 
-            onPress={() => router.push('/dashboard')}
-            activeOpacity={0.7}
-            style={{ width: '100%', marginBottom: 16 }}
-          >
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#1E1E2E',
-              paddingVertical: 14,
-              borderRadius: 12,
+              backgroundColor: '#1e1e2e',
+              padding: 12,
+              borderRadius: 10,
               borderWidth: 1,
-              borderColor: '#22c55e',
-              borderStyle: 'dashed',
+              borderColor: '#2a2a3e',
             }}>
-              <Ionicons name="person-circle" size={20} color="#22c55e" style={{ marginRight: 10 }} />
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>View My Dashboard</Text>
-              <Ionicons name="chevron-forward" size={16} color="#22c55e" style={{ marginLeft: 8 }} />
+              <Ionicons name="search" size={18} color="#555" style={{ marginRight: 10 }} />
+              <TextInput
+                placeholder="Search for players, heroes..."
+                placeholderTextColor="#555"
+                style={{ flex: 1, color: '#fff', fontSize: 14 }}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
+                autoCorrect={false}
+              />
+              {searchQuery.trim().length > 0 && (
+                <PressableScale 
+                  onPress={handleSearch}
+                  style={{
+                    backgroundColor: '#8b5cf6',
+                    width: 32,
+                    height: 32,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginLeft: 10
+                  }}
+                >
+                  <Ionicons name="arrow-forward" size={18} color="#fff" />
+                </PressableScale>
+              )}
             </View>
-          </TouchableOpacity>
-        )}
-
-        {/* Search bar */}
-        <View style={{ width: '100%' }}>
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: '#1e1e2e',
-            padding: 12,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: '#2a2a3e',
-          }}>
-            <Ionicons name="search" size={18} color="#555" style={{ marginRight: 10 }} />
-            <TextInput
-              placeholder="Search for players, heroes..."
-              placeholderTextColor="#555"
-              style={{ flex: 1, color: '#fff', fontSize: 14 }}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
-              autoCorrect={false}
-            />
-            {searchQuery.trim().length > 0 && (
-              <TouchableOpacity 
-                onPress={handleSearch}
-                style={{
-                  backgroundColor: '#8b5cf6',
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginLeft: 10
-                }}
-              >
-                <Ionicons name="arrow-forward" size={18} color="#fff" />
-              </TouchableOpacity>
-            )}
           </View>
         </View>
-      </View>
 
       {/* ─── Section 1: Top Win Rate Heroes ─── */}
       <SectionHeader icon="trophy" title="Highest Win Rate" color="#f59e0b" />
-      {isLoading ? <LoadingSkeleton /> : (
+      {isLoading ? <HeroCardSkeleton /> : (
         <FlatList
           data={topWinRate}
           horizontal
@@ -372,23 +447,25 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingHorizontal: 20 }}
           keyExtractor={(item) => `wr-${item.id}`}
           renderItem={({ item, index }) => (
-            <TouchableOpacity activeOpacity={0.7} onPress={() => openHeroModal(item.id)}>
-              <HeroStatsCard
-                heroName={item.name}
-                heroImg={item.img}
-                winRate={item.winRate}
-                pickCount={item.picks}
-                rank={index + 1}
-                mode="winrate"
-              />
-            </TouchableOpacity>
+            <PressableScale onPress={() => openHeroModal(item.id)}>
+              <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+                <HeroStatsCard
+                  heroName={item.name}
+                  heroImg={item.img}
+                  winRate={item.winRate}
+                  pickCount={item.picks}
+                  rank={index + 1}
+                  mode="winrate"
+                />
+              </Animated.View>
+            </PressableScale>
           )}
         />
       )}
 
       {/* ─── Section 2: Most Picked Heroes ─── */}
       <SectionHeader icon="flame" title="Most Picked" color="#ef4444" />
-      {isLoading ? <LoadingSkeleton /> : (
+      {isLoading ? <HeroCardSkeleton /> : (
         <FlatList
           data={mostPicked}
           horizontal
@@ -396,23 +473,25 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingHorizontal: 20 }}
           keyExtractor={(item) => `pk-${item.id}`}
           renderItem={({ item, index }) => (
-            <TouchableOpacity activeOpacity={0.7} onPress={() => openHeroModal(item.id)}>
-              <HeroStatsCard
-                heroName={item.name}
-                heroImg={item.img}
-                winRate={item.winRate}
-                pickCount={item.picks}
-                rank={index + 1}
-                mode="picks"
-              />
-            </TouchableOpacity>
+            <PressableScale onPress={() => openHeroModal(item.id)}>
+              <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+                <HeroStatsCard
+                  heroName={item.name}
+                  heroImg={item.img}
+                  winRate={item.winRate}
+                  pickCount={item.picks}
+                  rank={index + 1}
+                  mode="picks"
+                />
+              </Animated.View>
+            </PressableScale>
           )}
         />
       )}
 
       {/* ─── Section 3: Pro Scene ─── */}
       <SectionHeader icon="star" title="Pro Scene — Top Picks" color="#8b5cf6" />
-      {isLoading ? <LoadingSkeleton /> : (
+      {isLoading ? <HeroCardSkeleton /> : (
         <FlatList
           data={proPicks}
           horizontal
@@ -420,27 +499,25 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingHorizontal: 20 }}
           keyExtractor={(item) => `pp-${item.id}`}
           renderItem={({ item, index }) => (
-            <TouchableOpacity activeOpacity={0.7} onPress={() => openHeroModal(item.id)}>
-              <HeroStatsCard
-                heroName={item.name}
-                heroImg={item.img}
-                winRate={item.winRate}
-                pickCount={item.picks}
-                rank={index + 1}
-                mode="picks"
-              />
-            </TouchableOpacity>
+            <PressableScale onPress={() => openHeroModal(item.id)}>
+              <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+                <HeroStatsCard
+                  heroName={item.name}
+                  heroImg={item.img}
+                  winRate={item.winRate}
+                  pickCount={item.picks}
+                  rank={index + 1}
+                  mode="picks"
+                />
+              </Animated.View>
+            </PressableScale>
           )}
         />
       )}
 
       {/* Pro Bans */}
       <SectionHeader icon="ban" title="Pro Scene — Most Banned" color="#ef4444" />
-      {isLoading ? (
-        <View style={{ paddingHorizontal: 20 }}>
-          <ActivityIndicator color="#8b5cf6" />
-        </View>
-      ) : (
+      {isLoading ? <ProBanSkeleton /> : (
         proBans.slice(0, 5).map((hero, index) => (
           <ProBanItem key={`ban-${hero.id}`} hero={hero} index={index} onPress={() => openHeroModal(hero.id)} />
         ))
@@ -448,26 +525,28 @@ export default function HomeScreen() {
 
       {/* Recent Pro Matches */}
       <SectionHeader icon="game-controller" title="Recent Pro Matches" color="#3b82f6" />
-      {isLoading ? <LoadingSkeleton /> : (
+      {isLoading ? <ProMatchSkeleton /> : (
         <FlatList
           data={proMatchesData}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 20 }}
           keyExtractor={(item) => `pm-${item.match_id}`}
-          renderItem={({ item }) => (
-            <TouchableOpacity activeOpacity={0.7} onPress={() => openMatchModal(item)}>
-              <ProMatchCard
-                radiantName={item.radiant_name}
-                direName={item.dire_name}
-                radiantScore={item.radiant_score}
-                direScore={item.dire_score}
-                radiantWin={item.radiant_win}
-                duration={item.duration}
-                leagueName={item.league_name}
-                startTime={item.start_time}
-              />
-            </TouchableOpacity>
+          renderItem={({ item, index }) => (
+            <PressableScale onPress={() => openMatchModal(item)}>
+              <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+                <ProMatchCard
+                  radiantName={item.radiant_name}
+                  direName={item.dire_name}
+                  radiantScore={item.radiant_score}
+                  direScore={item.dire_score}
+                  radiantWin={item.radiant_win}
+                  duration={item.duration}
+                  leagueName={item.league_name}
+                  startTime={item.start_time}
+                />
+              </Animated.View>
+            </PressableScale>
           )}
         />
       )}
@@ -482,9 +561,14 @@ export default function HomeScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 20 }}
             keyExtractor={(item) => `live-${item.match_id}`}
-            renderItem={({ item }) => (
-              <LiveGameCard game={item} onPress={openMatchById} />
+            renderItem={({ item, index }) => (
+              <PressableScale onPress={() => openMatchById(item.match_id)}>
+                <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+                  <LiveGameCard game={item} onPress={openMatchById} />
+                </Animated.View>
+              </PressableScale>
             )}
+
           />
         </>
       )}
@@ -493,30 +577,36 @@ export default function HomeScreen() {
       {(records.gpm || records.kills || records.healing) && (
         <>
           <SectionHeader icon="medal" title="Global All-Time Records" color="#f59e0b" />
-          <RecordCard 
-            title="Highest GPM Ever" 
-            field="gold_per_min" 
-            record={records.gpm} 
-            icon="cash" 
-            color="#eab308" 
-            onPress={openMatchById} 
-          />
-          <RecordCard 
-            title="Most Kills in a Match" 
-            field="kills" 
-            record={records.kills} 
-            icon="skull" 
-            color="#ef4444" 
-            onPress={openMatchById} 
-          />
-          <RecordCard 
-            title="Legendary Support Impact" 
-            field="hero_healing" 
-            record={records.healing} 
-            icon="heart" 
-            color="#3b82f6" 
-            onPress={openMatchById} 
-          />
+          <Animated.View entering={FadeInDown.delay(100).springify()}>
+            <RecordCard 
+              title="Highest GPM Ever" 
+              field="gold_per_min" 
+              record={records.gpm} 
+              icon="cash" 
+              color="#eab308" 
+              onPress={openMatchById} 
+            />
+          </Animated.View>
+          <Animated.View entering={FadeInDown.delay(200).springify()}>
+            <RecordCard 
+              title="Most Kills in a Match" 
+              field="kills" 
+              record={records.kills} 
+              icon="skull" 
+              color="#ef4444" 
+              onPress={openMatchById} 
+            />
+          </Animated.View>
+          <Animated.View entering={FadeInDown.delay(300).springify()}>
+            <RecordCard 
+              title="Legendary Support Impact" 
+              field="hero_healing" 
+              record={records.healing} 
+              icon="heart" 
+              color="#3b82f6" 
+              onPress={openMatchById} 
+            />
+          </Animated.View>
         </>
       )}
 
@@ -564,6 +654,7 @@ export default function HomeScreen() {
           openMatchById(id);
         }}
       />
-    </ScrollView>
+      </ScrollView>
+    </LinearGradient>
   );
 }

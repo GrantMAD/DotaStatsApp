@@ -8,10 +8,16 @@ import {
   TouchableOpacity
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
 import { usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
+import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
+import GlassHeader from '../../src/components/GlassHeader';
+import GlassModal from '../../src/components/GlassModal';
+import MeshGradient from '../../src/components/MeshGradient';
+
 
 export default function DashboardScreen() {
   const { accountId } = useSteamAuth();
@@ -61,15 +67,15 @@ export default function DashboardScreen() {
   };
 
   if (loading && !profile) {
-    return (
-      <View className="flex-1 bg-gamingDark justify-center items-center">
-        <ActivityIndicator size="large" color="#8b5cf6" />
-      </View>
-    );
+    return <PlayerProfileSkeleton />;
   }
 
   return (
-    <View className="flex-1 bg-gamingDark">
+    <LinearGradient 
+      colors={['#1a1a2e', '#121212']} 
+      style={{ flex: 1 }}
+    >
+      <GlassHeader title="My Dashboard" />
       <PlayerOverviewContent
         accountId={accountId!}
         profile={profile || null}
@@ -89,15 +95,17 @@ export default function DashboardScreen() {
       />
 
       {/* Player Detail Modal */}
-      <Modal visible={playerModalVisible} animationType="slide" transparent={true} onRequestClose={() => setPlayerModalVisible(false)}>
-        <Pressable className="flex-1 bg-black/80 justify-end" onPress={() => setPlayerModalVisible(false)}>
-          <Pressable className="bg-[#1e1e1e] h-[92%] rounded-t-3xl overflow-hidden" onPress={(e) => e.stopPropagation()}>
+      {/* Player Profile Drill-down Modal */}
+      <GlassModal
+        visible={playerModalVisible}
+        onClose={() => setPlayerModalVisible(false)}
+      >
             {playerDetailsLoading ? (
-              <View className="flex-1 justify-center items-center"><ActivityIndicator size="large" color="#8b5cf6" /><Text className="text-gray-400 mt-4">Loading player profile...</Text></View>
+              <PlayerProfileSkeleton />
             ) : selectedPlayerProfile ? (
               <View className="flex-1">
                 <View className="p-4 border-b border-zinc-800 flex-row justify-between items-center bg-[#1e1e1e]">
-                   <Text className="text-white font-bold ml-2">Player Details</Text>
+                   <Text className="text-white font-outfit-bold ml-2">Player Details</Text>
                    <TouchableOpacity onPress={() => setPlayerModalVisible(false)} className="p-2">
                      <Ionicons name="close" size={28} color="white" />
                    </TouchableOpacity>
@@ -113,10 +121,10 @@ export default function DashboardScreen() {
                   }}
                 />
               </View>
-            ) : null}
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </View>
+            ) : (
+              <View className="flex-1 justify-center items-center"><Text className="text-red-500">Failed to load data.</Text></View>
+            )}
+      </GlassModal>
+    </LinearGradient>
   );
 }

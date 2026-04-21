@@ -30,6 +30,7 @@ export default function LeagueCard({ league, onPress }: Props) {
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: '#2a2a3e',
+        marginHorizontal: 16,
       }}
     >
       {league.banner ? (

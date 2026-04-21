@@ -10,6 +10,7 @@ import {
   ScrollView,
   Dimensions
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { 
   PlayerProfile, 
@@ -22,6 +23,38 @@ import {
 } from '../services/opendota';
 import { getHeroImageUrl, HEROES, REGIONS } from '../services/constants';
 import { RankBadge } from './RankBadge';
+import PressableScale from './PressableScale';
+import Skeleton from './Skeleton';
+import MeshGradient from './MeshGradient';
+
+function LifetimeStatsSkeleton() {
+  return (
+    <View className="flex-1">
+      {[1, 2, 3].map(i => (
+        <View key={i} className="mx-4 mb-6 bg-[#1e1e1e] rounded-2xl overflow-hidden border border-white/5">
+          <View className="flex-row items-center bg-zinc-800/50 p-4 border-b border-white/5">
+            <Skeleton width={20} height={20} borderRadius={10} style={{ marginRight: 12 }} />
+            <Skeleton width={100} height={14} borderRadius={4} />
+          </View>
+          <View className="p-4">
+            {[1, 2].map(j => (
+              <View key={j} className={`flex-row justify-between items-center ${j === 1 ? 'mb-4 pb-4 border-b border-white/5' : ''}`}>
+                <View className="flex-1">
+                  <Skeleton width="60%" height={16} borderRadius={4} style={{ marginBottom: 8 }} />
+                  <Skeleton width="40%" height={12} borderRadius={4} />
+                </View>
+                <View className="items-end">
+                   <Skeleton width={50} height={24} borderRadius={6} style={{ marginBottom: 4 }} />
+                   <Skeleton width={30} height={10} borderRadius={2} />
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 type DashboardTab = 'Recent' | 'Lifetime';
 
@@ -129,126 +162,139 @@ export function PlayerOverviewContent({
   };
 
   const renderHeader = () => (
-    <View className="bg-[#1e1e1e] p-6 rounded-b-3xl shadow-lg mb-4">
-      <View className="flex-row items-center mb-6">
-        {profile?.profile?.avatarfull ? (
-          <Image source={{ uri: profile.profile.avatarfull }} className="w-20 h-20 rounded-full border-2 border-gamingAccent mr-4" />
-        ) : (
-          <View className="w-20 h-20 rounded-full bg-gray-600 mr-4" />
-        )}
-        <View className="flex-1">
-          <Text className="text-2xl text-white font-bold" numberOfLines={1}>{profile?.profile?.personaname || 'Unknown Player'}</Text>
-          <Text className="text-gray-400">Account ID: {accountId}</Text>
+    <View className="mb-4">
+      <MeshGradient 
+        intensity="low"
+        colors={['#1e1e1e', '#1a1a2e', '#2d1b4e']}
+        className="p-6 rounded-b-3xl shadow-lg border-b border-white/5 overflow-hidden"
+      >
+        <View className="flex-row items-center">
+          {profile?.profile?.avatarfull ? (
+            <Image source={{ uri: profile.profile.avatarfull }} className="w-20 h-20 rounded-full border-2 border-gamingAccent mr-4" />
+          ) : (
+            <View className="w-20 h-20 rounded-full bg-gray-600 mr-4" />
+          )}
+          <View className="flex-1">
+            <Text className="text-2xl text-white font-outfit-bold" numberOfLines={1}>{profile?.profile?.personaname || 'Unknown Player'}</Text>
+            <Text className="text-gray-400 font-outfit">Account ID: {accountId}</Text>
+          </View>
+          <RankBadge rankTier={profile?.rank_tier || null} leaderboardRank={profile?.leaderboard_rank || null} size={60} />
         </View>
-        <RankBadge rankTier={profile?.rank_tier || null} leaderboardRank={profile?.leaderboard_rank || null} size={60} />
-      </View>
+      </MeshGradient>
       
-      {activeTab === 'Recent' && wl && (
-        <View className="flex-row justify-between bg-[#2a2a2a] p-4 rounded-xl mb-6">
-          <View className="items-center">
-            <Text className="text-gray-400 text-xs uppercase tracking-widest">Wins</Text>
-            <Text className="text-win text-xl font-bold">{wl.win}</Text>
+      <View className="mt-6 px-4">
+        {activeTab === 'Recent' && wl && (
+          <View className="flex-row justify-between bg-[#2a2a2a] p-4 rounded-xl shadow-sm mb-6">
+            <View className="items-center">
+              <Text className="text-gray-400 text-xs uppercase tracking-widest font-outfit-bold">Wins</Text>
+              <Text className="text-win text-xl font-outfit-bold">{wl.win}</Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-gray-400 text-xs uppercase tracking-widest font-outfit-bold">Losses</Text>
+              <Text className="text-loss text-xl font-outfit-bold">{wl.lose}</Text>
+            </View>
+            <View className="items-center">
+              <Text className="text-gray-400 text-xs uppercase tracking-widest font-outfit-bold">Win Rate</Text>
+              <Text className="text-white text-xl font-outfit-bold">{wl.win + wl.lose > 0 ? ((wl.win / (wl.win + wl.lose)) * 100).toFixed(2) : '0.00'}%</Text>
+            </View>
           </View>
-          <View className="items-center">
-            <Text className="text-gray-400 text-xs uppercase tracking-widest">Losses</Text>
-            <Text className="text-loss text-xl font-bold">{wl.lose}</Text>
-          </View>
-          <View className="items-center">
-            <Text className="text-gray-400 text-xs uppercase tracking-widest">Win Rate</Text>
-            <Text className="text-white text-xl font-bold">{wl.win + wl.lose > 0 ? ((wl.win / (wl.win + wl.lose)) * 100).toFixed(2) : '0.00'}%</Text>
-          </View>
-        </View>
-      )}
+        )}
 
-      {activeTab === 'Lifetime' && totals.length > 0 && (
-        <View className="flex-col bg-[#2a2a2a] p-4 rounded-xl mb-6">
-          <View className="flex-row justify-between mb-4 pb-4 border-b border-white/5">
-            <View className="items-center flex-1">
-              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Total Matches</Text>
-              <Text className="text-white text-xl font-bold">{wl ? wl.win + wl.lose : 0}</Text>
+        {activeTab === 'Lifetime' && totals.length > 0 && (
+          <View className="flex-col bg-[#2a2a2a] p-4 rounded-xl shadow-sm mb-6">
+            <View className="flex-row justify-between mb-4 pb-4 border-b border-white/5">
+              <View className="items-center flex-1">
+                <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">Total Matches</Text>
+                <Text className="text-white text-xl font-outfit-bold">{wl ? wl.win + wl.lose : 0}</Text>
+              </View>
+              <View className="items-center flex-1 border-x border-white/5">
+                <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">Win Rate</Text>
+                <Text className={`text-xl font-outfit-bold ${wl && wl.win / (wl.win + wl.lose) >= 0.5 ? 'text-win' : 'text-loss'}`}>
+                  {wl && wl.win + wl.lose > 0 ? ((wl.win / (wl.win + wl.lose)) * 100).toFixed(2) : '0.00'}%
+                </Text>
+              </View>
+              <View className="items-center flex-1">
+                <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">K/D/A</Text>
+                <Text className="text-white text-xl font-outfit-bold">
+                  {(() => {
+                    const k = totals.find(t => t.field === 'kills')?.sum || 0;
+                    const d = totals.find(t => t.field === 'deaths')?.sum || 0;
+                    const a = totals.find(t => t.field === 'assists')?.sum || 0;
+                    const n = totals.find(t => t.field === 'kills')?.n || 1;
+                    return `${(k/n).toFixed(1)}/${(d/n).toFixed(1)}/${(a/n).toFixed(1)}`;
+                  })()}
+                </Text>
+              </View>
             </View>
-            <View className="items-center flex-1 border-x border-white/5">
-              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Win Rate</Text>
-              <Text className={`text-xl font-bold ${wl && wl.win / (wl.win + wl.lose) >= 0.5 ? 'text-win' : 'text-loss'}`}>
-                {wl && wl.win + wl.lose > 0 ? ((wl.win / (wl.win + wl.lose)) * 100).toFixed(2) : '0.00'}%
-              </Text>
-            </View>
-            <View className="items-center flex-1">
-              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">K/D/A</Text>
-              <Text className="text-white text-xl font-bold">
-                {(() => {
-                  const k = totals.find(t => t.field === 'kills')?.sum || 0;
-                  const d = totals.find(t => t.field === 'deaths')?.sum || 0;
-                  const a = totals.find(t => t.field === 'assists')?.sum || 0;
-                  const n = totals.find(t => t.field === 'kills')?.n || 1;
-                  return `${(k/n).toFixed(1)}/${(d/n).toFixed(1)}/${(a/n).toFixed(1)}`;
-                })()}
-              </Text>
+            <View className="flex-row justify-around">
+              <View className="items-center">
+                <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">Avg GPM</Text>
+                <Text className="text-yellow-500 text-lg font-outfit-bold">
+                  {Math.round((totals.find(t => t.field === 'gold_per_min')?.sum || 0) / (totals.find(t => t.field === 'gold_per_min')?.n || 1))}
+                </Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">Avg XPM</Text>
+                <Text className="text-blue-500 text-lg font-outfit-bold">
+                  {Math.round((totals.find(t => t.field === 'xp_per_min')?.sum || 0) / (totals.find(t => t.field === 'xp_per_min')?.n || 1))}
+                </Text>
+              </View>
+              <View className="items-center">
+                <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">Impact</Text>
+                <Text className="text-red-500 text-lg font-outfit-bold">
+                  {Math.round((totals.find(t => t.field === 'hero_damage')?.sum || 0) / (totals.find(t => t.field === 'hero_damage')?.n || 1)).toLocaleString()}
+                </Text>
+              </View>
             </View>
           </View>
-          <View className="flex-row justify-around">
-            <View className="items-center">
-              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Avg GPM</Text>
-              <Text className="text-yellow-500 text-lg font-bold">
-                {Math.round((totals.find(t => t.field === 'gold_per_min')?.sum || 0) / (totals.find(t => t.field === 'gold_per_min')?.n || 1))}
-              </Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Avg XPM</Text>
-              <Text className="text-blue-500 text-lg font-bold">
-                {Math.round((totals.find(t => t.field === 'xp_per_min')?.sum || 0) / (totals.find(t => t.field === 'xp_per_min')?.n || 1))}
-              </Text>
-            </View>
-            <View className="items-center">
-              <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-bold">Impact</Text>
-              <Text className="text-red-500 text-lg font-bold">
-                {Math.round((totals.find(t => t.field === 'hero_damage')?.sum || 0) / (totals.find(t => t.field === 'hero_damage')?.n || 1)).toLocaleString()}
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
+        )}
 
-      {/* Dashboard Tabs */}
-      <View className="flex-row bg-[#2a2a2a] rounded-xl p-1">
-        {(['Recent', 'Lifetime'] as DashboardTab[]).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
-          >
-            <Text className={`font-bold text-sm ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
-              {tab === 'Recent' ? 'RECENT MATCHES' : 'LIFETIME STATS'}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {/* Dashboard Tabs */}
+        <View className="flex-row bg-[#2a2a2a] rounded-xl p-1 mb-4">
+          {(['Recent', 'Lifetime'] as DashboardTab[]).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
+            >
+              <Text className={`font-outfit-bold text-sm ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
+                {tab === 'Recent' ? 'RECENT MATCHES' : 'LIFETIME STATS'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     </View>
   );
 
   const renderStatSection = (title: string, icon: string, stats: CategoryStats[]) => (
-    <View key={title} className="mx-4 mb-6 bg-[#1e1e1e] rounded-2xl overflow-hidden border border-white/5">
+    <Animated.View 
+      key={title} 
+      entering={FadeInDown.delay(200).springify()}
+      style={{ marginHorizontal: 16 }}
+      className="mb-6 bg-[#1e1e1e] rounded-2xl overflow-hidden border border-white/5"
+    >
       <View className="flex-row items-center bg-zinc-800/50 p-4 border-b border-white/5">
         <Ionicons name={icon as any} size={20} color="#8b5cf6" />
-        <Text className="text-white font-bold ml-3 uppercase tracking-widest text-xs">{title}</Text>
+        <Text className="text-white font-outfit-bold ml-3 uppercase tracking-widest text-xs">{title}</Text>
       </View>
       <View className="p-4">
         {stats.map((stat, i) => (
           <View key={i} className={`flex-row justify-between items-center ${i !== stats.length - 1 ? 'mb-4 pb-4 border-b border-white/5' : ''}`}>
             <View>
-              <Text className="text-white font-semibold">{stat.label}</Text>
-              <Text className="text-gray-500 text-xs mt-1">{stat.total} Matches • {stat.win}W - {stat.lose}L</Text>
+              <Text className="text-white font-outfit-semibold">{stat.label}</Text>
+              <Text className="text-gray-500 text-xs font-outfit mt-1">{stat.total} Matches • {stat.win}W - {stat.lose}L</Text>
             </View>
             <View className="items-end">
-              <Text className={`text-lg font-bold ${stat.win / stat.total >= 0.5 ? 'text-win' : 'text-loss'}`}>
+              <Text className={`text-lg font-outfit-bold ${stat.win / stat.total >= 0.5 ? 'text-win' : 'text-loss'}`}>
                 {stat.total > 0 ? ((stat.win / stat.total) * 100).toFixed(2) : '0.00'}%
               </Text>
-              <Text className="text-gray-600 text-[10px] uppercase font-bold">Win Rate</Text>
+              <Text className="text-gray-600 text-[10px] uppercase font-outfit-bold">Win Rate</Text>
             </View>
           </View>
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 
   const renderLifetimeContent = () => (
@@ -258,10 +304,7 @@ export function PlayerOverviewContent({
     >
       {renderHeader()}
       {statsLoading ? (
-        <View className="py-20 items-center">
-          <ActivityIndicator color="#8b5cf6" />
-          <Text className="text-gray-500 mt-4">Analyzing lifetime data...</Text>
-        </View>
+        <LifetimeStatsSkeleton />
       ) : (
         <>
           {renderStatSection('Lobby Type', 'globe-outline', lobbyStats)}
@@ -274,33 +317,36 @@ export function PlayerOverviewContent({
     </ScrollView>
   );
 
-  const renderMatch = ({ item }: { item: RecentMatch }) => {
+  const renderMatch = ({ item, index }: { item: RecentMatch, index: number }) => {
     const isRadiant = item.player_slot < 128;
     const isWin = (isRadiant && item.radiant_win) || (!isRadiant && !item.radiant_win);
     const heroName = HEROES[item.hero_id]?.localized_name || `Hero ${item.hero_id}`;
     
     return (
-      <TouchableOpacity 
-        onPress={() => onMatchPress(item.match_id)}
-        className={`bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl border-l-4 flex-row justify-between items-center active:bg-zinc-800 ${isWin ? 'border-win' : 'border-loss'}`}
-      >
-        <View className="flex-row items-center flex-1">
-          <Image 
-            source={{ uri: getHeroImageUrl(item.hero_id) }} 
-            className="w-12 h-12 rounded-lg mr-3"
-            resizeMode="cover"
-          />
-          <View className="flex-1">
-            <Text className={`font-bold text-lg ${isWin ? 'text-win' : 'text-loss'}`}>{isWin ? 'Victory' : 'Defeat'}</Text>
-            <Text className="text-gray-300 text-sm font-semibold">{heroName}</Text>
-            <Text className="text-gray-500 text-xs">KDA: {item.kills}/{item.deaths}/{item.assists}</Text>
+      <PressableScale onPress={() => onMatchPress(item.match_id)}>
+        <Animated.View 
+          entering={FadeInDown.delay(index * 100).springify()}
+          style={{ marginHorizontal: 16 }}
+          className={`bg-[#1e1e1e] p-4 mb-3 rounded-xl border-l-4 flex-row justify-between items-center ${isWin ? 'border-win' : 'border-loss'}`}
+        >
+          <View className="flex-row items-center flex-1">
+            <Image 
+              source={{ uri: getHeroImageUrl(item.hero_id) }} 
+              className="w-12 h-12 rounded-lg mr-3"
+              resizeMode="cover"
+            />
+            <View className="flex-1">
+              <Text className={`font-outfit-bold text-lg ${isWin ? 'text-win' : 'text-loss'}`}>{isWin ? 'Victory' : 'Defeat'}</Text>
+              <Text className="text-gray-300 text-sm font-outfit-semibold">{heroName}</Text>
+              <Text className="text-gray-500 text-xs font-outfit">KDA: {item.kills}/{item.deaths}/{item.assists}</Text>
+            </View>
           </View>
-        </View>
-        <View className="items-end">
-          <Text className="text-gray-300 font-semibold">{Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, '0')}</Text>
-          <Ionicons name="chevron-forward" size={16} color="#4b5563" className="mt-1" />
-        </View>
-      </TouchableOpacity>
+          <View className="items-end">
+            <Text className="text-gray-300 font-outfit-semibold">{Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, '0')}</Text>
+            <Ionicons name="chevron-forward" size={16} color="#4b5563" className="mt-1" />
+          </View>
+        </Animated.View>
+      </PressableScale>
     );
   };
 

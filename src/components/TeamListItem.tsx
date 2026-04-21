@@ -27,6 +27,7 @@ export default function TeamListItem({ team, rank, onPress }: Props) {
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#2a2a3e',
+        marginHorizontal: 16,
       }}
     >
       <View style={{ width: 30, alignItems: 'center' }}>

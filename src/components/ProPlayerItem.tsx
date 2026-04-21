@@ -22,6 +22,7 @@ export default function ProPlayerItem({ player, onPress }: Props) {
         alignItems: 'center',
         borderWidth: 1,
         borderColor: '#2a2a3e',
+        marginHorizontal: 16,
       }}
     >
       <View style={{
