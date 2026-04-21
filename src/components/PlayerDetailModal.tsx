@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View, Text, Modal, ActivityIndicator, TouchableOpacity, Pressable
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  getPlayerProfile, getPlayerWinLoss, getRecentMatches, 
-  PlayerProfile, WinLossStats, RecentMatch 
-} from '../services/opendota';
 import { PlayerOverviewContent } from './PlayerOverviewContent';
+import { usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../hooks/useOpenDota';
 
 interface PlayerDetailModalProps {
   visible: boolean;
-  accountId: number | null;
+  accountId: number | string | null;
   onClose: () => void;
   onMatchPress: (matchId: number) => void;
 }
@@ -19,31 +16,18 @@ interface PlayerDetailModalProps {
 export default function PlayerDetailModal({
   visible, accountId, onClose, onMatchPress
 }: PlayerDetailModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [data, setData] = useState<{ profile: PlayerProfile | null; wl: WinLossStats | null; matches: RecentMatch[] } | null>(null);
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(visible ? accountId : null);
+  const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(visible ? accountId : null);
+  const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(visible ? accountId : null, 10);
 
-  useEffect(() => {
-    if (visible && accountId) {
-      fetchPlayerData(accountId);
-    } else {
-      setData(null);
-    }
-  }, [visible, accountId]);
+  const loading = profileLoading || wlLoading || matchesLoading;
 
-  const fetchPlayerData = async (id: number) => {
-    setLoading(true);
-    try {
-      const [profile, wl, matches] = await Promise.all([
-        getPlayerProfile(id),
-        getPlayerWinLoss(id),
-        getRecentMatches(id, 10)
-      ]);
-      setData({ profile, wl, matches });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+  const onRefresh = async () => {
+    await Promise.all([
+      refetchProfile(),
+      refetchWl(),
+      refetchMatches()
+    ]);
   };
 
   if (!visible) return null;
@@ -52,12 +36,12 @@ export default function PlayerDetailModal({
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <Pressable className="flex-1 bg-black/60 justify-end" onPress={onClose}>
         <Pressable className="bg-[#1e1e1e] h-[92%] rounded-t-3xl overflow-hidden" onPress={(e) => e.stopPropagation()}>
-          {loading ? (
+          {loading && !profile ? (
             <View className="flex-1 justify-center items-center">
               <ActivityIndicator size="large" color="#8b5cf6" />
               <Text className="text-gray-400 mt-4">Fetching player stats...</Text>
             </View>
-          ) : data ? (
+          ) : profile ? (
             <View className="flex-1">
               {/* Header */}
               <View className="p-4 border-b border-zinc-800 flex-row justify-between items-center bg-[#1e1e1e]">
@@ -68,12 +52,12 @@ export default function PlayerDetailModal({
               </View>
               
               <PlayerOverviewContent
-                accountId={accountId!}
-                profile={data.profile}
-                wl={data.wl}
-                matches={data.matches}
+                accountId={accountId!.toString()}
+                profile={profile}
+                wl={wl || null}
+                matches={matches}
                 onMatchPress={onMatchPress}
-                onRefresh={() => fetchPlayerData(accountId!)}
+                onRefresh={onRefresh}
                 refreshing={loading}
               />
             </View>

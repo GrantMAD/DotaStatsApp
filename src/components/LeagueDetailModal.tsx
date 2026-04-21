@@ -1,52 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   View, Text, Modal, ScrollView, Image, TouchableOpacity, 
   ActivityIndicator, Dimensions 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  League, ProMatch, getLeagueMatches 
-} from '../services/opendota';
 import ProMatchCard from './ProMatchCard';
 import { MatchOverviewModal } from './MatchOverviewModal';
 import PlayerDetailModal from './PlayerDetailModal';
+import { useLeagueMatches } from '../hooks/useOpenDota';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface Props {
   visible: boolean;
-  league: League | null;
+  league: any | null;
   onClose: () => void;
 }
 
 export default function LeagueDetailModal({ visible, league, onClose }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [matches, setMatches] = useState<ProMatch[]>([]);
+  const { data: matchesData = [], isLoading: loading } = useLeagueMatches(visible && league ? league.leagueid : null);
+  const matches = matchesData.slice(0, 50);
   
   // Drill-down states
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [matchModalVisible, setMatchModalVisible] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [playerModalVisible, setPlayerModalVisible] = useState(false);
-
-  useEffect(() => {
-    if (visible && league) {
-      loadLeagueDetails();
-    }
-  }, [visible, league]);
-
-  const loadLeagueDetails = async () => {
-    if (!league) return;
-    setLoading(true);
-    try {
-      const matchData = await getLeagueMatches(league.leagueid);
-      setMatches(matchData.slice(0, 50)); // Show last 50 matches
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openMatch = (id: number) => {
     setSelectedMatchId(id);

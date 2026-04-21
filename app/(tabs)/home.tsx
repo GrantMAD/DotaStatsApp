@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'expo-router';
 import {
   View, Text, Image, TouchableOpacity, TextInput,
@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import { Ionicons } from '@expo/vector-icons';
-import { getHeroStats, getProMatches, HeroStats, ProMatch } from '../../src/services/opendota';
+import { HeroStats, ProMatch, searchPlayers } from '../../src/services/opendota';
 import HeroStatsCard from '../../src/components/HeroStatsCard';
 import ProMatchCard from '../../src/components/ProMatchCard';
 import HeroDetailModal from '../../src/components/HeroDetailModal';
@@ -15,11 +15,9 @@ import UnifiedSearchModal from '../../src/components/UnifiedSearchModal';
 import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import LiveGameCard from '../../src/components/LiveGameCard';
 import RecordCard from '../../src/components/RecordCard';
-import { 
-  searchPlayers, SearchResult,
-  getLiveGames, getGlobalRecords,
-  LiveGame, GlobalRecord
-} from '../../src/services/opendota';
+import { SearchResult } from '../../src/services/opendota';
+import { useHeroStats, useProMatches, useLiveGames, useGlobalRecords } from '../../src/hooks/useOpenDota';
+import { queryClient } from '../../src/services/queryClient';
 
 // Minimum picks threshold to avoid heroes with tiny sample sizes
 const MIN_PICKS = 5000;
@@ -33,6 +31,8 @@ interface ProcessedHero {
 }
 
 function processHeroStats(heroes: HeroStats[]): { topWinRate: ProcessedHero[]; mostPicked: ProcessedHero[]; proPicks: ProcessedHero[]; proBans: ProcessedHero[] } {
+  if (!heroes || heroes.length === 0) return { topWinRate: [], mostPicked: [], proPicks: [], proBans: [] };
+
   // Filter heroes with enough picks
   const eligible = heroes.filter(h => h.pub_pick >= MIN_PICKS);
 
@@ -150,24 +150,22 @@ export default function HomeScreen() {
   const router = useRouter();
   const { login, accountId } = useSteamAuth();
 
-  const [heroStats, setHeroStats] = useState<HeroStats[]>([]);
-  const [proMatches, setProMatches] = useState<ProMatch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // Queries
+  const { data: heroesData = [], isLoading: loadingHeroes, refetch: refetchHeroes } = useHeroStats();
+  const { data: proMatchesData = [], isLoading: loadingMatches, refetch: refetchMatches } = useProMatches(10);
+  const { data: liveGames = [], refetch: refetchLive } = useLiveGames();
+  const { data: gpmRecords = [], refetch: refetchGpm } = useGlobalRecords('gold_per_min');
+  const { data: killRecords = [], refetch: refetchKills } = useGlobalRecords('kills');
+  const { data: healRecords = [], refetch: refetchHealing } = useGlobalRecords('hero_healing');
+
+  const isLoading = loadingHeroes || loadingMatches;
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modal state
   const [selectedHero, setSelectedHero] = useState<HeroStats | null>(null);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [matchModalVisible, setMatchModalVisible] = useState(false);
-
-  // Phase 2 Stats State
-  const [liveGames, setLiveGames] = useState<LiveGame[]>([]);
-  const [records, setRecords] = useState<{ gpm: GlobalRecord | null; kills: GlobalRecord | null; healing: GlobalRecord | null }>({
-    gpm: null,
-    kills: null,
-    healing: null
-  });
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
@@ -182,6 +180,9 @@ export default function HomeScreen() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerModalVisible, setPlayerModalVisible] = useState(false);
 
+  const processedStats = useMemo(() => processHeroStats(heroesData), [heroesData]);
+  const { topWinRate, mostPicked, proPicks, proBans } = processedStats;
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
 
@@ -192,7 +193,7 @@ export default function HomeScreen() {
       const queryLower = searchQuery.toLowerCase().trim();
       
       // 1. Search Heroes (local filtering on already-fetched heroStats)
-      const matchingHeroes = heroStats.filter(h => 
+      const matchingHeroes = heroesData.filter(h => 
         h.localized_name.toLowerCase().includes(queryLower)
       );
 
@@ -201,6 +202,7 @@ export default function HomeScreen() {
       const matchId = isMatchId ? parseInt(queryLower) : undefined;
 
       // 3. Search Players (API call)
+      // Use queryClient to fetch search if we want to cache it, but manual fetch is fine here
       const players = await searchPlayers(searchQuery);
 
       setSearchResults({
@@ -216,12 +218,12 @@ export default function HomeScreen() {
   };
 
   const openHeroModal = useCallback((heroId: number) => {
-    const hero = heroStats.find(h => h.id === heroId);
+    const hero = heroesData.find(h => h.id === heroId);
     if (hero) {
       setSelectedHero(hero);
       setHeroModalVisible(true);
     }
-  }, [heroStats]);
+  }, [heroesData]);
 
   const openMatchModal = useCallback((match: ProMatch) => {
     setSelectedMatchId(match.match_id);
@@ -238,50 +240,31 @@ export default function HomeScreen() {
     setPlayerModalVisible(true);
   }, []);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [heroes, matches, live, gpmRec, killRec, healRec] = await Promise.all([
-        getHeroStats(),
-        getProMatches(10),
-        getLiveGames(),
-        getGlobalRecords('gold_per_min'),
-        getGlobalRecords('kills'),
-        getGlobalRecords('hero_healing')
-      ]);
-      setHeroStats(heroes);
-      setProMatches(matches);
-      setLiveGames(live);
-      setRecords({
-        gpm: gpmRec[0] || null,
-        kills: killRec[0] || null,
-        healing: healRec[0] || null
-      });
-    } catch (e) {
-      console.error('Fetch failed:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
   const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
-  }, [fetchData]);
+    setIsRefreshing(true);
+    await Promise.all([
+      refetchHeroes(),
+      refetchMatches(),
+      refetchLive(),
+      refetchGpm(),
+      refetchKills(),
+      refetchHealing(),
+    ]);
+    setIsRefreshing(false);
+  }, [refetchHeroes, refetchMatches, refetchLive, refetchGpm, refetchKills, refetchHealing]);
 
-  const { topWinRate, mostPicked, proPicks, proBans } = processHeroStats(heroStats);
+  const records = {
+    gpm: gpmRecords[0] || null,
+    kills: killRecords[0] || null,
+    healing: healRecords[0] || null
+  };
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: '#121212' }}
       contentContainerStyle={{ paddingBottom: 40 }}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
       }
     >
       {/* Header Area */}
@@ -381,7 +364,7 @@ export default function HomeScreen() {
 
       {/* ─── Section 1: Top Win Rate Heroes ─── */}
       <SectionHeader icon="trophy" title="Highest Win Rate" color="#f59e0b" />
-      {loading ? <LoadingSkeleton /> : (
+      {isLoading ? <LoadingSkeleton /> : (
         <FlatList
           data={topWinRate}
           horizontal
@@ -405,7 +388,7 @@ export default function HomeScreen() {
 
       {/* ─── Section 2: Most Picked Heroes ─── */}
       <SectionHeader icon="flame" title="Most Picked" color="#ef4444" />
-      {loading ? <LoadingSkeleton /> : (
+      {isLoading ? <LoadingSkeleton /> : (
         <FlatList
           data={mostPicked}
           horizontal
@@ -429,7 +412,7 @@ export default function HomeScreen() {
 
       {/* ─── Section 3: Pro Scene ─── */}
       <SectionHeader icon="star" title="Pro Scene — Top Picks" color="#8b5cf6" />
-      {loading ? <LoadingSkeleton /> : (
+      {isLoading ? <LoadingSkeleton /> : (
         <FlatList
           data={proPicks}
           horizontal
@@ -453,7 +436,7 @@ export default function HomeScreen() {
 
       {/* Pro Bans */}
       <SectionHeader icon="ban" title="Pro Scene — Most Banned" color="#ef4444" />
-      {loading ? (
+      {isLoading ? (
         <View style={{ paddingHorizontal: 20 }}>
           <ActivityIndicator color="#8b5cf6" />
         </View>
@@ -465,9 +448,9 @@ export default function HomeScreen() {
 
       {/* Recent Pro Matches */}
       <SectionHeader icon="game-controller" title="Recent Pro Matches" color="#3b82f6" />
-      {loading ? <LoadingSkeleton /> : (
+      {isLoading ? <LoadingSkeleton /> : (
         <FlatList
-          data={proMatches}
+          data={proMatchesData}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 20 }}

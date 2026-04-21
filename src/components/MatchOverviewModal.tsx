@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -13,10 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart } from "react-native-chart-kit";
 import { 
-  getMatchDetails,
   requestMatchParse,
   MatchDetails,
-  ChatMessage,
   GAME_MODES
 } from '../services/opendota';
 import { 
@@ -25,13 +23,11 @@ import {
   getItemImageUrlByName,
   LOBBY_TYPES, 
   REGIONS, 
-  LANE_ROLES,
-  HERO_NAME_TO_ID,
   HEROES
 } from '../services/constants';
 import { getChatWheelPhrase } from '../services/chatwheel';
-import { RankBadge } from './RankBadge';
 import * as Linking from 'expo-linking';
+import { useMatchDetails } from '../hooks/useOpenDota';
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Combat' | 'Support' | 'Economy' | 'Timeline' | 'Chat';
 
@@ -43,8 +39,7 @@ interface MatchOverviewModalProps {
 }
 
 export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: MatchOverviewModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [matchData, setMatchData] = useState<MatchDetails | null>(null);
+  const { data: matchData, isLoading: loading } = useMatchDetails(visible ? matchId : null);
   const [activeTab, setActiveTab] = useState<MatchTab>('Scoreboard');
   const [isParsing, setIsParsing] = useState(false);
   const [parseRequested, setParseRequested] = useState(false);
@@ -55,30 +50,6 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
   const [scrollX, setScrollX] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
   const [viewWidth, setViewWidth] = useState(0);
-
-  useEffect(() => {
-    if (visible && matchId) {
-      fetchMatchDetails(matchId);
-    } else {
-      setMatchData(null);
-      setActiveTab('Scoreboard');
-      setExpandedCombatPlayers([]);
-    }
-  }, [visible, matchId]);
-
-  const fetchMatchDetails = async (id: number) => {
-    setLoading(true);
-    setParseRequested(false);
-    setExpandedCombatPlayers([]);
-    try {
-      const details = await getMatchDetails(id);
-      setMatchData(details);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleRequestParse = async () => {
     if (!matchId || isParsing) return;

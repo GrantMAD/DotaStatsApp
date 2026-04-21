@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -9,63 +9,44 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
-import { 
-  getPlayerProfile, 
-  getPlayerWinLoss, 
-  getRecentMatches, 
-  PlayerProfile, 
-  WinLossStats, 
-  RecentMatch
-} from '../../src/services/opendota';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
+import { usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
 
 export default function DashboardScreen() {
   const { accountId } = useSteamAuth();
   
-  const [profile, setProfile] = useState<PlayerProfile | null>(null);
-  const [wl, setWl] = useState<WinLossStats | null>(null);
-  const [matches, setMatches] = useState<RecentMatch[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  // Main Dashboard Queries
+  const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(accountId);
+  const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(accountId);
+  const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(accountId);
+
+  const loading = profileLoading || wlLoading || matchesLoading;
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Match Details Modal State
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   // Individual Player Detail State
+  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [playerModalVisible, setPlayerModalVisible] = useState(false);
-  const [playerDetailsLoading, setPlayerDetailsLoading] = useState(false);
-  const [selectedPlayerProfile, setSelectedPlayerProfile] = useState<PlayerProfile | null>(null);
-  const [selectedPlayerWL, setSelectedPlayerWL] = useState<WinLossStats | null>(null);
-  const [selectedPlayerMatches, setSelectedPlayerMatches] = useState<RecentMatch[]>([]);
 
-  const loadData = async () => {
-    if (!accountId) return;
-    try {
-      const [profData, wlData, matchData] = await Promise.all([
-        getPlayerProfile(accountId),
-        getPlayerWinLoss(accountId),
-        getRecentMatches(accountId)
-      ]);
-      setProfile(profData);
-      setWl(wlData);
-      setMatches(matchData);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  // Queries for Player Detail Modal
+  const { data: selectedPlayerProfile, isLoading: pProfileLoading } = usePlayerProfile(selectedPlayerId);
+  const { data: selectedPlayerWL, isLoading: pWLLoading } = usePlayerWinLoss(selectedPlayerId);
+  const { data: selectedPlayerMatches = [], isLoading: pMatchesLoading } = useRecentMatches(selectedPlayerId, 5);
 
-  useEffect(() => {
-    loadData();
-  }, [accountId]);
+  const playerDetailsLoading = pProfileLoading || pWLLoading || pMatchesLoading;
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
+  const onRefresh = async () => {
+    setIsRefreshing(true);
+    await Promise.all([
+      refetchProfile(),
+      refetchWl(),
+      refetchMatches()
+    ]);
+    setIsRefreshing(false);
   };
 
   const handleMatchPress = (matchId: number) => {
@@ -73,27 +54,13 @@ export default function DashboardScreen() {
     setModalVisible(true);
   };
 
-  const handlePlayerPress = async (pAccountId: number | null) => {
+  const handlePlayerPress = (pAccountId: number | null) => {
     if (!pAccountId) return;
+    setSelectedPlayerId(pAccountId);
     setPlayerModalVisible(true);
-    setPlayerDetailsLoading(true);
-    try {
-      const [pProfile, pWL, pMatches] = await Promise.all([
-        getPlayerProfile(pAccountId.toString()),
-        getPlayerWinLoss(pAccountId.toString()),
-        getRecentMatches(pAccountId.toString(), 5)
-      ]);
-      setSelectedPlayerProfile(pProfile);
-      setSelectedPlayerWL(pWL);
-      setSelectedPlayerMatches(pMatches);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setPlayerDetailsLoading(false);
-    }
   };
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <View className="flex-1 bg-gamingDark justify-center items-center">
         <ActivityIndicator size="large" color="#8b5cf6" />
@@ -105,12 +72,12 @@ export default function DashboardScreen() {
     <View className="flex-1 bg-gamingDark">
       <PlayerOverviewContent
         accountId={accountId!}
-        profile={profile}
-        wl={wl}
+        profile={profile || null}
+        wl={wl || null}
         matches={matches}
         onMatchPress={handleMatchPress}
         onRefresh={onRefresh}
-        refreshing={refreshing}
+        refreshing={isRefreshing}
       />
 
       {/* Match Details Modal */}
@@ -138,7 +105,7 @@ export default function DashboardScreen() {
                 <PlayerOverviewContent
                   accountId={selectedPlayerProfile.profile.account_id.toString()}
                   profile={selectedPlayerProfile}
-                  wl={selectedPlayerWL}
+                  wl={selectedPlayerWL || null}
                   matches={selectedPlayerMatches}
                   onMatchPress={(id) => {
                     setPlayerModalVisible(false);

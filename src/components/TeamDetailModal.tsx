@@ -1,16 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { 
   View, Text, Modal, ScrollView, Image, TouchableOpacity, 
-  ActivityIndicator, FlatList, Dimensions, Pressable 
+  ActivityIndicator, Dimensions 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { 
-  ProTeam, ProPlayer, getTeamRoster, getTeamMatches, ProMatch 
+  ProTeam 
 } from '../services/opendota';
 import ProPlayerItem from './ProPlayerItem';
 import ProMatchCard from './ProMatchCard';
 import { MatchOverviewModal } from './MatchOverviewModal';
 import PlayerDetailModal from './PlayerDetailModal';
+import { useTeamRoster, useTeamMatches } from '../hooks/useOpenDota';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -21,38 +22,18 @@ interface Props {
 }
 
 export default function TeamDetailModal({ visible, team, onClose }: Props) {
-  const [loading, setLoading] = useState(false);
-  const [roster, setRoster] = useState<ProPlayer[]>([]);
-  const [matches, setMatches] = useState<ProMatch[]>([]);
+  const teamId = visible && team ? team.team_id : null;
+  const { data: roster = [], isLoading: loadingRoster } = useTeamRoster(teamId);
+  const { data: matchesData = [], isLoading: loadingMatches } = useTeamMatches(teamId);
+  const matches = matchesData.slice(0, 20);
+
+  const loading = loadingRoster || loadingMatches;
   
   // Drill-down states
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [matchModalVisible, setMatchModalVisible] = useState(false);
   const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
   const [playerModalVisible, setPlayerModalVisible] = useState(false);
-
-  useEffect(() => {
-    if (visible && team) {
-      loadTeamDetails();
-    }
-  }, [visible, team]);
-
-  const loadTeamDetails = async () => {
-    if (!team) return;
-    setLoading(true);
-    try {
-      const [rosterData, matchData] = await Promise.all([
-        getTeamRoster(team.team_id),
-        getTeamMatches(team.team_id)
-      ]);
-      setRoster(rosterData);
-      setMatches(matchData.slice(0, 20)); // Show last 20 matches
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openMatch = (id: number) => {
     setSelectedMatchId(id);

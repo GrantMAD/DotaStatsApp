@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -8,68 +8,36 @@ import {
   Image, 
   ActivityIndicator,
   Modal,
-  ScrollView,
   Pressable
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import { 
-  searchPlayers, 
-  getPlayerProfile, 
-  getPlayerWinLoss, 
-  getRecentMatches,
-  getMatchDetails,
   SearchResult,
-  PlayerProfile,
-  WinLossStats,
-  RecentMatch,
-  MatchDetails,
-  GAME_MODES
 } from '../../src/services/opendota';
-import { 
-  getHeroImageUrl, 
-  getItemImageUrl, 
-  HEROES, 
-  LOBBY_TYPES, 
-  REGIONS, 
-  LANES, 
-  LANE_ROLES,
-  HERO_NAME_TO_ID
-} from '../../src/services/constants';
-import { RankBadge } from '../../src/components/RankBadge';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
+import { useSearchPlayers, usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
 
-type MatchTab = 'Scoreboard' | 'Highlights' | 'Combat' | 'Economy';
 type StackItem = 
-  | { type: 'player', id: number | string; data?: { profile: PlayerProfile | null; wl: WinLossStats | null; matches: RecentMatch[] } }
-  | { type: 'match', id: number; data?: MatchDetails | null };
+  | { type: 'player', id: number | string }
+  | { type: 'match', id: number };
 
 export default function SearchScreen() {
   const router = useRouter();
   const { accountId } = useSteamAuth();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [activeQuery, setActiveQuery] = useState('');
+
+  const { data: results = [], isLoading: searching, error } = useSearchPlayers(activeQuery);
 
   // The Navigation Stack
   const [modalStack, setModalStack] = useState<StackItem[]>([]);
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!query.trim()) return;
-    setSearching(true);
-    setError(null);
-    setResults([]);
-    try {
-      const data = await searchPlayers(query);
-      setResults(data);
-    } catch (e: any) {
-      setError(e.message || 'An unexpected error occurred');
-    } finally {
-      setSearching(false);
-    }
+    setActiveQuery(query);
   };
 
   const pushPlayer = (accountId: number | string) => {
@@ -158,7 +126,7 @@ export default function SearchScreen() {
         <View className="flex-1 justify-center items-center px-10">
           <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
           <Text className="text-red-500 text-center mt-4 font-semibold text-lg">Search Error</Text>
-          <Text className="text-gray-400 text-center mt-2">{error}</Text>
+          <Text className="text-gray-400 text-center mt-2">{(error as any).message || 'An error occurred'}</Text>
           <TouchableOpacity onPress={handleSearch} className="mt-6 bg-zinc-800 px-6 py-2 rounded-lg">
             <Text className="text-white font-bold">Try Again</Text>
           </TouchableOpacity>
@@ -170,6 +138,11 @@ export default function SearchScreen() {
           renderItem={renderResult}
           contentContainerStyle={{ paddingTop: 20, paddingBottom: 40 }}
         />
+      ) : activeQuery ? (
+        <View className="flex-1 justify-center items-center px-10">
+          <Ionicons name="search-outline" size={64} color="#374151" />
+          <Text className="text-gray-400 text-center mt-4 font-semibold text-lg">No results found for "{activeQuery}"</Text>
+        </View>
       ) : (
         <View className="flex-1 justify-center items-center px-10">
           <Ionicons name="search-outline" size={64} color="#374151" />
@@ -185,7 +158,6 @@ export default function SearchScreen() {
           onClose={popStack}
           onPushPlayer={pushPlayer}
           onPushMatch={pushMatch}
-          zIndex={index + 100}
         />
       ))}
     </View>
@@ -193,44 +165,20 @@ export default function SearchScreen() {
 }
 
 /**
- * A self-contained modal that handles its own data fetching and rendering
- * based on whether it's a Player or a Match.
+ * A self-contained modal that handles its own data fetching via hooks
  */
-function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, zIndex }: { 
+function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch }: { 
   item: StackItem; 
   onClose: () => void; 
   onPushPlayer: (id: number | string) => void;
   onPushMatch: (id: number) => void;
-  zIndex: number;
 }) {
-  const [loading, setLoading] = useState(true);
-  const [playerData, setPlayerData] = useState<{ profile: PlayerProfile | null; wl: WinLossStats | null; matches: RecentMatch[] } | null>(null);
-  const [matchData, setMatchData] = useState<MatchDetails | null>(null);
-  const [activeTab, setActiveTab] = useState<MatchTab>('Scoreboard');
+  // Player Queries (only enabled if item.type === 'player')
+  const { data: profile, isLoading: pProfileLoading } = usePlayerProfile(item.type === 'player' ? item.id : null);
+  const { data: wl, isLoading: pWLLoading } = usePlayerWinLoss(item.type === 'player' ? item.id : null);
+  const { data: matches = [], isLoading: pMatchesLoading } = useRecentMatches(item.type === 'player' ? item.id : null, 10);
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      try {
-        if (item.type === 'player') {
-          const [pProfile, pWL, pMatches] = await Promise.all([
-            getPlayerProfile(item.id),
-            getPlayerWinLoss(item.id),
-            getRecentMatches(item.id, 10)
-          ]);
-          setPlayerData({ profile: pProfile, wl: pWL, matches: pMatches });
-        } else {
-          const details = await getMatchDetails(item.id);
-          setMatchData(details);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchData();
-  }, [item.id, item.type]);
+  const loading = pProfileLoading || pWLLoading || pMatchesLoading;
 
   return (
     <>
@@ -242,7 +190,7 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, zIndex }: {
                 <ActivityIndicator size="large" color="#8b5cf6" />
                 <Text className="text-gray-400 mt-4">Fetching player data...</Text>
               </View>
-            ) : item.type === 'player' && playerData ? (
+            ) : item.type === 'player' && profile ? (
               <View className="flex-1">
                 <View className="p-4 border-b border-zinc-800 flex-row justify-between items-center bg-[#1e1e1e]">
                    <Text className="text-white font-bold ml-2">Player Details</Text>
@@ -252,9 +200,9 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, zIndex }: {
                 </View>
                 <PlayerOverviewContent
                   accountId={item.id}
-                  profile={playerData.profile}
-                  wl={playerData.wl}
-                  matches={playerData.matches}
+                  profile={profile}
+                  wl={wl || null}
+                  matches={matches}
                   onMatchPress={(matchId) => onPushMatch(matchId)}
                 />
               </View>
