@@ -32,7 +32,7 @@ export default function LandingScreen() {
         <Text className="text-white text-lg font-bold">Sign in with Steam</Text>
       </TouchableOpacity>
 
-      <Link href="/search" asChild>
+      <Link href="/home" asChild>
         <TouchableOpacity className="mt-6">
           <Text className="text-gray-400 font-semibold border-b border-gray-600 pb-1">Continue without signing in</Text>
         </TouchableOpacity>

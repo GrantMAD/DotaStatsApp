@@ -5,27 +5,28 @@ import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import { useState } from 'react';
 
 export default function TabsLayout() {
-  const { logout, accountId, isLoading } = useSteamAuth();
+  const { logout, accountId, isLoading, login } = useSteamAuth(); // login is now available
   const [menuVisible, setMenuVisible] = useState(false);
   const pathname = usePathname();
 
-  // Redirect to landing if not logged in and not on search screen
-  if (!isLoading && !accountId && pathname !== '/search') {
+  // Corrected Redirect logic: Allow /search and /home when unauthenticated.
+  // Redirect to landing page '/' if not logged in and on any other path.
+  if (!isLoading && !accountId && pathname !== '/search' && pathname !== '/home') {
     return <Redirect href="/" />;
   }
 
   return (
     <>
-      <Tabs 
+      <Tabs
         screenOptions={{
-          headerStyle: { 
+          headerStyle: {
             backgroundColor: '#121212',
             borderBottomWidth: 1,
             borderBottomColor: '#333',
           },
           headerTintColor: '#fff',
-          tabBarStyle: { 
-            backgroundColor: '#121212', 
+          tabBarStyle: {
+            backgroundColor: '#121212',
             borderTopWidth: 1,
             borderTopColor: '#333',
             height: 70,
@@ -43,13 +44,23 @@ export default function TabsLayout() {
           },
         }}
       >
-        <Tabs.Screen 
-          name="dashboard" 
-          options={{ 
-            href: accountId ? '/dashboard' : null,
+        <Tabs.Screen
+          name="home"
+          options={{
+            href: '/home', // Always available
+            headerTitle: '', // Set headerTitle to empty string to remove heading
+            tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
+            tabBarLabel: 'Home'
+          }}
+        />
+
+        <Tabs.Screen
+          name="dashboard"
+          options={{
+            href: accountId ? '/dashboard' : null, // Only show tab if logged in
             headerTitle: '',
             headerLeft: () => (
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setMenuVisible(true)}
                 className="ml-4 p-2"
               >
@@ -58,15 +69,15 @@ export default function TabsLayout() {
             ),
             tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={24} color={color} />,
             tabBarLabel: 'Dashboard'
-          }} 
+          }}
         />
-        <Tabs.Screen 
-          name="search" 
-          options={{ 
+        <Tabs.Screen
+          name="search"
+          options={{
             headerShown: false,
             tabBarIcon: ({ color }) => <Ionicons name="search" size={24} color={color} />,
             tabBarLabel: 'Search'
-          }} 
+          }}
         />
       </Tabs>
 
@@ -77,12 +88,12 @@ export default function TabsLayout() {
           onRequestClose={() => setMenuVisible(false)}
           animationType="fade"
         >
-          <Pressable 
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} 
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
             onPress={() => setMenuVisible(false)}
           >
             <View className="absolute top-16 left-4 bg-zinc-900 border border-zinc-800 rounded-lg w-48 py-2 shadow-2xl">
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => {
                   setMenuVisible(false);
                   logout();
@@ -92,8 +103,8 @@ export default function TabsLayout() {
                 <Ionicons name="log-out-outline" size={20} color="#ef4444" />
                 <Text className="text-red-500 ml-3 font-medium">Logout</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 onPress={() => setMenuVisible(false)}
                 className="px-4 py-3 border-t border-zinc-800 flex-row items-center active:bg-zinc-800"
               >
