@@ -1,0 +1,106 @@
+import React, { useState } from 'react';
+import { View, Text, FlatList, ActivityIndicator, Image } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { useFriends } from '../../src/hooks/useFriends';
+import GlassHeader from '../../src/components/GlassHeader';
+import PressableScale from '../../src/components/PressableScale';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import PlayerDetailModal from '../../src/components/PlayerDetailModal';
+import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
+import NotificationBell from '../../src/components/NotificationBell';
+
+export default function FriendsScreen() {
+  const { friends, loading, fetchFriends } = useFriends();
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [playerModalVisible, setPlayerModalVisible] = useState(false);
+  
+  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
+  const [matchModalVisible, setMatchModalVisible] = useState(false);
+
+  const openPlayerDetails = (accountId: string) => {
+    setSelectedPlayerId(accountId);
+    setPlayerModalVisible(true);
+  };
+
+  const openMatchById = (matchId: number) => {
+    setSelectedMatchId(matchId);
+    setMatchModalVisible(true);
+  };
+
+  const renderFriend = ({ item, index }: { item: any; index: number }) => {
+    const friendUser = item.users;
+    if (!friendUser) return null;
+
+    return (
+      <PressableScale onPress={() => openPlayerDetails(friendUser.steam_account_id)}>
+        <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+          <View className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center border border-zinc-800">
+            <View className="w-12 h-12 rounded-full bg-gamingAccent/20 items-center justify-center mr-4">
+              <Ionicons name="person" size={24} color="#8b5cf6" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>
+                {friendUser.steam_name || 'Unknown Player'}
+              </Text>
+              <Text className="text-gray-500 text-xs font-outfit">
+                ID: {friendUser.steam_account_id}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#4b5563" />
+          </View>
+        </Animated.View>
+      </PressableScale>
+    );
+  };
+
+  return (
+    <LinearGradient colors={['#1a1a2e', '#121212']} style={{ flex: 1 }}>
+      <GlassHeader title="Friends" rightComponent={<NotificationBell />} />
+      
+      <View className="flex-1 pt-4">
+        {loading ? (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="#8b5cf6" />
+          </View>
+        ) : (
+          <FlatList
+            data={friends}
+            keyExtractor={(item) => item.id}
+            renderItem={renderFriend}
+            onRefresh={fetchFriends}
+            refreshing={loading}
+            ListEmptyComponent={
+              <View className="flex-1 justify-center items-center py-20 px-10">
+                <Ionicons name="people-outline" size={64} color="#374151" />
+                <Text className="text-gray-400 text-center mt-4 font-outfit-semibold text-lg">
+                  No friends yet. Search for players to add them!
+                </Text>
+              </View>
+            }
+          />
+        )}
+      </View>
+
+      <PlayerDetailModal
+        visible={playerModalVisible}
+        accountId={selectedPlayerId}
+        onClose={() => setPlayerModalVisible(false)}
+        onMatchPress={(id) => {
+          setPlayerModalVisible(false);
+          openMatchById(id);
+        }}
+      />
+
+      <MatchOverviewModal
+        matchId={selectedMatchId}
+        visible={matchModalVisible}
+        onClose={() => setMatchModalVisible(false)}
+        onPushPlayer={(id) => {
+          setMatchModalVisible(false);
+          openPlayerDetails(id.toString());
+        }}
+      />
+    </LinearGradient>
+  );
+}

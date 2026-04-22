@@ -23,6 +23,7 @@ import { queryClient } from '../../src/services/queryClient';
 import Skeleton from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
+import NotificationBell from '../../src/components/NotificationBell';
 
 // Minimum picks threshold to avoid heroes with tiny sample sizes
 const MIN_PICKS = 5000;
@@ -328,7 +329,7 @@ export default function HomeScreen() {
       colors={['#1a1a2e', '#121212']} 
       style={{ flex: 1 }}
     >
-      <GlassHeader>
+      <GlassHeader rightComponent={<NotificationBell />}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Image
             source={require('../../assets/images/dota_logo_placeholder.png')}

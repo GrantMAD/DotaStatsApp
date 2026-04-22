@@ -22,10 +22,14 @@ import {
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
 import { useSearchPlayers, usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
+import { useFriends } from '../../src/hooks/useFriends';
+import { supabase } from '../../src/services/supabase';
+import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
 import GlassModal from '../../src/components/GlassModal';
+import NotificationBell from '../../src/components/NotificationBell';
 
 type StackItem = 
   | { type: 'player', id: number | string }
@@ -61,10 +65,40 @@ function SearchSkeleton() {
 export default function SearchScreen() {
   const router = useRouter();
   const { accountId } = useSteamAuth();
+  const { user } = useSupabaseAuth();
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
 
   const { data: results = [], isLoading: searching, error } = useSearchPlayers(activeQuery);
+  const { sendFriendRequest } = useFriends();
+  
+  // Cross-reference with app users
+  const [appUsersMap, setAppUsersMap] = useState<Record<number, string>>({});
+
+  React.useEffect(() => {
+    async function checkAppUsers() {
+      if (!results.length) return;
+      const accountIds = results.map(r => r.account_id.toString());
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, steam_account_id')
+        .in('steam_account_id', accountIds);
+
+      if (data && !error) {
+        console.log('checkAppUsers found matching users in DB:', data);
+        const map: Record<number, string> = {};
+        data.forEach(u => {
+          map[Number(u.steam_account_id)] = u.id;
+        });
+        setAppUsersMap(map);
+      } else if (error) {
+        console.error('checkAppUsers error:', error);
+      } else {
+        console.log('checkAppUsers found 0 matching users in DB.');
+      }
+    }
+    checkAppUsers();
+  }, [results]);
 
   // The Navigation Stack
   const [modalStack, setModalStack] = useState<StackItem[]>([]);
@@ -86,36 +120,50 @@ export default function SearchScreen() {
     setModalStack(prev => prev.slice(0, -1));
   };
 
-  const renderResult = ({ item, index }: { item: SearchResult, index: number }) => (
-    <PressableScale onPress={() => pushPlayer(item.account_id)}>
-      <Animated.View 
-        entering={FadeInDown.delay(index * 50).springify()}
-        className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center"
-      >
-        <Image 
-          source={{ uri: item.avatarfull }} 
-          className="w-12 h-12 rounded-full border border-zinc-700 mr-4"
-        />
-        <View className="flex-1">
-          <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>{item.personaname}</Text>
-          <Text className="text-gray-500 text-xs font-outfit">ID: {item.account_id}</Text>
-          {item.last_match_time && (
-            <Text className="text-gray-600 text-[10px] font-outfit mt-1">
-              Last match: {new Date(item.last_match_time).toLocaleDateString()}
-            </Text>
-          )}
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="#4b5563" />
-      </Animated.View>
-    </PressableScale>
-  );
+  const renderResult = ({ item, index }: { item: SearchResult, index: number }) => {
+    const appUserId = appUsersMap[item.account_id];
+    
+    return (
+      <PressableScale onPress={() => pushPlayer(item.account_id)}>
+        <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+          <View className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center">
+            <Image 
+              source={{ uri: item.avatarfull }} 
+              className="w-12 h-12 rounded-full border border-zinc-700 mr-4"
+            />
+            <View className="flex-1">
+              <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>{item.personaname}</Text>
+              <Text className="text-gray-500 text-xs font-outfit">ID: {item.account_id}</Text>
+              {item.last_match_time && (
+                <Text className="text-gray-600 text-[10px] font-outfit mt-1">
+                  Last match: {new Date(item.last_match_time).toLocaleDateString()}
+                </Text>
+              )}
+            </View>
+            
+            {appUserId && user?.id !== appUserId && (
+              <TouchableOpacity 
+                onPress={() => sendFriendRequest(appUserId)}
+                className="bg-gamingAccent px-3 py-1.5 rounded-lg mr-3 flex-row items-center"
+              >
+                <Ionicons name="person-add" size={14} color="white" />
+                <Text className="text-white text-xs font-outfit-bold ml-1">Add</Text>
+              </TouchableOpacity>
+            )}
+
+            <Ionicons name="chevron-forward" size={20} color="#4b5563" />
+          </View>
+        </Animated.View>
+      </PressableScale>
+    );
+  };
 
   return (
     <LinearGradient 
       colors={['#1a1a2e', '#121212']} 
       style={{ flex: 1 }}
     >
-      <GlassHeader title="Search Players" />
+      <GlassHeader title="Search Players" rightComponent={<NotificationBell />} />
       
       <View className="flex-1">
         <FlatList

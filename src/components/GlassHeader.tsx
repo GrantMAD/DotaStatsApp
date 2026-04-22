@@ -6,10 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 interface GlassHeaderProps {
   title?: string;
   children?: React.ReactNode;
+  rightComponent?: React.ReactNode;
   style?: ViewStyle;
 }
 
-export default function GlassHeader({ title, children, style }: GlassHeaderProps) {
+export default function GlassHeader({ title, children, rightComponent, style }: GlassHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -20,10 +21,17 @@ export default function GlassHeader({ title, children, style }: GlassHeaderProps
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(18, 18, 18, 0.8)' }]} />
       )}
       <View style={styles.content}>
-        {title ? (
-          <Text style={styles.title}>{title}</Text>
-        ) : (
-          children
+        <View style={styles.leftContent}>
+          {title ? (
+            <Text style={styles.title}>{title}</Text>
+          ) : (
+            children
+          )}
+        </View>
+        {rightComponent && (
+          <View style={styles.rightContent}>
+            {rightComponent}
+          </View>
         )}
       </View>
       <View style={styles.border} />
@@ -41,6 +49,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  leftContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  rightContent: {
+    marginLeft: 16,
     justifyContent: 'center',
   },
   title: {

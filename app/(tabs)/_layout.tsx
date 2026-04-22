@@ -114,6 +114,24 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="friends"
+          options={{
+            href: session ? '/friends' : null,
+            headerShown: false,
+            headerTitle: '',
+            headerLeft: () => session ? (
+              <TouchableOpacity
+                onPress={() => setMenuVisible(true)}
+                className="ml-4 p-2"
+              >
+                <Ionicons name="menu" size={28} color="white" />
+              </TouchableOpacity>
+            ) : null,
+            tabBarIcon: ({ color }) => <Ionicons name="people" size={24} color={color} />,
+            tabBarLabel: 'Friends'
+          }}
+        />
+        <Tabs.Screen
           name="settings"
           options={{
             href: null, // Don't show in tab bar directly
