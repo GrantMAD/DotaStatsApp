@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSteamAuth } from '../../src/hooks/useSteamAuth';
+import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { HeroStats, ProMatch, searchPlayers } from '../../src/services/opendota';
 import HeroStatsCard from '../../src/components/HeroStatsCard';
@@ -212,7 +212,7 @@ function ProBanItem({ hero, index, onPress }: { hero: ProcessedHero; index: numb
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { login, accountId } = useSteamAuth();
+  const { session, steamAccountId } = useSupabaseAuth();
 
   // Queries
   const { data: heroesData = [], isLoading: loadingHeroes, refetch: refetchHeroes } = useHeroStats();
@@ -358,8 +358,8 @@ export default function HomeScreen() {
           </Text>
 
           {/* Login / Signed-in indicator */}
-          {!accountId ? (
-            <PressableScale onPress={login} style={{ width: '100%', marginBottom: 16 }}>
+          {!session ? (
+            <PressableScale onPress={() => router.push('/sign-in')} style={{ width: '100%', marginBottom: 16 }}>
               <View style={{
                 backgroundColor: '#8b5cf6',
                 flexDirection: 'row',
@@ -368,8 +368,29 @@ export default function HomeScreen() {
                 paddingVertical: 14,
                 borderRadius: 12,
               }}>
-                <Ionicons name="logo-steam" size={20} color="#fff" style={{ marginRight: 10 }} />
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign in with Steam</Text>
+                <Ionicons name="log-in" size={20} color="#fff" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign In</Text>
+              </View>
+            </PressableScale>
+          ) : !steamAccountId ? (
+            <PressableScale 
+              onPress={() => router.push('/dashboard')}
+              style={{ width: '100%', marginBottom: 16 }}
+            >
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: '#1E1E2E',
+                paddingVertical: 14,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#eab308',
+                borderStyle: 'dashed',
+              }}>
+                <Ionicons name="link" size={20} color="#eab308" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Link Steam Account</Text>
+                <Ionicons name="chevron-forward" size={16} color="#eab308" style={{ marginLeft: 8 }} />
               </View>
             </PressableScale>
           ) : (

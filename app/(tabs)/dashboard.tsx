@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
+import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
 import { usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
@@ -20,7 +21,9 @@ import MeshGradient from '../../src/components/MeshGradient';
 
 
 export default function DashboardScreen() {
-  const { accountId } = useSteamAuth();
+  const { steamAccountId } = useSupabaseAuth();
+  const { login, isLoading: steamLoading } = useSteamAuth();
+  const accountId = steamAccountId;
   
   // Main Dashboard Queries
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(accountId);
@@ -66,7 +69,7 @@ export default function DashboardScreen() {
     setPlayerModalVisible(true);
   };
 
-  if (loading && !profile) {
+  if (loading && !profile && accountId) {
     return <PlayerProfileSkeleton />;
   }
 
@@ -76,15 +79,47 @@ export default function DashboardScreen() {
       style={{ flex: 1 }}
     >
       <GlassHeader title="My Dashboard" />
-      <PlayerOverviewContent
-        accountId={accountId!}
-        profile={profile || null}
-        wl={wl || null}
-        matches={matches}
-        onMatchPress={handleMatchPress}
-        onRefresh={onRefresh}
-        refreshing={isRefreshing}
-      />
+      
+      {!accountId ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Ionicons name="link" size={64} color="#eab308" style={{ marginBottom: 16 }} />
+          <Text style={{ color: '#fff', fontSize: 24, fontWeight: '800', marginBottom: 8, textAlign: 'center' }}>
+            Link Steam Account
+          </Text>
+          <Text style={{ color: '#888', fontSize: 16, marginBottom: 32, textAlign: 'center' }}>
+            Connect your Steam account to view your Dota 2 statistics and match history.
+          </Text>
+          <TouchableOpacity 
+            onPress={login}
+            disabled={steamLoading}
+            style={{ 
+              backgroundColor: '#8b5cf6', 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              paddingVertical: 14, 
+              paddingHorizontal: 24, 
+              borderRadius: 12 
+            }}
+          >
+            {steamLoading ? <ActivityIndicator color="#fff" /> : (
+              <>
+                <Ionicons name="logo-steam" size={20} color="#fff" style={{ marginRight: 10 }} />
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign in with Steam</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <PlayerOverviewContent
+          accountId={accountId!}
+          profile={profile || null}
+          wl={wl || null}
+          matches={matches}
+          onMatchPress={handleMatchPress}
+          onRefresh={onRefresh}
+          refreshing={isRefreshing}
+        />
+      )}
 
       {/* Match Details Modal */}
       <MatchOverviewModal 

@@ -3,6 +3,9 @@ import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as SecureStore from 'expo-secure-store';
+import { useSupabaseAuth } from './SupabaseAuthContext';
+import { getPlayerProfile } from '../services/opendota';
+import { supabase } from '../services/supabase';
 
 const STORAGE_KEY = 'account_id';
 const STEAM_OPENID_URL = 'https://steamcommunity.com/openid/login';
@@ -36,6 +39,7 @@ WebBrowser.maybeCompleteAuthSession();
 export function SteamAuthProvider({ children }: { children: ReactNode }) {
   const [accountId, setAccountId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, refreshProfile } = useSupabaseAuth();
 
   useEffect(() => {
     storage.getItem(STORAGE_KEY).then(id => {
@@ -73,6 +77,21 @@ export function SteamAuthProvider({ children }: { children: ReactNode }) {
 
             await storage.setItem(STORAGE_KEY, accountIdStr);
             setAccountId(accountIdStr);
+
+            if (user) {
+              const profile = await getPlayerProfile(accountIdStr);
+              let steamName = null;
+              if (profile && profile.profile) {
+                steamName = profile.profile.personaname;
+              }
+              
+              await supabase
+                .from('users')
+                .update({ steam_account_id: accountIdStr, steam_name: steamName })
+                .eq('id', user.id);
+                
+              await refreshProfile();
+            }
           }
         }
       }
@@ -81,7 +100,7 @@ export function SteamAuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user, refreshProfile]);
 
   const logout = useCallback(async () => {
     await storage.removeItem(STORAGE_KEY);

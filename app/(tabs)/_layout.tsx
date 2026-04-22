@@ -1,17 +1,18 @@
-import { Tabs, Redirect, usePathname } from 'expo-router';
+import { Tabs, Redirect, usePathname, useRouter } from 'expo-router';
 import { TouchableOpacity, View, Text, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useSteamAuth } from '../../src/hooks/useSteamAuth';
+import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import { useState } from 'react';
 
 export default function TabsLayout() {
-  const { logout, accountId, isLoading, login } = useSteamAuth(); // login is now available
+  const { session, isLoading, signOut } = useSupabaseAuth();
   const [menuVisible, setMenuVisible] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
-  // If not logged in and trying to access a protected route, redirect to home
-  if (!isLoading && !accountId && pathname !== '/search' && pathname !== '/home' && pathname !== '/pro') {
-    return <Redirect href="/(tabs)/home" />;
+  // If not logged in and trying to access a protected route, redirect to welcome
+  if (!isLoading && !session && pathname !== '/search' && pathname !== '/home' && pathname !== '/pro') {
+    return <Redirect href="/welcome" />;
   }
 
   return (
@@ -48,7 +49,7 @@ export default function TabsLayout() {
           options={{
             href: '/home', // Always available
             headerTitle: '', // Set headerTitle to empty string to remove heading
-            headerLeft: () => accountId ? (
+            headerLeft: () => session ? (
               <TouchableOpacity
                 onPress={() => setMenuVisible(true)}
                 className="ml-4 p-2"
@@ -64,7 +65,7 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="dashboard"
           options={{
-            href: accountId ? '/dashboard' : null, // Only show tab if logged in
+            href: session ? '/dashboard' : null, // Only show tab if logged in to Supabase
             headerTitle: '',
             headerLeft: () => (
               <TouchableOpacity
@@ -83,7 +84,7 @@ export default function TabsLayout() {
           options={{
             headerShown: true,
             headerTitle: '',
-            headerLeft: () => accountId ? (
+            headerLeft: () => session ? (
               <TouchableOpacity
                 onPress={() => setMenuVisible(true)}
                 className="ml-4 p-2"
@@ -100,7 +101,7 @@ export default function TabsLayout() {
           options={{
             headerShown: true,
             headerTitle: '',
-            headerLeft: () => accountId ? (
+            headerLeft: () => session ? (
               <TouchableOpacity
                 onPress={() => setMenuVisible(true)}
                 className="ml-4 p-2"
@@ -110,6 +111,13 @@ export default function TabsLayout() {
             ) : null,
             tabBarIcon: ({ color }) => <Ionicons name="trophy" size={24} color={color} />,
             tabBarLabel: 'Pro Scene'
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            href: null, // Don't show in tab bar directly
+            headerShown: false,
           }}
         />
       </Tabs>
@@ -129,7 +137,7 @@ export default function TabsLayout() {
               <TouchableOpacity
                 onPress={() => {
                   setMenuVisible(false);
-                  logout();
+                  signOut();
                 }}
                 className="px-4 py-3 flex-row items-center active:bg-zinc-800"
               >
@@ -138,7 +146,10 @@ export default function TabsLayout() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => setMenuVisible(false)}
+                onPress={() => {
+                  setMenuVisible(false);
+                  router.push('/(tabs)/settings');
+                }}
                 className="px-4 py-3 border-t border-zinc-800 flex-row items-center active:bg-zinc-800"
               >
                 <Ionicons name="settings-outline" size={20} color="white" />
