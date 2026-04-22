@@ -43,7 +43,7 @@ export const useFriends = () => {
     // so we fetch where auth.uid() is involved, then process.
     const { data, error } = await supabase
       .from('friendships')
-      .select('*, requester:requester_id(id, steam_account_id, steam_name, email), addressee:addressee_id(id, steam_account_id, steam_name, email)')
+      .select('*, requester:requester_id(*), addressee:addressee_id(*)')
       .eq('status', 'accepted')
       .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
 

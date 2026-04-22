@@ -24,6 +24,9 @@ import { useLeagues, useProTeams, useProPlayers } from '../../src/hooks/useOpenD
 import Skeleton from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
+import NotificationBell from '../../src/components/NotificationBell';
+import { useMenu } from './_layout';
+import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 
 type TabType = 'Tournaments' | 'Teams' | 'Players';
 type SubTabType = 'Premium' | 'Professional' | 'Amateur';
@@ -56,6 +59,8 @@ function ProSkeleton() {
 }
 
 export default function ProSceneScreen() {
+  const { session } = useSupabaseAuth();
+  const { setMenuVisible } = useMenu();
   const [activeTab, setActiveTab] = useState<TabType>('Tournaments');
   const [subTab, setSubTab] = useState<SubTabType>('Premium');
   const [searchQuery, setSearchQuery] = useState('');
@@ -172,6 +177,14 @@ export default function ProSceneScreen() {
 
   const renderHeader = () => (
     <View style={{ paddingBottom: 20, paddingTop: 10 }}>
+      <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
+        <Text style={{ color: '#fff', fontSize: 28, fontFamily: 'Outfit_900Black', marginBottom: 4 }}>
+          Pro Scene
+        </Text>
+        <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
+          Stay updated with the professional Dota 2 scene.
+        </Text>
+      </View>
       <View
         style={{
           flexDirection: 'row',
@@ -277,11 +290,24 @@ export default function ProSceneScreen() {
     </View>
   );
   return (
-    <LinearGradient 
-      colors={['#1a1a2e', '#121212']} 
+    <LinearGradient
+      colors={['#1a1a2e', '#121212']}
       style={{ flex: 1 }}
     >
-      <GlassHeader title="Pro Scene" />
+      <GlassHeader 
+        leftComponent={
+          session ? (
+            <TouchableOpacity 
+              onPress={() => setMenuVisible(true)}
+              style={{ padding: 8, marginLeft: -8 }}
+            >
+              <Ionicons name="menu" size={28} color="white" />
+            </TouchableOpacity>
+          ) : undefined
+        }
+        rightComponent={<NotificationBell />} 
+      />
+
       <View style={{ flex: 1 }}>
         {loading ? (
           <View style={{ marginTop: 20 }}>

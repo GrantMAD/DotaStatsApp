@@ -28,8 +28,9 @@ import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
-import GlassModal from '../../src/components/GlassModal';
 import NotificationBell from '../../src/components/NotificationBell';
+import { useMenu } from './_layout';
+
 
 type StackItem = 
   | { type: 'player', id: number | string }
@@ -65,7 +66,8 @@ function SearchSkeleton() {
 export default function SearchScreen() {
   const router = useRouter();
   const { accountId } = useSteamAuth();
-  const { user } = useSupabaseAuth();
+  const { user, session } = useSupabaseAuth();
+  const { setMenuVisible } = useMenu();
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
 
@@ -163,7 +165,19 @@ export default function SearchScreen() {
       colors={['#1a1a2e', '#121212']} 
       style={{ flex: 1 }}
     >
-      <GlassHeader title="Search Players" rightComponent={<NotificationBell />} />
+      <GlassHeader 
+        leftComponent={
+          session ? (
+            <TouchableOpacity 
+              onPress={() => setMenuVisible(true)}
+              style={{ padding: 8, marginLeft: -8 }}
+            >
+              <Ionicons name="menu" size={28} color="white" />
+            </TouchableOpacity>
+          ) : undefined
+        }
+        rightComponent={<NotificationBell />} 
+      />
       
       <View className="flex-1">
         <FlatList
@@ -171,11 +185,34 @@ export default function SearchScreen() {
           keyExtractor={(item) => item.account_id.toString()}
           renderItem={renderResult}
           ListHeaderComponent={
-            <View className="pt-2 px-6 pb-6">
-              <View className="flex-row items-center bg-[#2a2a2a] px-4 py-2 rounded-xl border border-zinc-800">
+            <View style={{ paddingTop: 8, paddingHorizontal: 20, paddingBottom: 24 }}>
+              <Text style={{ color: '#fff', fontSize: 28, fontFamily: 'Outfit_900Black', marginBottom: 4 }}>
+                Search
+              </Text>
+              <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular', marginBottom: 16 }}>
+                Find any Dota 2 player by their name or Steam ID.
+              </Text>
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: '#2a2a2a', 
+                borderRadius: 14, 
+                borderWidth: 1, 
+                borderColor: '#3a3a4e',
+                paddingLeft: 12,
+                paddingRight: 6,
+                paddingVertical: 6,
+              }}>
                 <Ionicons name="search" size={20} color="#9ca3af" />
                 <TextInput 
-                  className="flex-1 text-white ml-3 py-2 font-outfit"
+                  style={{ 
+                    flex: 1, 
+                    color: '#fff', 
+                    marginLeft: 10, 
+                    paddingVertical: 8, 
+                    fontFamily: 'Outfit_400Regular',
+                    fontSize: 16
+                  }}
                   placeholder="Search by name or Steam ID..."
                   placeholderTextColor="#6b7280"
                   value={query}
@@ -184,24 +221,47 @@ export default function SearchScreen() {
                   returnKeyType="search"
                   autoCorrect={false}
                 />
+                
                 {query.length > 0 && (
-                  <TouchableOpacity onPress={() => setQuery('')}>
+                  <TouchableOpacity onPress={() => setQuery('')} style={{ padding: 8 }}>
                     <Ionicons name="close-circle" size={20} color="#6b7280" />
                   </TouchableOpacity>
                 )}
+
+                <TouchableOpacity 
+                  onPress={handleSearch}
+                  style={{
+                    backgroundColor: '#8b5cf6',
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    marginLeft: 4,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Ionicons name="arrow-forward" size={20} color="#fff" />
+                </TouchableOpacity>
               </View>
-              <PressableScale 
-                onPress={handleSearch}
-                className="bg-gamingAccent mt-4 py-3 rounded-xl items-center shadow-md"
-              >
-                <Text className="text-white font-outfit-bold">Search</Text>
-              </PressableScale>
 
               {!results.length && !searching && (
-                <View className="py-20 justify-center items-center px-10">
-                  <Ionicons name="search-outline" size={64} color="#374151" />
-                  <Text className="text-gray-400 text-center mt-4 font-outfit-semibold text-lg">
+                <View style={{ paddingVertical: 80, justifyContent: 'center', alignItems: 'center' }}>
+                  <View style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 50,
+                    backgroundColor: '#1a1a2e',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 20,
+                  }}>
+                    <Ionicons name="search-outline" size={48} color="#374151" />
+                  </View>
+                  <Text style={{ color: '#9ca3af', textAlign: 'center', fontFamily: 'Outfit_600SemiBold', fontSize: 18 }}>
                     {activeQuery ? `No results found for "${activeQuery}"` : "Who are you looking for?"}
+                  </Text>
+                  <Text style={{ color: '#6b7280', textAlign: 'center', marginTop: 8, fontFamily: 'Outfit_400Regular' }}>
+                    Search for players by name or Steam ID.
                   </Text>
                 </View>
               )}

@@ -2,7 +2,14 @@ import { Tabs, Redirect, usePathname, useRouter } from 'expo-router';
 import { TouchableOpacity, View, Text, Modal, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
-import { useState } from 'react';
+import { useState, createContext, useContext } from 'react';
+
+// Create a simple context to manage the side menu
+const MenuContext = createContext({
+  setMenuVisible: (visible: boolean) => {},
+});
+
+export const useMenu = () => useContext(MenuContext);
 
 export default function TabsLayout() {
   const { session, isLoading, signOut } = useSupabaseAuth();
@@ -16,15 +23,10 @@ export default function TabsLayout() {
   }
 
   return (
-    <>
+    <MenuContext.Provider value={{ setMenuVisible }}>
       <Tabs
         screenOptions={{
-          headerStyle: {
-            backgroundColor: '#121212',
-            borderBottomWidth: 1,
-            borderBottomColor: '#333',
-          },
-          headerTintColor: '#fff',
+          headerShown: false,
           tabBarStyle: {
             backgroundColor: '#121212',
             borderTopWidth: 1,
@@ -47,51 +49,22 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="home"
           options={{
-            href: '/home', // Always available
-            headerTitle: '', // Set headerTitle to empty string to remove heading
-            headerLeft: () => session ? (
-              <TouchableOpacity
-                onPress={() => setMenuVisible(true)}
-                className="ml-4 p-2"
-              >
-                <Ionicons name="menu" size={28} color="white" />
-              </TouchableOpacity>
-            ) : null,
+            href: '/home',
             tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
             tabBarLabel: 'Home'
           }}
         />
 
         <Tabs.Screen
-          name="dashboard"
+          name="profile"
           options={{
-            href: session ? '/dashboard' : null, // Only show tab if logged in to Supabase
-            headerTitle: '',
-            headerLeft: () => (
-              <TouchableOpacity
-                onPress={() => setMenuVisible(true)}
-                className="ml-4 p-2"
-              >
-                <Ionicons name="menu" size={28} color="white" />
-              </TouchableOpacity>
-            ),
-            tabBarIcon: ({ color }) => <Ionicons name="stats-chart" size={24} color={color} />,
-            tabBarLabel: 'Dashboard'
+            href: null,
+            headerShown: false,
           }}
         />
         <Tabs.Screen
           name="search"
           options={{
-            headerShown: true,
-            headerTitle: '',
-            headerLeft: () => session ? (
-              <TouchableOpacity
-                onPress={() => setMenuVisible(true)}
-                className="ml-4 p-2"
-              >
-                <Ionicons name="menu" size={28} color="white" />
-              </TouchableOpacity>
-            ) : null,
             tabBarIcon: ({ color }) => <Ionicons name="search" size={24} color={color} />,
             tabBarLabel: 'Search'
           }}
@@ -99,16 +72,6 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="pro"
           options={{
-            headerShown: true,
-            headerTitle: '',
-            headerLeft: () => session ? (
-              <TouchableOpacity
-                onPress={() => setMenuVisible(true)}
-                className="ml-4 p-2"
-              >
-                <Ionicons name="menu" size={28} color="white" />
-              </TouchableOpacity>
-            ) : null,
             tabBarIcon: ({ color }) => <Ionicons name="trophy" size={24} color={color} />,
             tabBarLabel: 'Pro Scene'
           }}
@@ -116,25 +79,14 @@ export default function TabsLayout() {
         <Tabs.Screen
           name="friends"
           options={{
-            href: session ? '/friends' : null,
+            href: null,
             headerShown: false,
-            headerTitle: '',
-            headerLeft: () => session ? (
-              <TouchableOpacity
-                onPress={() => setMenuVisible(true)}
-                className="ml-4 p-2"
-              >
-                <Ionicons name="menu" size={28} color="white" />
-              </TouchableOpacity>
-            ) : null,
-            tabBarIcon: ({ color }) => <Ionicons name="people" size={24} color={color} />,
-            tabBarLabel: 'Friends'
           }}
         />
         <Tabs.Screen
           name="settings"
           options={{
-            href: null, // Don't show in tab bar directly
+            href: null,
             headerShown: false,
           }}
         />
@@ -151,7 +103,50 @@ export default function TabsLayout() {
             style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
             onPress={() => setMenuVisible(false)}
           >
-            <View className="absolute top-16 left-4 bg-zinc-900 border border-zinc-800 rounded-lg w-48 py-2 shadow-2xl">
+            <View className="absolute top-16 left-4 bg-zinc-900 border border-zinc-800 rounded-lg w-56 py-2 shadow-2xl">
+              <View className="px-4 py-2 mb-1 border-b border-zinc-800/50">
+                <Text className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">Navigation</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setMenuVisible(false);
+                  router.push('/(tabs)/profile');
+                }}
+                className="px-4 py-3 flex-row items-center active:bg-zinc-800"
+              >
+                <Ionicons name="person-outline" size={20} color="white" />
+                <Text className="text-white ml-3 font-medium">My Profile</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setMenuVisible(false);
+                  router.push('/(tabs)/friends');
+                }}
+                className="px-4 py-3 flex-row items-center active:bg-zinc-800"
+              >
+                <Ionicons name="people-outline" size={20} color="white" />
+                <Text className="text-white ml-3 font-medium">Friends</Text>
+              </TouchableOpacity>
+
+              <View className="px-4 py-2 mt-2 mb-1 border-b border-zinc-800/50">
+                <Text className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">System</Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => {
+                  setMenuVisible(false);
+                  router.push('/(tabs)/settings');
+                }}
+                className="px-4 py-3 flex-row items-center active:bg-zinc-800"
+              >
+                <Ionicons name="settings-outline" size={20} color="white" />
+                <Text className="text-white ml-3 font-medium">Settings</Text>
+              </TouchableOpacity>
+
+              <View className="h-[1px] bg-zinc-800 mx-2 my-1" />
+
               <TouchableOpacity
                 onPress={() => {
                   setMenuVisible(false);
@@ -162,21 +157,10 @@ export default function TabsLayout() {
                 <Ionicons name="log-out-outline" size={20} color="#ef4444" />
                 <Text className="text-red-500 ml-3 font-medium">Logout</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setMenuVisible(false);
-                  router.push('/(tabs)/settings');
-                }}
-                className="px-4 py-3 border-t border-zinc-800 flex-row items-center active:bg-zinc-800"
-              >
-                <Ionicons name="settings-outline" size={20} color="white" />
-                <Text className="text-white ml-3">Settings</Text>
-              </TouchableOpacity>
             </View>
           </Pressable>
         </Modal>
       )}
-    </>
+    </MenuContext.Provider>
   );
 }

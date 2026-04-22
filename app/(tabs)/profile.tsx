@@ -18,19 +18,22 @@ import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
 import GlassHeader from '../../src/components/GlassHeader';
 import GlassModal from '../../src/components/GlassModal';
 import MeshGradient from '../../src/components/MeshGradient';
+import NotificationBell from '../../src/components/NotificationBell';
+import { useMenu } from './_layout';
 
 
-export default function DashboardScreen() {
-  const { steamAccountId } = useSupabaseAuth();
+export default function ProfileScreen() {
+  const { steamAccountId, session } = useSupabaseAuth();
   const { login, isLoading: steamLoading } = useSteamAuth();
-  const accountId = steamAccountId;
+  const { setMenuVisible } = useMenu();
+  const accountId = steamAccountId ? steamAccountId.toString() : null;
   
-  // Main Dashboard Queries
+  // Main Profile Queries
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(accountId);
   const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(accountId);
   const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(accountId);
 
-  const loading = profileLoading || wlLoading || matchesLoading;
+  const isDataLoading = profileLoading || wlLoading || matchesLoading;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Match Details Modal State
@@ -69,7 +72,7 @@ export default function DashboardScreen() {
     setPlayerModalVisible(true);
   };
 
-  if (loading && !profile && accountId) {
+  if (isDataLoading && !profile && accountId) {
     return <PlayerProfileSkeleton />;
   }
 
@@ -78,7 +81,20 @@ export default function DashboardScreen() {
       colors={['#1a1a2e', '#121212']} 
       style={{ flex: 1 }}
     >
-      <GlassHeader title="My Dashboard" />
+      <GlassHeader 
+        title="My Profile" 
+        leftComponent={
+          session ? (
+            <TouchableOpacity 
+              onPress={() => setMenuVisible(true)}
+              style={{ padding: 8, marginLeft: -8 }}
+            >
+              <Ionicons name="menu" size={28} color="white" />
+            </TouchableOpacity>
+          ) : undefined
+        }
+        rightComponent={<NotificationBell />}
+      />
       
       {!accountId ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>

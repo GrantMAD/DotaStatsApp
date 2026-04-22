@@ -24,6 +24,7 @@ import Skeleton from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
+import { useMenu } from './_layout';
 
 // Minimum picks threshold to avoid heroes with tiny sample sizes
 const MIN_PICKS = 5000;
@@ -214,6 +215,7 @@ function ProBanItem({ hero, index, onPress }: { hero: ProcessedHero; index: numb
 export default function HomeScreen() {
   const router = useRouter();
   const { session, steamAccountId } = useSupabaseAuth();
+  const { setMenuVisible } = useMenu();
 
   // Queries
   const { data: heroesData = [], isLoading: loadingHeroes, refetch: refetchHeroes } = useHeroStats();
@@ -329,18 +331,19 @@ export default function HomeScreen() {
       colors={['#1a1a2e', '#121212']} 
       style={{ flex: 1 }}
     >
-      <GlassHeader rightComponent={<NotificationBell />}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image
-            source={require('../../assets/images/dota_logo_placeholder.png')}
-            style={{ width: 32, height: 32, marginRight: 12 }}
-            resizeMode="contain"
-          />
-          <Text style={{ fontSize: 20, color: '#fff', fontWeight: '900', letterSpacing: 0.5 }}>
-            DOTA APP
-          </Text>
-        </View>
-      </GlassHeader>
+      <GlassHeader 
+        leftComponent={
+          session ? (
+            <TouchableOpacity 
+              onPress={() => setMenuVisible(true)}
+              style={{ padding: 8, marginLeft: -8 }}
+            >
+              <Ionicons name="menu" size={28} color="white" />
+            </TouchableOpacity>
+          ) : undefined
+        }
+        rightComponent={<NotificationBell />}
+      />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -375,7 +378,7 @@ export default function HomeScreen() {
             </PressableScale>
           ) : !steamAccountId ? (
             <PressableScale 
-              onPress={() => router.push('/dashboard')}
+              onPress={() => router.push('/profile')}
               style={{ width: '100%', marginBottom: 16 }}
             >
               <View style={{
@@ -396,7 +399,7 @@ export default function HomeScreen() {
             </PressableScale>
           ) : (
             <PressableScale 
-              onPress={() => router.push('/dashboard')}
+              onPress={() => router.push('/profile')}
               style={{ width: '100%', marginBottom: 16 }}
             >
               <View style={{
@@ -411,7 +414,7 @@ export default function HomeScreen() {
                 borderStyle: 'dashed',
               }}>
                 <Ionicons name="person-circle" size={20} color="#22c55e" style={{ marginRight: 10 }} />
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>View My Dashboard</Text>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>View My Profile</Text>
                 <Ionicons name="chevron-forward" size={16} color="#22c55e" style={{ marginLeft: 8 }} />
               </View>
             </PressableScale>

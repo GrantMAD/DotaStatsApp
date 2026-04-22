@@ -56,7 +56,7 @@ function LifetimeStatsSkeleton() {
   );
 }
 
-type DashboardTab = 'Recent' | 'Lifetime';
+type ProfileTab = 'Recent' | 'Lifetime';
 
 interface CategoryStats {
   label: string;
@@ -84,7 +84,7 @@ export function PlayerOverviewContent({
   onRefresh,
   refreshing = false
 }: PlayerOverviewContentProps) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('Recent');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('Recent');
   
   // Lifetime Stats State
   const [totals, setTotals] = useState<PlayerTotal[]>([]);
@@ -249,9 +249,9 @@ export function PlayerOverviewContent({
           </View>
         )}
 
-        {/* Dashboard Tabs */}
+        {/* Profile Tabs */}
         <View className="flex-row bg-[#2a2a2a] rounded-xl p-1 mb-4">
-          {(['Recent', 'Lifetime'] as DashboardTab[]).map((tab) => (
+          {(['Recent', 'Lifetime'] as ProfileTab[]).map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => setActiveTab(tab)}
@@ -326,24 +326,41 @@ export function PlayerOverviewContent({
       <PressableScale onPress={() => onMatchPress(item.match_id)}>
         <Animated.View 
           entering={FadeInDown.delay(index * 100).springify()}
-          style={{ marginHorizontal: 16 }}
-          className={`bg-[#1e1e1e] p-4 mb-3 rounded-xl border-l-4 flex-row justify-between items-center ${isWin ? 'border-win' : 'border-loss'}`}
+          style={{ 
+            marginHorizontal: 16,
+            backgroundColor: '#1e1e2e',
+            padding: 16,
+            marginBottom: 12,
+            borderRadius: 14,
+            borderLeftWidth: 4,
+            borderLeftColor: isWin ? '#22c55e' : '#ef4444',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.05)'
+          }}
         >
-          <View className="flex-row items-center flex-1">
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <Image 
               source={{ uri: getHeroImageUrl(item.hero_id) }} 
-              className="w-12 h-12 rounded-lg mr-3"
+              style={{ width: 48, height: 48, borderRadius: 8, marginRight: 12 }}
               resizeMode="cover"
             />
-            <View className="flex-1">
-              <Text className={`font-outfit-bold text-lg ${isWin ? 'text-win' : 'text-loss'}`}>{isWin ? 'Victory' : 'Defeat'}</Text>
-              <Text className="text-gray-300 text-sm font-outfit-semibold">{heroName}</Text>
-              <Text className="text-gray-500 text-xs font-outfit">KDA: {item.kills}/{item.deaths}/{item.assists}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: isWin ? '#22c55e' : '#ef4444', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>
+                {isWin ? 'Victory' : 'Defeat'}
+              </Text>
+              <Text style={{ color: '#d1d5db', fontFamily: 'Outfit_600SemiBold', fontSize: 14 }}>{heroName}</Text>
+              <Text style={{ color: '#6b7280', fontFamily: 'Outfit_400Regular', fontSize: 12 }}>KDA: {item.kills}/{item.deaths}/{item.assists}</Text>
             </View>
           </View>
-          <View className="items-end">
-            <Text className="text-gray-300 font-outfit-semibold">{Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, '0')}</Text>
-            <Ionicons name="chevron-forward" size={16} color="#4b5563" className="mt-1" />
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+            <Text style={{ color: '#9ca3af', fontFamily: 'Outfit_600SemiBold', fontSize: 13, marginRight: 8 }}>
+              {Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, '0')}
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color="#4b5563" />
           </View>
         </Animated.View>
       </PressableScale>

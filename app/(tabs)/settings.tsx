@@ -4,11 +4,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import GlassHeader from '../../src/components/GlassHeader';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
+import { useMenu } from './_layout';
 import { supabase } from '../../src/services/supabase';
 import Toast from 'react-native-toast-message';
 
 export default function SettingsScreen() {
-  const { user, steamAccountId, signOut, refreshProfile } = useSupabaseAuth();
+  const { user, session, steamAccountId, signOut, refreshProfile } = useSupabaseAuth();
+  const { setMenuVisible } = useMenu();
   const [loading, setLoading] = useState(false);
 
   const handleUnlinkSteam = async () => {
@@ -74,10 +76,30 @@ export default function SettingsScreen() {
 
   return (
     <LinearGradient colors={['#1a1a2e', '#121212']} style={{ flex: 1 }}>
-      <GlassHeader title="Settings" />
+      <GlassHeader 
+        leftComponent={
+          session ? (
+            <TouchableOpacity 
+              onPress={() => setMenuVisible(true)}
+              style={{ padding: 8, marginLeft: -8 }}
+            >
+              <Ionicons name="menu" size={28} color="white" />
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
       
-      <View style={{ padding: 24 }}>
-        <Text style={{ color: '#888', fontSize: 14, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase' }}>
+      <View style={{ padding: 20 }}>
+        <View style={{ paddingBottom: 16 }}>
+          <Text style={{ color: '#fff', fontSize: 28, fontFamily: 'Outfit_900Black', marginBottom: 4 }}>
+            Settings
+          </Text>
+          <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
+            Manage your account preferences and connected services.
+          </Text>
+        </View>
+
+        <Text style={{ color: '#888', fontSize: 14, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase', marginTop: 16 }}>
           Account
         </Text>
         <View style={{ backgroundColor: '#1e1e2e', borderRadius: 12, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: '#2a2a3e' }}>
