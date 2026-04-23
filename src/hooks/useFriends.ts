@@ -29,18 +29,29 @@ export interface AppNotification {
   created_at: string;
 }
 
+export interface Follow {
+  id: string;
+  follower_id: string;
+  followed_id: string;
+  created_at: string;
+  followed_user?: {
+    id: string;
+    steam_account_id: string;
+    steam_name: string;
+    email: string;
+  };
+}
+
 export const useFriends = () => {
   const { user } = useSupabaseAuth();
   const [friends, setFriends] = useState<Friendship[]>([]);
+  const [following, setFollowing] = useState<Follow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchFriends = async () => {
     if (!user) return;
-    setLoading(true);
     
     // We want friendships where status is 'accepted' and user is either requester or addressee.
-    // Supabase JS doesn't easily let us join on either/or for foreign keys natively without a view,
-    // so we fetch where auth.uid() is involved, then process.
     const { data, error } = await supabase
       .from('friendships')
       .select('*, requester:requester_id(*), addressee:addressee_id(*)')
@@ -57,11 +68,32 @@ export const useFriends = () => {
       }));
       setFriends(formatted);
     }
+  };
+
+  const fetchFollowing = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('follows')
+      .select('*, followed_user:followed_id(*)')
+      .eq('follower_id', user.id);
+
+    if (error) {
+      console.error('Error fetching following:', error);
+    } else {
+      setFollowing(data || []);
+    }
+  };
+
+  const loadData = async () => {
+    if (!user) return;
+    setLoading(true);
+    await Promise.all([fetchFriends(), fetchFollowing()]);
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchFriends();
+    loadData();
   }, [user]);
 
   const sendFriendRequest = async (addresseeId: string) => {
@@ -87,7 +119,75 @@ export const useFriends = () => {
     return true;
   };
 
-  return { friends, loading, fetchFriends, sendFriendRequest };
+  const followUser = async (targetUserId: string) => {
+    if (!user) return false;
+    const { error } = await supabase
+      .from('follows')
+      .insert({ follower_id: user.id, followed_id: targetUserId });
+
+    if (error) {
+      console.error('Error following user:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to follow user',
+        text2: error.message
+      });
+      return false;
+    }
+
+    Toast.show({
+      type: 'success',
+      text1: 'User followed!'
+    });
+    fetchFollowing();
+    return true;
+  };
+
+  const unfollowUser = async (targetUserId: string) => {
+    if (!user) return false;
+    const { error } = await supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', user.id)
+      .eq('followed_id', targetUserId);
+
+    if (error) {
+      console.error('Error unfollowing user:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to unfollow user',
+        text2: error.message
+      });
+      return false;
+    }
+
+    Toast.show({
+      type: 'success',
+      text1: 'User unfollowed'
+    });
+    fetchFollowing();
+    return true;
+  };
+
+  const isFollowing = (targetUserId: string) => {
+    return following.some(f => f.followed_id === targetUserId);
+  };
+
+  const isFriend = (targetUserId: string) => {
+    return friends.some(f => f.requester_id === targetUserId || f.addressee_id === targetUserId);
+  };
+
+  return { 
+    friends, 
+    following, 
+    loading, 
+    fetchFriends: loadData, 
+    sendFriendRequest,
+    followUser,
+    unfollowUser,
+    isFollowing,
+    isFriend
+  };
 };
 
 export const useNotifications = () => {

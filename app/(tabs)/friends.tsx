@@ -1,62 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Image, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFriends } from '../../src/hooks/useFriends';
 import GlassHeader from '../../src/components/GlassHeader';
-import PressableScale from '../../src/components/PressableScale';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
-import { usePlayerProfile } from '../../src/hooks/useOpenDota';
+import UserListItem from '../../src/components/UserListItem';
 
-function FriendItem({ friendUser, index, onPress }: { friendUser: any; index: number; onPress: () => void }) {
-  const { data: profile, isLoading } = usePlayerProfile(friendUser.steam_account_id);
-  const avatarUrl = profile?.profile?.avatarfull;
-
-  return (
-    <PressableScale onPress={onPress}>
-      <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
-        <View className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center border border-zinc-800 shadow-sm">
-          <View className="relative">
-            {avatarUrl ? (
-              <Image 
-                source={{ uri: avatarUrl }} 
-                className="w-12 h-12 rounded-full border border-zinc-700 mr-4"
-                resizeMode="cover"
-              />
-            ) : (
-              <View className="w-12 h-12 rounded-full bg-gamingAccent/20 items-center justify-center mr-4">
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="#8b5cf6" />
-                ) : (
-                  <Ionicons name="person" size={24} color="#8b5cf6" />
-                )}
-              </View>
-            )}
-          </View>
-          <View className="flex-1">
-            <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>
-              {friendUser.steam_name || 'Unknown Player'}
-            </Text>
-            <Text className="text-gray-500 text-xs font-outfit">
-              ID: {friendUser.steam_account_id}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#4b5563" />
-        </View>
-      </Animated.View>
-    </PressableScale>
-  );
-}
+type TabType = 'Friends' | 'Following';
 
 export default function FriendsScreen() {
   const { session } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
-  const { friends, loading, fetchFriends } = useFriends();
+  const { friends, following, loading, fetchFriends, unfollowUser } = useFriends();
+  const [activeTab, setActiveTab] = useState<TabType>('Friends');
+  
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerModalVisible, setPlayerModalVisible] = useState(false);
   
@@ -78,10 +40,31 @@ export default function FriendsScreen() {
     if (!friendUser) return null;
 
     return (
-      <FriendItem 
-        friendUser={friendUser} 
+      <UserListItem 
+        user={friendUser} 
         index={index} 
         onPress={() => openPlayerDetails(friendUser.steam_account_id)} 
+      />
+    );
+  };
+
+  const renderFollowing = ({ item, index }: { item: any; index: number }) => {
+    const followedUser = item.followed_user;
+    if (!followedUser) return null;
+
+    return (
+      <UserListItem 
+        user={followedUser} 
+        index={index} 
+        onPress={() => openPlayerDetails(followedUser.steam_account_id)}
+        rightComponent={
+          <TouchableOpacity 
+            onPress={() => unfollowUser(followedUser.id)}
+            className="bg-zinc-800 px-3 py-1.5 rounded-lg mr-2"
+          >
+            <Text className="text-gray-300 text-xs font-outfit-bold">Unfollow</Text>
+          </TouchableOpacity>
+        }
       />
     );
   };
@@ -103,32 +86,53 @@ export default function FriendsScreen() {
       />
       
       <View className="flex-1">
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
+          <Text style={{ color: '#fff', fontSize: 28, fontFamily: 'Outfit_900Black', marginBottom: 4 }}>
+            Community
+          </Text>
+          <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
+            Manage your friends and followed players.
+          </Text>
+        </View>
+
+        {/* Tab Selector */}
+        <View className="flex-row mx-5 mt-4 mb-2 bg-[#1e1e1e] p-1 rounded-xl border border-zinc-800">
+          {(['Friends', 'Following'] as TabType[]).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent' : ''}`}
+            >
+              <Text className={`font-outfit-bold text-sm ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
+                {tab.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {loading ? (
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="#8b5cf6" />
           </View>
         ) : (
           <FlatList
-            data={friends}
+            data={activeTab === 'Friends' ? friends : following}
             keyExtractor={(item) => item.id}
-            renderItem={renderFriend}
+            renderItem={activeTab === 'Friends' ? renderFriend : renderFollowing}
             onRefresh={fetchFriends}
             refreshing={loading}
-            ListHeaderComponent={
-              <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
-                <Text style={{ color: '#fff', fontSize: 28, fontFamily: 'Outfit_900Black', marginBottom: 4 }}>
-                  Friends
-                </Text>
-                <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
-                  Manage your friends and track their recent matches.
-                </Text>
-              </View>
-            }
+            contentContainerStyle={{ paddingTop: 12, paddingBottom: 40 }}
             ListEmptyComponent={
               <View className="flex-1 justify-center items-center py-20 px-10">
-                <Ionicons name="people-outline" size={64} color="#374151" />
+                <Ionicons 
+                  name={activeTab === 'Friends' ? "people-outline" : "person-add-outline"} 
+                  size={64} 
+                  color="#374151" 
+                />
                 <Text className="text-gray-400 text-center mt-4 font-outfit-semibold text-lg">
-                  No friends yet. Search for players to add them!
+                  {activeTab === 'Friends' 
+                    ? "No friends yet. Search for players to add them!" 
+                    : "You aren't following anyone yet."}
                 </Text>
               </View>
             }

@@ -72,7 +72,7 @@ export default function SearchScreen() {
   const [activeQuery, setActiveQuery] = useState('');
 
   const { data: results = [], isLoading: searching, error } = useSearchPlayers(activeQuery);
-  const { sendFriendRequest } = useFriends();
+  const { sendFriendRequest, followUser, unfollowUser, isFollowing, isFriend } = useFriends();
   
   // Cross-reference with app users
   const [appUsersMap, setAppUsersMap] = useState<Record<number, string>>({});
@@ -124,6 +124,8 @@ export default function SearchScreen() {
 
   const renderResult = ({ item, index }: { item: SearchResult, index: number }) => {
     const appUserId = appUsersMap[item.account_id];
+    const following = appUserId ? isFollowing(appUserId) : false;
+    const friend = appUserId ? isFriend(appUserId) : false;
     
     return (
       <PressableScale onPress={() => pushPlayer(item.account_id)}>
@@ -141,18 +143,32 @@ export default function SearchScreen() {
                   Last match: {new Date(item.last_match_time).toLocaleDateString()}
                 </Text>
               )}
+
+              {appUserId && user?.id !== appUserId && (
+                <View className="flex-row items-center mt-3">
+                  <TouchableOpacity 
+                    onPress={() => following ? unfollowUser(appUserId) : followUser(appUserId)}
+                    className={`${following ? 'bg-zinc-800' : 'bg-blue-600'} px-3 py-1.5 rounded-lg mr-2 flex-row items-center`}
+                  >
+                    <Ionicons name={following ? "checkmark" : "add"} size={14} color="white" />
+                    <Text className="text-white text-xs font-outfit-bold ml-1">
+                      {following ? 'Following' : 'Follow'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {!friend && (
+                    <TouchableOpacity 
+                      onPress={() => sendFriendRequest(appUserId)}
+                      className="bg-gamingAccent px-3 py-1.5 rounded-lg flex-row items-center"
+                    >
+                      <Ionicons name="person-add" size={14} color="white" />
+                      <Text className="text-white text-xs font-outfit-bold ml-1">Add Friend</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
             
-            {appUserId && user?.id !== appUserId && (
-              <TouchableOpacity 
-                onPress={() => sendFriendRequest(appUserId)}
-                className="bg-gamingAccent px-3 py-1.5 rounded-lg mr-3 flex-row items-center"
-              >
-                <Ionicons name="person-add" size={14} color="white" />
-                <Text className="text-white text-xs font-outfit-bold ml-1">Add</Text>
-              </TouchableOpacity>
-            )}
-
             <Ionicons name="chevron-forward" size={20} color="#4b5563" />
           </View>
         </Animated.View>
