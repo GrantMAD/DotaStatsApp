@@ -18,16 +18,18 @@ import { useRouter } from 'expo-router';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import { 
   SearchResult,
+  Peer,
 } from '../../src/services/opendota';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
-import { useSearchPlayers, usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
+import { useSearchPlayers, usePlayerProfile, usePlayerWinLoss, useRecentMatches, usePlayerPeers } from '../../src/hooks/useOpenDota';
 import { useFriends } from '../../src/hooks/useFriends';
 import { supabase } from '../../src/services/supabase';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
+import GlassModal from '../../src/components/GlassModal';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 
@@ -65,42 +67,62 @@ function SearchSkeleton() {
 
 export default function SearchScreen() {
   const router = useRouter();
-  const { accountId } = useSteamAuth();
+  const { accountId: steamAccountId } = useSteamAuth();
   const { user, session } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
   const [query, setQuery] = useState('');
   const [activeQuery, setActiveQuery] = useState('');
+  const [searchMode, setSearchMode] = useState<'global' | 'steam'>('global');
 
-  const { data: results = [], isLoading: searching, error } = useSearchPlayers(activeQuery);
+  const { data: globalResults = [], isLoading: searchingGlobal, error } = useSearchPlayers(activeQuery);
+  const { data: peers = [], isLoading: loadingPeers } = usePlayerPeers(searchMode === 'steam' ? steamAccountId : null);
   const { sendFriendRequest, followUser, unfollowUser, isFollowing, isFriend } = useFriends();
   
   // Cross-reference with app users
   const [appUsersMap, setAppUsersMap] = useState<Record<number, string>>({});
+  const [steamFriendsResults, setSteamFriendsResults] = useState<SearchResult[]>([]);
+
+  const results = searchMode === 'global' 
+    ? globalResults 
+    : steamFriendsResults.filter(p => p.personaname.toLowerCase().includes(query.toLowerCase()));
+  const searching = searchMode === 'global' ? searchingGlobal : loadingPeers;
 
   React.useEffect(() => {
     async function checkAppUsers() {
-      if (!results.length) return;
-      const accountIds = results.map(r => r.account_id.toString());
+      const sourceResults = searchMode === 'global' ? globalResults : peers;
+      if (!sourceResults.length) {
+        if (searchMode === 'steam') setSteamFriendsResults([]);
+        return;
+      }
+      
+      const accountIds = sourceResults.map(r => r.account_id.toString());
       const { data, error } = await supabase
         .from('users')
         .select('id, steam_account_id')
         .in('steam_account_id', accountIds);
 
       if (data && !error) {
-        console.log('checkAppUsers found matching users in DB:', data);
         const map: Record<number, string> = {};
         data.forEach(u => {
           map[Number(u.steam_account_id)] = u.id;
         });
         setAppUsersMap(map);
+
+        if (searchMode === 'steam') {
+          // Map ALL peers to SearchResult format (don't filter by map[p.account_id])
+          const formatted = peers.map(p => ({
+            account_id: p.account_id,
+            personaname: p.personaname,
+            avatarfull: p.avatar,
+          }));
+          setSteamFriendsResults(formatted);
+        }
       } else if (error) {
         console.error('checkAppUsers error:', error);
-      } else {
-        console.log('checkAppUsers found 0 matching users in DB.');
       }
     }
     checkAppUsers();
-  }, [results]);
+  }, [globalResults, peers, searchMode]);
 
   // The Navigation Stack
   const [modalStack, setModalStack] = useState<StackItem[]>([]);
@@ -124,7 +146,7 @@ export default function SearchScreen() {
 
   const renderResult = ({ item, index }: { item: SearchResult, index: number }) => {
     const appUserId = appUsersMap[item.account_id];
-    const following = appUserId ? isFollowing(appUserId) : false;
+    const following = isFollowing(item.account_id.toString());
     const friend = appUserId ? isFriend(appUserId) : false;
     
     return (
@@ -144,10 +166,10 @@ export default function SearchScreen() {
                 </Text>
               )}
 
-              {appUserId && user?.id !== appUserId && (
+              {steamAccountId !== item.account_id.toString() && (
                 <View className="flex-row items-center mt-3">
                   <TouchableOpacity 
-                    onPress={() => following ? unfollowUser(appUserId) : followUser(appUserId)}
+                    onPress={() => following ? unfollowUser(item.account_id.toString()) : followUser(item.account_id.toString())}
                     className={`${following ? 'bg-zinc-800' : 'bg-blue-600'} px-3 py-1.5 rounded-lg mr-2 flex-row items-center`}
                   >
                     <Ionicons name={following ? "checkmark" : "add"} size={14} color="white" />
@@ -156,7 +178,7 @@ export default function SearchScreen() {
                     </Text>
                   </TouchableOpacity>
 
-                  {!friend && (
+                  {appUserId && user?.id !== appUserId && !friend && (
                     <TouchableOpacity 
                       onPress={() => sendFriendRequest(appUserId)}
                       className="bg-gamingAccent px-3 py-1.5 rounded-lg flex-row items-center"
@@ -208,6 +230,30 @@ export default function SearchScreen() {
               <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular', marginBottom: 16 }}>
                 Find any Dota 2 player by their name or Steam ID.
               </Text>
+
+              {steamAccountId && (
+                <View className="flex-row mb-4 bg-[#1e1e1e] p-1 rounded-xl border border-zinc-800">
+                  <TouchableOpacity
+                    onPress={() => setSearchMode('global')}
+                    className={`flex-1 py-2 rounded-lg items-center flex-row justify-center ${searchMode === 'global' ? 'bg-gamingAccent' : ''}`}
+                  >
+                    <Ionicons name="globe-outline" size={16} color={searchMode === 'global' ? "white" : "#9ca3af"} />
+                    <Text className={`font-outfit-bold text-xs ml-2 ${searchMode === 'global' ? 'text-white' : 'text-gray-400'}`}>
+                      GLOBAL
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setSearchMode('steam')}
+                    className={`flex-1 py-2 rounded-lg items-center flex-row justify-center ${searchMode === 'steam' ? 'bg-gamingAccent' : ''}`}
+                  >
+                    <Ionicons name="logo-steam" size={16} color={searchMode === 'steam' ? "white" : "#9ca3af"} />
+                    <Text className={`font-outfit-bold text-xs ml-2 ${searchMode === 'steam' ? 'text-white' : 'text-gray-400'}`}>
+                      STEAM FRIENDS
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               <View style={{ 
                 flexDirection: 'row', 
                 alignItems: 'center', 
@@ -218,6 +264,7 @@ export default function SearchScreen() {
                 paddingLeft: 12,
                 paddingRight: 6,
                 paddingVertical: 6,
+                marginBottom: searchMode === 'steam' ? 16 : 0
               }}>
                 <Ionicons name="search" size={20} color="#9ca3af" />
                 <TextInput 
@@ -229,12 +276,12 @@ export default function SearchScreen() {
                     fontFamily: 'Outfit_400Regular',
                     fontSize: 16
                   }}
-                  placeholder="Search by name or Steam ID..."
+                  placeholder={searchMode === 'global' ? "Search by name or Steam ID..." : "Filter teammates by name..."}
                   placeholderTextColor="#6b7280"
                   value={query}
                   onChangeText={setQuery}
-                  onSubmitEditing={handleSearch}
-                  returnKeyType="search"
+                  onSubmitEditing={searchMode === 'global' ? handleSearch : undefined}
+                  returnKeyType={searchMode === 'global' ? "search" : "done"}
                   autoCorrect={false}
                 />
                 
@@ -244,21 +291,32 @@ export default function SearchScreen() {
                   </TouchableOpacity>
                 )}
 
-                <TouchableOpacity 
-                  onPress={handleSearch}
-                  style={{
-                    backgroundColor: '#8b5cf6',
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    marginLeft: 4,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons name="arrow-forward" size={20} color="#fff" />
-                </TouchableOpacity>
+                {searchMode === 'global' && (
+                  <TouchableOpacity 
+                    onPress={handleSearch}
+                    style={{
+                      backgroundColor: '#8b5cf6',
+                      width: 40,
+                      height: 40,
+                      borderRadius: 10,
+                      marginLeft: 4,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Ionicons name="arrow-forward" size={20} color="#fff" />
+                  </TouchableOpacity>
+                )}
               </View>
+
+              {searchMode === 'steam' && (
+                <View className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30 flex-row items-center">
+                  <Ionicons name="information-circle" size={24} color="#60a5fa" />
+                  <Text className="text-blue-200 text-xs font-outfit-semibold ml-3 flex-1">
+                    Showing players who have played with you and are registered on the app.
+                  </Text>
+                </View>
+              )}
 
               {!results.length && !searching && (
                 <View style={{ paddingVertical: 80, justifyContent: 'center', alignItems: 'center' }}>
@@ -271,13 +329,17 @@ export default function SearchScreen() {
                     justifyContent: 'center',
                     marginBottom: 20,
                   }}>
-                    <Ionicons name="search-outline" size={48} color="#374151" />
+                    <Ionicons name={searchMode === 'global' ? "search-outline" : "people-outline"} size={48} color="#374151" />
                   </View>
                   <Text style={{ color: '#9ca3af', textAlign: 'center', fontFamily: 'Outfit_600SemiBold', fontSize: 18 }}>
-                    {activeQuery ? `No results found for "${activeQuery}"` : "Who are you looking for?"}
+                    {searchMode === 'global' 
+                      ? (activeQuery ? `No results found for "${activeQuery}"` : "Who are you looking for?")
+                      : "No Steam friends found using the app."}
                   </Text>
                   <Text style={{ color: '#6b7280', textAlign: 'center', marginTop: 8, fontFamily: 'Outfit_400Regular' }}>
-                    Search for players by name or Steam ID.
+                    {searchMode === 'global' 
+                      ? "Search for players by name or Steam ID."
+                      : "We've matched your Steam frequent teammates with our users."}
                   </Text>
                 </View>
               )}

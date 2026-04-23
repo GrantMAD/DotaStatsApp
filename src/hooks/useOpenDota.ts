@@ -35,6 +35,17 @@ export function useRecentMatches(accountId: string | number | null, limit: numbe
 }
 
 /**
+ * Hook to fetch players who have played in the same matches.
+ */
+export function usePlayerPeers(accountId: string | number | null) {
+  return useQuery({
+    queryKey: ['playerPeers', accountId],
+    queryFn: () => (accountId ? openDotaApi.getPlayerPeers(accountId) : []),
+    enabled: !!accountId,
+  });
+}
+
+/**
  * Hook to fetch global hero statistics.
  */
 export function useHeroStats() {

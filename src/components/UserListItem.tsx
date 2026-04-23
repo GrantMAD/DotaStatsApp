@@ -43,7 +43,7 @@ export default function UserListItem({ user: appUser, index, onPress, rightCompo
           </View>
           <View className="flex-1">
             <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>
-              {appUser.steam_name || 'Unknown Player'}
+              {appUser.steam_name || profile?.profile?.personaname || (isLoading ? 'Loading...' : 'Unknown Player')}
             </Text>
             <Text className="text-gray-500 text-xs font-outfit">
               ID: {appUser.steam_account_id}

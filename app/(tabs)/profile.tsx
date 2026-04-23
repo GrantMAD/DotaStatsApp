@@ -14,6 +14,8 @@ import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
 import { usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
+import { useFriends } from '../../src/hooks/useFriends';
+import { useRouter } from 'expo-router';
 import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
 import GlassHeader from '../../src/components/GlassHeader';
 import GlassModal from '../../src/components/GlassModal';
@@ -23,10 +25,14 @@ import { useMenu } from './_layout';
 
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { steamAccountId, session } = useSupabaseAuth();
   const { login, isLoading: steamLoading } = useSteamAuth();
   const { setMenuVisible } = useMenu();
   const accountId = steamAccountId ? steamAccountId.toString() : null;
+
+  // Friends & Following Data
+  const { friends, following } = useFriends();
   
   // Main Profile Queries
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(accountId);
@@ -134,6 +140,10 @@ export default function ProfileScreen() {
           onMatchPress={handleMatchPress}
           onRefresh={onRefresh}
           refreshing={isRefreshing}
+          isCurrentUser={true}
+          friendsCount={friends.length}
+          followingCount={following.length}
+          onStatsPress={() => router.push('/friends')}
         />
       )}
 

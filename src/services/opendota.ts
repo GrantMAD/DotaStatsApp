@@ -161,6 +161,20 @@ function convertSteam64To32(steam64: string): string {
   }
 }
 
+export interface Peer {
+  account_id: number;
+  last_played: number;
+  win: number;
+  games: number;
+  with_win: number;
+  with_games: number;
+  against_win: number;
+  against_games: number;
+  personaname: string;
+  avatar: string;
+  avatarfull?: string;
+}
+
 /**
  * Searches for players by name or ID.
  */
@@ -280,6 +294,20 @@ export async function getRecentMatches(accountId: string | number, limit: number
     return await response.json();
   } catch (error) {
     console.error('Error fetching recent matches:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetches players who have played in the same matches.
+ */
+export async function getPlayerPeers(accountId: string | number): Promise<Peer[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/peers`);
+    if (!response.ok) throw new Error('Failed to fetch peers');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching peers:', error);
     return [];
   }
 }

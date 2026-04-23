@@ -32,14 +32,8 @@ export interface AppNotification {
 export interface Follow {
   id: string;
   follower_id: string;
-  followed_id: string;
+  followed_steam_id: string;
   created_at: string;
-  followed_user?: {
-    id: string;
-    steam_account_id: string;
-    steam_name: string;
-    email: string;
-  };
 }
 
 export const useFriends = () => {
@@ -51,7 +45,6 @@ export const useFriends = () => {
   const fetchFriends = async () => {
     if (!user) return;
     
-    // We want friendships where status is 'accepted' and user is either requester or addressee.
     const { data, error } = await supabase
       .from('friendships')
       .select('*, requester:requester_id(*), addressee:addressee_id(*)')
@@ -61,7 +54,6 @@ export const useFriends = () => {
     if (error) {
       console.error('Error fetching friends:', error);
     } else {
-      // Map to a consistent 'users' property for the friend
       const formatted = (data || []).map((f: any) => ({
         ...f,
         users: f.requester_id === user.id ? f.addressee : f.requester
@@ -75,7 +67,7 @@ export const useFriends = () => {
     
     const { data, error } = await supabase
       .from('follows')
-      .select('*, followed_user:followed_id(*)')
+      .select('*')
       .eq('follower_id', user.id);
 
     if (error) {
@@ -119,11 +111,11 @@ export const useFriends = () => {
     return true;
   };
 
-  const followUser = async (targetUserId: string) => {
+  const followUser = async (steamAccountId: string) => {
     if (!user) return false;
     const { error } = await supabase
       .from('follows')
-      .insert({ follower_id: user.id, followed_id: targetUserId });
+      .insert({ follower_id: user.id, followed_steam_id: steamAccountId });
 
     if (error) {
       console.error('Error following user:', error);
@@ -137,19 +129,19 @@ export const useFriends = () => {
 
     Toast.show({
       type: 'success',
-      text1: 'User followed!'
+      text1: 'Player followed!'
     });
     fetchFollowing();
     return true;
   };
 
-  const unfollowUser = async (targetUserId: string) => {
+  const unfollowUser = async (steamAccountId: string) => {
     if (!user) return false;
     const { error } = await supabase
       .from('follows')
       .delete()
       .eq('follower_id', user.id)
-      .eq('followed_id', targetUserId);
+      .eq('followed_steam_id', steamAccountId);
 
     if (error) {
       console.error('Error unfollowing user:', error);
@@ -163,14 +155,14 @@ export const useFriends = () => {
 
     Toast.show({
       type: 'success',
-      text1: 'User unfollowed'
+      text1: 'Player unfollowed'
     });
     fetchFollowing();
     return true;
   };
 
-  const isFollowing = (targetUserId: string) => {
-    return following.some(f => f.followed_id === targetUserId);
+  const isFollowing = (steamAccountId: string) => {
+    return following.some(f => f.followed_steam_id === steamAccountId.toString());
   };
 
   const isFriend = (targetUserId: string) => {

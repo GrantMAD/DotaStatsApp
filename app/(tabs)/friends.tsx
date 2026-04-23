@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useFriends } from '../../src/hooks/useFriends';
+import { useFriends, Follow } from '../../src/hooks/useFriends';
 import GlassHeader from '../../src/components/GlassHeader';
 import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
@@ -48,18 +48,19 @@ export default function FriendsScreen() {
     );
   };
 
-  const renderFollowing = ({ item, index }: { item: any; index: number }) => {
-    const followedUser = item.followed_user;
-    if (!followedUser) return null;
-
+  const renderFollowing = ({ item, index }: { item: Follow; index: number }) => {
     return (
       <UserListItem 
-        user={followedUser} 
+        user={{
+          id: item.id,
+          steam_account_id: item.followed_steam_id,
+          steam_name: '' // UserListItem will fetch profile data anyway
+        }} 
         index={index} 
-        onPress={() => openPlayerDetails(followedUser.steam_account_id)}
+        onPress={() => openPlayerDetails(item.followed_steam_id)}
         rightComponent={
           <TouchableOpacity 
-            onPress={() => unfollowUser(followedUser.id)}
+            onPress={() => unfollowUser(item.followed_steam_id)}
             className="bg-zinc-800 px-3 py-1.5 rounded-lg mr-2"
           >
             <Text className="text-gray-300 text-xs font-outfit-bold">Unfollow</Text>

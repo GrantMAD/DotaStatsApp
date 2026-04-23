@@ -73,6 +73,10 @@ interface PlayerOverviewContentProps {
   onMatchPress: (matchId: number) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
+  isCurrentUser?: boolean;
+  friendsCount?: number;
+  followingCount?: number;
+  onStatsPress?: () => void;
 }
 
 export function PlayerOverviewContent({ 
@@ -82,7 +86,11 @@ export function PlayerOverviewContent({
   matches, 
   onMatchPress,
   onRefresh,
-  refreshing = false
+  refreshing = false,
+  isCurrentUser = false,
+  friendsCount = 0,
+  followingCount = 0,
+  onStatsPress
 }: PlayerOverviewContentProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>('Recent');
   
@@ -177,6 +185,27 @@ export function PlayerOverviewContent({
           <View className="flex-1">
             <Text className="text-2xl text-white font-outfit-bold" numberOfLines={1}>{profile?.profile?.personaname || 'Unknown Player'}</Text>
             <Text className="text-gray-400 font-outfit">Account ID: {accountId}</Text>
+            
+            {isCurrentUser && (
+              <View className="flex-row mt-2">
+                <TouchableOpacity 
+                  onPress={onStatsPress}
+                  className="mr-3 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
+                >
+                  <Text className="text-white font-outfit-bold text-xs">
+                    {friendsCount} <Text className="text-gray-400 font-outfit-semibold">Friends</Text>
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={onStatsPress}
+                  className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
+                >
+                  <Text className="text-white font-outfit-bold text-xs">
+                    {followingCount} <Text className="text-gray-400 font-outfit-semibold">Following</Text>
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
           <RankBadge rankTier={profile?.rank_tier || null} leaderboardRank={profile?.leaderboard_rank || null} size={60} />
         </View>
