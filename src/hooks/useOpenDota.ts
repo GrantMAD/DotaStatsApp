@@ -13,6 +13,49 @@ export function usePlayerProfile(accountId: string | number | null) {
 }
 
 /**
+ * Hook to fetch player's hero performance.
+ */
+export function usePlayerHeroes(accountId: string | number | null) {
+  return useQuery({
+    queryKey: ['playerHeroes', accountId],
+    queryFn: async () => {
+      if (!accountId) return [];
+      
+      const [heroes, matches] = await Promise.all([
+        openDotaApi.getPlayerHeroes(accountId),
+        // Fetch matches with projected fields for KDA calculation
+        fetch(`https://api.opendota.com/api/players/${accountId}/matches?project=hero_id&project=kills&project=deaths&project=assists`).then(res => res.json())
+      ]);
+
+      // Aggregate KDA per hero
+      const matchStats: Record<number, { kills: number; deaths: number; assists: number; count: number }> = {};
+      matches.forEach((m: any) => {
+        if (!matchStats[m.hero_id]) {
+          matchStats[m.hero_id] = { kills: 0, deaths: 0, assists: 0, count: 0 };
+        }
+        matchStats[m.hero_id].kills += m.kills || 0;
+        matchStats[m.hero_id].deaths += m.deaths || 0;
+        matchStats[m.hero_id].assists += m.assists || 0;
+        matchStats[m.hero_id].count += 1;
+      });
+
+      // Combine and return
+      return heroes.map(h => {
+        const stats = matchStats[Number(h.hero_id)];
+        return {
+          ...h,
+          avg_kills: stats ? stats.kills / stats.count : 0,
+          avg_deaths: stats ? stats.deaths / stats.count : 0,
+          avg_assists: stats ? stats.assists / stats.count : 0,
+          kda: stats ? (stats.kills + stats.assists) / Math.max(1, stats.deaths) : 0
+        };
+      });
+    },
+    enabled: !!accountId,
+  });
+}
+
+/**
  * Hook to fetch player's win/loss record.
  */
 export function usePlayerWinLoss(accountId: string | number | null) {
@@ -42,7 +85,22 @@ export function usePlayerPeers(accountId: string | number | null) {
     queryKey: ['playerPeers', accountId],
     queryFn: () => (accountId ? openDotaApi.getPlayerPeers(accountId) : []),
     enabled: !!accountId,
+    staleTime: 1000 * 60 * 60, // Peers don't change that fast, cache for 1 hour
   });
+}
+
+/**
+ * Hook to check if a target player has been encountered by the current user.
+ */
+export function useEncounterHistory(currentUserId: string | null, targetId: string | number | null) {
+  const { data: peers = [] } = usePlayerPeers(currentUserId);
+  
+  if (!currentUserId || !targetId) return null;
+  
+  const targetIdNum = typeof targetId === 'string' ? parseInt(targetId) : targetId;
+  const peer = peers.find(p => p.account_id === targetIdNum);
+  
+  return peer || null;
 }
 
 /**

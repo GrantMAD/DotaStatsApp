@@ -26,6 +26,9 @@ import { RankBadge } from './RankBadge';
 import PressableScale from './PressableScale';
 import Skeleton from './Skeleton';
 import MeshGradient from './MeshGradient';
+import { useSteamAuth } from '../hooks/useSteamAuth';
+import { useEncounterHistory, usePlayerHeroes } from '../hooks/useOpenDota';
+import HeroDetailModal from './HeroDetailModal';
 
 function LifetimeStatsSkeleton() {
   return (
@@ -56,7 +59,7 @@ function LifetimeStatsSkeleton() {
   );
 }
 
-type ProfileTab = 'Recent' | 'Lifetime';
+type ProfileTab = 'Recent' | 'Heroes' | 'Lifetime';
 
 interface CategoryStats {
   label: string;
@@ -92,7 +95,14 @@ export function PlayerOverviewContent({
   followingCount = 0,
   onStatsPress
 }: PlayerOverviewContentProps) {
+  const { accountId: currentUserId } = useSteamAuth();
+  const peer = useEncounterHistory(currentUserId, accountId);
+  const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
   const [activeTab, setActiveTab] = useState<ProfileTab>('Recent');
+  
+  // Hero Detail State
+  const [selectedHeroId, setSelectedHeroId] = useState<number | null>(null);
+  const [heroModalVisible, setHeroModalVisible] = useState(false);
   
   // Lifetime Stats State
   const [totals, setTotals] = useState<PlayerTotal[]>([]);
@@ -212,6 +222,54 @@ export function PlayerOverviewContent({
       </MeshGradient>
       
       <View className="mt-6 px-4">
+        {/* Profile Tabs */}
+        <View className="flex-row bg-[#2a2a2a] rounded-xl p-1 mb-4">
+          {(['Recent', 'Heroes', 'Lifetime'] as ProfileTab[]).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
+            >
+              <Text className={`font-outfit-bold text-[10px] ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
+                {tab === 'Recent' ? 'RECENT' : tab === 'Heroes' ? 'HEROES' : 'LIFETIME'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {peer && !isCurrentUser && (
+          <View className="bg-gamingAccent/10 border border-gamingAccent/20 p-4 rounded-xl mb-6">
+            <View className="flex-row items-center mb-3">
+              <View className="bg-gamingAccent/20 p-2 rounded-full mr-3">
+                <Ionicons name="people" size={20} color="#8b5cf6" />
+              </View>
+              <View>
+                <Text className="text-white font-outfit-bold text-sm">Your History</Text>
+                <Text className="text-gray-400 text-[10px] uppercase font-outfit-bold">Shared Matches: {peer.games}</Text>
+              </View>
+            </View>
+            
+            <View className="flex-row justify-between">
+              <View className="flex-1">
+                <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-1">As Ally</Text>
+                <Text className="text-white font-outfit-bold">{peer.with_games} Games</Text>
+                <Text className="text-win text-[10px] font-outfit-bold">{peer.with_win} Wins</Text>
+              </View>
+              <View className="flex-1 border-l border-white/5 pl-4">
+                <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-1">As Opponent</Text>
+                <Text className="text-white font-outfit-bold">{peer.against_games} Games</Text>
+                <Text className="text-loss text-[10px] font-outfit-bold">{peer.against_games - peer.against_win} Losses</Text>
+              </View>
+              <View className="flex-1 border-l border-white/5 pl-4">
+                <Text className="text-gray-400 text-[10px] uppercase font-outfit-black mb-1">Last Played</Text>
+                <Text className="text-white font-outfit-bold text-[11px] mt-1">
+                  {new Date(peer.last_played * 1000).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {activeTab === 'Recent' && wl && (
           <View className="flex-row justify-between bg-[#2a2a2a] p-4 rounded-xl shadow-sm mb-6">
             <View className="items-center">
@@ -277,21 +335,6 @@ export function PlayerOverviewContent({
             </View>
           </View>
         )}
-
-        {/* Profile Tabs */}
-        <View className="flex-row bg-[#2a2a2a] rounded-xl p-1 mb-4">
-          {(['Recent', 'Lifetime'] as ProfileTab[]).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
-            >
-              <Text className={`font-outfit-bold text-sm ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
-                {tab === 'Recent' ? 'RECENT MATCHES' : 'LIFETIME STATS'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
     </View>
   );
@@ -396,6 +439,55 @@ export function PlayerOverviewContent({
     );
   };
 
+  const renderHeroRow = ({ item, index }: { item: any, index: number }) => {
+    const heroInfo = HEROES[Number(item.hero_id)];
+    const winRate = (item.win / item.games) * 100;
+    
+    return (
+      <TouchableOpacity 
+        onPress={() => {
+          setSelectedHeroId(Number(item.hero_id));
+          setHeroModalVisible(true);
+        }}
+        className="mx-4 mb-3 bg-[#1e1e2e] p-4 rounded-xl border border-white/5 flex-row items-center"
+      >
+        <Image 
+          source={{ uri: getHeroImageUrl(Number(item.hero_id)) }} 
+          className="w-14 h-14 rounded-lg mr-4 bg-zinc-900"
+          resizeMode="cover"
+        />
+        <View className="flex-1">
+          <View className="flex-row justify-between items-center mb-1">
+            <Text className="text-white font-outfit-bold text-lg">{heroInfo?.localized_name || 'Hero'}</Text>
+            <Text className="text-gray-400 font-outfit-bold text-xs uppercase">{item.games} Games</Text>
+          </View>
+          
+          <View className="flex-row items-center justify-between">
+            <View>
+              <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-0.5">Performance</Text>
+              <Text className="text-gamingAccent font-outfit-bold text-sm">
+                {item.kda.toFixed(2)} <Text className="text-gray-500 text-[10px] font-outfit">KDA</Text>
+              </Text>
+              <Text className="text-gray-400 text-[10px] font-outfit">
+                {item.avg_kills.toFixed(1)} / {item.avg_deaths.toFixed(1)} / {item.avg_assists.toFixed(1)}
+              </Text>
+            </View>
+            
+            <View className="items-end">
+              <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-0.5">Win Rate</Text>
+              <Text className={`font-outfit-bold text-lg ${winRate >= 55 ? 'text-win' : winRate < 45 ? 'text-loss' : 'text-white'}`}>
+                {winRate.toFixed(1)}%
+              </Text>
+              <View className="w-16 h-1 bg-zinc-800 rounded-full mt-1 overflow-hidden">
+                <View style={{ width: `${winRate}%` }} className={`h-full ${winRate >= 55 ? 'bg-win' : winRate < 45 ? 'bg-loss' : 'bg-gray-500'}`} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <View className="flex-1">
       {activeTab === 'Recent' ? (
@@ -408,9 +500,30 @@ export function PlayerOverviewContent({
           refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
+      ) : activeTab === 'Heroes' ? (
+        <FlatList
+          data={playerHeroes.sort((a, b) => b.games - a.games).slice(0, 50)}
+          keyExtractor={(item) => item.hero_id}
+          renderItem={renderHeroRow}
+          ListHeaderComponent={renderHeader()}
+          ListEmptyComponent={
+            heroesLoading ? (
+              <View className="py-20 items-center"><ActivityIndicator color="#8b5cf6" /></View>
+            ) : null
+          }
+          ListFooterComponent={<View style={{ height: 40 }} />}
+          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
+          contentContainerStyle={{ paddingBottom: 20 }}
+        />
       ) : (
         renderLifetimeContent()
       )}
+
+      <HeroDetailModal
+        visible={heroModalVisible}
+        heroId={selectedHeroId}
+        onClose={() => setHeroModalVisible(false)}
+      />
     </View>
   );
 }

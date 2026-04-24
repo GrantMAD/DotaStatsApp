@@ -226,6 +226,31 @@ export async function searchPlayers(query: string): Promise<SearchResult[]> {
   }
 }
 
+export interface PlayerHero {
+  hero_id: string;
+  last_played: number;
+  games: number;
+  win: number;
+  with_games: number;
+  with_win: number;
+  against_games: number;
+  against_win: number;
+}
+
+/**
+ * Fetches the hero stats for a specific player.
+ */
+export async function getPlayerHeroes(accountId: string | number): Promise<PlayerHero[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/heroes`);
+    if (!response.ok) throw new Error('Failed to fetch player heroes');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching player heroes:', error);
+    return [];
+  }
+}
+
 /**
  * Fetches the core profile data for a specific account.
  */

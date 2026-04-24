@@ -27,12 +27,13 @@ import {
 } from '../services/constants';
 import { getChatWheelPhrase } from '../services/chatwheel';
 import * as Linking from 'expo-linking';
-import { useMatchDetails } from '../hooks/useOpenDota';
+import { useMatchDetails, usePlayerPeers } from '../hooks/useOpenDota';
+import { useSteamAuth } from '../hooks/useSteamAuth';
 import Skeleton, { MatchOverviewSkeleton } from './Skeleton';
 import GlassModal from './GlassModal';
 import MeshGradient from './MeshGradient';
 
-type MatchTab = 'Scoreboard' | 'Highlights' | 'Combat' | 'Support' | 'Economy' | 'Timeline' | 'Chat';
+type MatchTab = 'Scoreboard' | 'Highlights' | 'Economy' | 'Timeline' | 'Chat';
 
 interface MatchOverviewModalProps {
   visible: boolean;
@@ -42,11 +43,12 @@ interface MatchOverviewModalProps {
 }
 
 export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: MatchOverviewModalProps) {
+  const { accountId: currentUserId } = useSteamAuth();
   const { data: matchData, isLoading: loading } = useMatchDetails(visible ? matchId : null);
+  const { data: userPeers = [] } = usePlayerPeers(visible ? currentUserId : null);
   const [activeTab, setActiveTab] = useState<MatchTab>('Scoreboard');
   const [isParsing, setIsParsing] = useState(false);
   const [parseRequested, setParseRequested] = useState(false);
-  const [expandedCombatPlayers, setExpandedCombatPlayers] = useState<number[]>([]);
   const [showChatWheel, setShowChatWheel] = useState(true);
 
   // Tab Scroll State
@@ -127,6 +129,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
   const renderPlayerRow = (p: MatchDetails['players'][0], index: number) => {
     const isAnonymous = !p.account_id;
     const mainItems = [p.item_0, p.item_1, p.item_2, p.item_3, p.item_4, p.item_5];
+    const peer = !isAnonymous ? userPeers.find(up => up.account_id === p.account_id) : null;
 
     return (
       <TouchableOpacity
@@ -141,7 +144,15 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
             <Text className="text-gray-500 text-[8px] mt-1">LVL {p.level}</Text>
           </View>
           <View className="flex-1 ml-2">
-            <Text className="text-xs font-bold text-white mr-2" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
+            <View className="flex-row items-center">
+              <Text className="text-xs font-bold text-white mr-2" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
+              {peer && (
+                <View className="bg-gamingAccent/20 px-1.5 py-0.5 rounded border border-gamingAccent/30 flex-row items-center">
+                  <Ionicons name="people" size={8} color="#8b5cf6" />
+                  <Text className="text-gamingAccent text-[7px] font-bold ml-1 uppercase">History</Text>
+                </View>
+              )}
+            </View>
             <Text className="text-[9px] text-gray-500 mt-0.5">
               NW: {(p.net_worth / 1000).toFixed(1)}k • G/X: {p.gold_per_min}/{p.xp_per_min}
             </Text>
@@ -223,7 +234,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
               onLayout={(e) => setViewWidth(e.nativeEvent.layout.width)}
               scrollEventThrottle={16}
             >
-              {(['Scoreboard', 'Highlights', 'Combat', 'Support', 'Economy', 'Timeline', 'Chat'] as MatchTab[]).map((tab) => (
+              {(['Scoreboard', 'Highlights', 'Economy', 'Timeline', 'Chat'] as MatchTab[]).map((tab) => (
                 <TouchableOpacity
                   key={tab}
                   onPress={() => setActiveTab(tab)}
@@ -560,177 +571,6 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
                     </View>
                   );
                 })()}
-              </View>
-            )}
-
-            {activeTab === 'Combat' && (
-              <View>
-                <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Advanced Combat Performance</Text>
-
-                {matchData.players.map((p, i) => {
-                  const hasCombatStats = p.multi_kills || p.stuns !== undefined || p.hero_damage_targets;
-                  if (!hasCombatStats) return null;
-                  const isExpanded = expandedCombatPlayers.includes(i);
-
-                  return (
-                    <View key={i} className="bg-[#2a2a2a] rounded-xl mb-3 overflow-hidden border border-zinc-800">
-                      <TouchableOpacity
-                        onPress={() => {
-                          setExpandedCombatPlayers(prev =>
-                            prev.includes(i) ? prev.filter(idx => idx !== i) : [...prev, i]
-                          );
-                        }}
-                        className="flex-row items-center p-3 active:bg-zinc-800"
-                      >
-                        <Image source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-10 h-7 rounded-sm mr-3" />
-                        <Text className="text-white font-bold flex-1" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
-                        <View className="bg-red-500/10 px-2 py-1 rounded mr-3">
-                          <Text className="text-red-500 text-[10px] font-bold">{p.hero_damage.toLocaleString()} DMG</Text>
-                        </View>
-                        <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
-                      </TouchableOpacity>
-
-                      {isExpanded && (
-                        <View className="p-4 border-t border-zinc-800 bg-black/10">
-                          {p.multi_kills && Object.keys(p.multi_kills).length > 0 && (
-                            <View className="mb-4">
-                              <Text className="text-gray-500 text-[9px] font-bold uppercase mb-2">Kill Feats</Text>
-                              <View className="flex-row flex-wrap">
-                                {Object.entries(p.multi_kills).map(([key, val]) => {
-                                  const label = key === '2' ? 'Double' : key === '3' ? 'Triple' : key === '4' ? 'Ultra' : 'Rampage';
-                                  const color = key === '2' ? 'text-blue-400' : key === '3' ? 'text-purple-400' : key === '4' ? 'text-orange-400' : 'text-red-500';
-                                  return (
-                                    <View key={key} className="bg-zinc-900 px-3 py-1.5 rounded-lg mr-2 mb-2 border border-zinc-800">
-                                      <Text className={`${color} text-xs font-bold`}>{val}x {label}</Text>
-                                    </View>
-                                  );
-                                })}
-                              </View>
-                            </View>
-                          )}
-
-                          <View className="flex-row justify-between mb-4">
-                            {p.stuns !== undefined && (
-                              <View className="flex-1 bg-zinc-900 p-2 rounded-lg mr-2 border border-zinc-800">
-                                <Text className="text-gray-500 text-[8px] font-bold uppercase">Stun Duration</Text>
-                                <Text className="text-white text-sm font-bold">{p.stuns.toFixed(1)}s</Text>
-                              </View>
-                            )}
-                            <View className="flex-1 bg-zinc-900 p-2 rounded-lg border border-zinc-800">
-                              <Text className="text-gray-500 text-[8px] font-bold uppercase">Damage Taken</Text>
-                              <Text className="text-red-500 text-sm font-bold">{p.hero_damage_taken?.toLocaleString() || 'N/A'}</Text>
-                            </View>
-                          </View>
-
-                          <View className="flex-row justify-between mb-4">
-                            {p.actions_per_min !== undefined && (
-                              <View className="flex-1 bg-zinc-900 p-2 rounded-lg mr-2 border border-zinc-800">
-                                <Text className="text-gray-500 text-[8px] font-bold uppercase">APM</Text>
-                                <Text className="text-white text-sm font-bold">{p.actions_per_min}</Text>
-                              </View>
-                            )}
-                            {p.kill_streaks && Object.keys(p.kill_streaks).length > 0 && (
-                              <View className="flex-1 bg-zinc-900 p-2 rounded-lg border border-zinc-800">
-                                <Text className="text-gray-500 text-[8px] font-bold uppercase">Max Streak</Text>
-                                <Text className="text-white text-sm font-bold">{Math.max(...Object.keys(p.kill_streaks).map(Number))}</Text>
-                              </View>
-                            )}
-                          </View>
-
-                          {p.hero_damage_targets && (
-                            <View className="mb-0">
-                              <Text className="text-gray-500 text-[9px] font-bold uppercase mb-2">Damage to Enemies</Text>
-                              {Object.entries(p.hero_damage_targets)
-                                .sort(([, a], [, b]) => b - a)
-                                .slice(0, 3)
-                                .map(([targetHeroId, damage]) => (
-                                  <View key={targetHeroId} className="flex-row items-center mb-1">
-                                    <Image source={{ uri: getHeroImageUrl(Number(targetHeroId)) }} className="w-6 h-4 rounded-sm mr-2" />
-                                    <View className="flex-1 h-1.5 bg-zinc-900 rounded-full overflow-hidden">
-                                      <View
-                                        style={{ width: `${(damage / p.hero_damage) * 100}%` }}
-                                        className="h-full bg-red-500/60"
-                                      />
-                                    </View>
-                                    <Text className="text-gray-400 text-[10px] ml-2 w-12 text-right">{damage.toLocaleString()}</Text>
-                                  </View>
-                                ))}
-                            </View>
-                          )}
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-
-                {!matchData.version && (
-                  renderParseInstructions("Detailed combat stats like multi-kills, stuns, and damage targets are only available for parsed matches.")
-                )}
-              </View>
-            )}
-
-            {activeTab === 'Support' && (
-              <View>
-                <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Vision & Utility Impact</Text>
-
-                {matchData.players.map((p, i) => {
-                  const hasSupportStats = (p.obs_placed || 0) > 0 || (p.sen_placed || 0) > 0 || p.hero_healing > 0 || (p.camps_stacked || 0) > 0;
-                  if (!hasSupportStats) return null;
-                  const isExpanded = expandedCombatPlayers.includes(i + 100); // Offset for support tab
-
-                  return (
-                    <View key={i} className="bg-[#2a2a2a] rounded-xl mb-3 overflow-hidden border border-zinc-800">
-                      <TouchableOpacity
-                        onPress={() => {
-                          setExpandedCombatPlayers(prev =>
-                            prev.includes(i + 100) ? prev.filter(idx => idx !== i + 100) : [...prev, i + 100]
-                          );
-                        }}
-                        className="flex-row items-center p-3 active:bg-zinc-800"
-                      >
-                        <Image source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-10 h-7 rounded-sm mr-3" />
-                        <Text className="text-white font-bold flex-1" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
-                        <View className="flex-row items-center">
-                          <View className="bg-indigo-500/10 px-2 py-1 rounded mr-2 flex-row items-center">
-                            <Ionicons name="eye" size={10} color="#6366f1" />
-                            <Text className="text-indigo-500 text-[10px] font-bold ml-1">{(p.obs_placed || 0) + (p.sen_placed || 0)}</Text>
-                          </View>
-                          <Ionicons name={isExpanded ? "chevron-up" : "chevron-down"} size={16} color="#4b5563" />
-                        </View>
-                      </TouchableOpacity>
-
-                      {isExpanded && (
-                        <View className="p-4 border-t border-zinc-800 bg-black/10">
-                          <View className="flex-row justify-between mb-4">
-                            <View className="flex-1 bg-zinc-900 p-2 rounded-lg mr-2 border border-zinc-800">
-                              <Text className="text-gray-500 text-[8px] font-bold uppercase">Observers</Text>
-                              <Text className="text-white text-sm font-bold">{p.obs_placed || 0}</Text>
-                            </View>
-                            <View className="flex-1 bg-zinc-900 p-2 rounded-lg border border-zinc-800">
-                              <Text className="text-gray-500 text-[8px] font-bold uppercase">Sentries</Text>
-                              <Text className="text-white text-sm font-bold">{p.sen_placed || 0}</Text>
-                            </View>
-                          </View>
-
-                          <View className="flex-row justify-between mb-0">
-                            <View className="flex-1 bg-zinc-900 p-2 rounded-lg mr-2 border border-zinc-800">
-                              <Text className="text-gray-500 text-[8px] font-bold uppercase">Healing</Text>
-                              <Text className="text-blue-500 text-sm font-bold">{p.hero_healing.toLocaleString()}</Text>
-                            </View>
-                            <View className="flex-1 bg-zinc-900 p-2 rounded-lg border border-zinc-800">
-                              <Text className="text-gray-500 text-[8px] font-bold uppercase">Camps Stacked</Text>
-                              <Text className="text-purple-500 text-sm font-bold">{p.camps_stacked || 0}</Text>
-                            </View>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-
-                {!matchData.version && (
-                  renderParseInstructions("Vision stats, camps stacked, and detailed healing are only available for parsed matches.")
-                )}
               </View>
             )}
 
