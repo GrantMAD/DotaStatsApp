@@ -80,6 +80,7 @@ interface PlayerOverviewContentProps {
   friendsCount?: number;
   followingCount?: number;
   onStatsPress?: () => void;
+  isPrivate?: boolean;
 }
 
 export function PlayerOverviewContent({ 
@@ -93,7 +94,8 @@ export function PlayerOverviewContent({
   isCurrentUser = false,
   friendsCount = 0,
   followingCount = 0,
-  onStatsPress
+  onStatsPress,
+  isPrivate = false
 }: PlayerOverviewContentProps) {
   const { accountId: currentUserId } = useSteamAuth();
   const peer = useEncounterHistory(currentUserId, accountId);
@@ -222,6 +224,20 @@ export function PlayerOverviewContent({
       </MeshGradient>
       
       <View className="mt-6 px-4">
+        {isPrivate && (
+          <View className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl mb-6 flex-row items-center">
+            <View className="bg-orange-500/20 p-2 rounded-full mr-3">
+              <Ionicons name="eye-off-outline" size={20} color="#f97316" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-orange-500 font-outfit-bold text-sm">Private Profile</Text>
+              <Text className="text-gray-400 text-[10px] font-outfit">
+                This user has not enabled "Expose Public Match Data" in their Dota 2 settings. Statistics may be incomplete or missing.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Profile Tabs */}
         <View className="flex-row bg-[#2a2a2a] rounded-xl p-1 mb-4">
           {(['Recent', 'Heroes', 'Lifetime'] as ProfileTab[]).map((tab) => (

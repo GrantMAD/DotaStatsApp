@@ -15,7 +15,8 @@ import { LineChart } from "react-native-chart-kit";
 import {
   requestMatchParse,
   MatchDetails,
-  GAME_MODES
+  GAME_MODES,
+  PickBan
 } from '../services/opendota';
 import {
   getHeroImageUrl,
@@ -41,6 +42,80 @@ interface MatchOverviewModalProps {
   onClose: () => void;
   onPushPlayer?: (id: number) => void;
 }
+
+const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode: number }) => {
+  const radiantPicks = picksBans.filter(pb => pb.team === 0 && pb.is_pick).sort((a, b) => a.order - b.order);
+  const direPicks = picksBans.filter(pb => pb.team === 1 && pb.is_pick).sort((a, b) => a.order - b.order);
+  
+  const allBans = picksBans.filter(pb => !pb.is_pick).sort((a, b) => a.order - b.order);
+  const radiantBans = allBans.filter(pb => pb.team === 0);
+  const direBans = allBans.filter(pb => pb.team === 1);
+
+  // Captains Mode (2) and Captains Draft (16) use structured team bans
+  const isStructuredDraft = gameMode === 2 || gameMode === 16;
+
+  return (
+    <View className="bg-[#2a2a2a] p-4 rounded-xl mb-6 border border-zinc-800">
+      <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-4 text-center">Draft Phase</Text>
+      
+      <View className="flex-row justify-between">
+        {/* Radiant Side */}
+        <View className="flex-1 mr-2">
+          <Text className="text-win text-[9px] font-bold mb-2 uppercase text-center">Radiant Picks</Text>
+          <View className="flex-row flex-wrap justify-center mb-2">
+            {radiantPicks.map((p, i) => (
+              <Image key={i} source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-8 h-5 m-0.5 rounded-sm border border-win/30" />
+            ))}
+          </View>
+          {isStructuredDraft && (
+            <>
+              <Text className="text-zinc-500 text-[8px] font-bold mb-1 uppercase text-center">Bans</Text>
+              <View className="flex-row flex-wrap justify-center opacity-40 grayscale">
+                {radiantBans.map((b, i) => (
+                  <Image key={i} source={{ uri: getHeroImageUrl(b.hero_id) }} className="w-6 h-4 m-0.5 rounded-sm border border-zinc-700" />
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+
+        <View className="w-[1px] bg-zinc-800 self-stretch mx-1" />
+
+        {/* Dire Side */}
+        <View className="flex-1 ml-2">
+          <Text className="text-loss text-[9px] font-bold mb-2 uppercase text-center">Dire Picks</Text>
+          <View className="flex-row flex-wrap justify-center mb-2">
+            {direPicks.map((p, i) => (
+              <Image key={i} source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-8 h-5 m-0.5 rounded-sm border border-loss/30" />
+            ))}
+          </View>
+          {isStructuredDraft && (
+            <>
+              <Text className="text-zinc-500 text-[8px] font-bold mb-1 uppercase text-center">Bans</Text>
+              <View className="flex-row flex-wrap justify-center opacity-40 grayscale">
+                {direBans.map((b, i) => (
+                  <Image key={i} source={{ uri: getHeroImageUrl(b.hero_id) }} className="w-6 h-4 m-0.5 rounded-sm border border-zinc-700" />
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+      </View>
+
+      {/* Unified Bans for All Pick / Turbo */}
+      {!isStructuredDraft && allBans.length > 0 && (
+        <View className="mt-4 pt-3 border-t border-zinc-800/50">
+          <Text className="text-zinc-500 text-[8px] font-bold mb-2 uppercase text-center">Banned Heroes</Text>
+          <View className="flex-row flex-wrap justify-center opacity-40 grayscale">
+            {allBans.map((b, i) => (
+              <Image key={i} source={{ uri: getHeroImageUrl(b.hero_id) }} className="w-6 h-4 m-0.5 rounded-sm border border-zinc-700" />
+            ))}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+};
 
 export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: MatchOverviewModalProps) {
   const { accountId: currentUserId } = useSteamAuth();
@@ -182,6 +257,39 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
               <Image source={{ uri: getItemImageUrl(p.item_neutral) }} className="w-6 h-5 rounded-full bg-zinc-900 border border-zinc-600" resizeMode="cover" />
             </View>
           </View>
+
+          {/* Permanent Buffs */}
+          {p.permanent_buffs && p.permanent_buffs.length > 0 && (
+            <View className="flex-row items-center ml-3">
+              {p.permanent_buffs.map((buff, i) => {
+                let buffImg = null;
+                if (buff.permanent_buff === 'item_ultimate_scepter' || buff.permanent_buff === 'item_ultimate_scepter_2') {
+                  buffImg = 'ultimate_scepter';
+                } else if (buff.permanent_buff === 'item_aghanims_shard') {
+                  buffImg = 'aghanims_shard';
+                } else if (buff.permanent_buff === 'item_moon_shard') {
+                  buffImg = 'moon_shard';
+                }
+
+                if (!buffImg) return null;
+
+                return (
+                  <View key={i} className="relative mr-1.5">
+                    <Image
+                      source={{ uri: getItemImageUrlByName(buffImg) }}
+                      className="w-5 h-4 rounded-sm opacity-80"
+                      resizeMode="cover"
+                    />
+                    {buff.stack_count > 1 && (
+                      <View className="absolute -bottom-1 -right-1 bg-black/80 px-0.5 rounded">
+                        <Text className="text-[6px] text-white font-bold">{buff.stack_count}</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
@@ -459,6 +567,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
 
             {activeTab === 'Scoreboard' && (
               <>
+                {matchData.picks_bans && <DraftDisplay picksBans={matchData.picks_bans} gameMode={matchData.game_mode} />}
                 <View className="mb-6">
                   <Text className="text-win font-bold uppercase text-[10px] mb-2 pl-1 tracking-widest">Radiant Team</Text>
                   <View className="bg-[#222] rounded-xl overflow-hidden border border-zinc-800 shadow-sm">

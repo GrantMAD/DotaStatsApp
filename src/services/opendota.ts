@@ -62,6 +62,18 @@ export interface ChatMessage {
   player_slot?: number;
 }
 
+export interface PickBan {
+  is_pick: boolean;
+  hero_id: number;
+  team: number;
+  order: number;
+}
+
+export interface PermanentBuff {
+  permanent_buff: string;
+  stack_count: number;
+}
+
 export interface MatchDetails {
   match_id: number;
   radiant_win: boolean;
@@ -77,6 +89,7 @@ export interface MatchDetails {
   radiant_gold_adv: number[];
   radiant_xp_adv: number[];
   chat?: ChatMessage[];
+  picks_bans?: PickBan[];
   players: {
     account_id: number;
     personaname: string;
@@ -101,6 +114,7 @@ export interface MatchDetails {
     item_5: number;
     item_neutral: number;
     player_slot: number;
+    permanent_buffs?: PermanentBuff[];
     // Advanced/Parsed fields
     benchmarks?: {
       gold_per_min: { raw: number; pct: number };

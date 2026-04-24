@@ -21,6 +21,7 @@ export default function PlayerDetailModal({
   const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(visible ? accountId : null, 10);
 
   const loading = profileLoading || wlLoading || matchesLoading;
+  const isPrivate = profile && !profile.last_match_time;
 
   const onRefresh = async () => {
     await Promise.all([
@@ -59,6 +60,7 @@ export default function PlayerDetailModal({
                 onMatchPress={onMatchPress}
                 onRefresh={onRefresh}
                 refreshing={loading}
+                isPrivate={!!isPrivate}
               />
             </View>
           ) : (
