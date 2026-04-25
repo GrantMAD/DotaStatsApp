@@ -1,25 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  ActivityIndicator, 
-  Image, 
-  RefreshControl, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  FlatList,
+  ActivityIndicator,
+  Image,
+  RefreshControl,
+  TouchableOpacity,
   ScrollView,
   Dimensions
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { 
-  PlayerProfile, 
-  WinLossStats, 
+import {
+  PlayerProfile,
+  WinLossStats,
   RecentMatch,
   PlayerTotal,
   getPlayerWinLoss,
   getPlayerTotals,
-  getPlayerCounts
+  getPlayerCounts,
+  HeroStats,
+  getHeroStats
 } from '../services/opendota';
 import { getHeroImageUrl, HEROES, REGIONS } from '../services/constants';
 import { RankBadge } from './RankBadge';
@@ -47,8 +49,8 @@ function LifetimeStatsSkeleton() {
                   <Skeleton width="40%" height={12} borderRadius={4} />
                 </View>
                 <View className="items-end">
-                   <Skeleton width={50} height={24} borderRadius={6} style={{ marginBottom: 4 }} />
-                   <Skeleton width={30} height={10} borderRadius={2} />
+                  <Skeleton width={50} height={24} borderRadius={6} style={{ marginBottom: 4 }} />
+                  <Skeleton width={30} height={10} borderRadius={2} />
                 </View>
               </View>
             ))}
@@ -83,11 +85,11 @@ interface PlayerOverviewContentProps {
   isPrivate?: boolean;
 }
 
-export function PlayerOverviewContent({ 
-  accountId, 
-  profile, 
-  wl, 
-  matches, 
+export function PlayerOverviewContent({
+  accountId,
+  profile,
+  wl,
+  matches,
   onMatchPress,
   onRefresh,
   refreshing = false,
@@ -101,11 +103,11 @@ export function PlayerOverviewContent({
   const peer = useEncounterHistory(currentUserId, accountId);
   const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
   const [activeTab, setActiveTab] = useState<ProfileTab>('Recent');
-  
+
   // Hero Detail State
-  const [selectedHeroId, setSelectedHeroId] = useState<number | null>(null);
+  const [selectedHero, setSelectedHero] = useState<HeroStats | null>(null);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
-  
+
   // Lifetime Stats State
   const [totals, setTotals] = useState<PlayerTotal[]>([]);
   const [lobbyStats, setLobbyStats] = useState<CategoryStats[]>([]);
@@ -183,7 +185,7 @@ export function PlayerOverviewContent({
 
   const renderHeader = () => (
     <View className="mb-4">
-      <MeshGradient 
+      <MeshGradient
         intensity="low"
         colors={['#1e1e1e', '#1a1a2e', '#2d1b4e']}
         className="p-6 rounded-b-3xl shadow-lg border-b border-white/5 overflow-hidden"
@@ -197,10 +199,10 @@ export function PlayerOverviewContent({
           <View className="flex-1">
             <Text className="text-2xl text-white font-outfit-bold" numberOfLines={1}>{profile?.profile?.personaname || 'Unknown Player'}</Text>
             <Text className="text-gray-400 font-outfit">Account ID: {accountId}</Text>
-            
+
             {isCurrentUser && (
               <View className="flex-row mt-2">
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={onStatsPress}
                   className="mr-3 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
                 >
@@ -208,7 +210,7 @@ export function PlayerOverviewContent({
                     {friendsCount} <Text className="text-gray-400 font-outfit-semibold">Friends</Text>
                   </Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={onStatsPress}
                   className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/10"
                 >
@@ -222,7 +224,7 @@ export function PlayerOverviewContent({
           <RankBadge rankTier={profile?.rank_tier || null} leaderboardRank={profile?.leaderboard_rank || null} size={60} />
         </View>
       </MeshGradient>
-      
+
       <View className="mt-6 px-4">
         {isPrivate && (
           <View className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl mb-6 flex-row items-center">
@@ -264,7 +266,7 @@ export function PlayerOverviewContent({
                 <Text className="text-gray-400 text-[10px] uppercase font-outfit-bold">Shared Matches: {peer.games}</Text>
               </View>
             </View>
-            
+
             <View className="flex-row justify-between">
               <View className="flex-1">
                 <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-1">As Ally</Text>
@@ -324,7 +326,7 @@ export function PlayerOverviewContent({
                     const d = totals.find(t => t.field === 'deaths')?.sum || 0;
                     const a = totals.find(t => t.field === 'assists')?.sum || 0;
                     const n = totals.find(t => t.field === 'kills')?.n || 1;
-                    return `${(k/n).toFixed(1)}/${(d/n).toFixed(1)}/${(a/n).toFixed(1)}`;
+                    return `${(k / n).toFixed(1)}/${(d / n).toFixed(1)}/${(a / n).toFixed(1)}`;
                   })()}
                 </Text>
               </View>
@@ -356,8 +358,8 @@ export function PlayerOverviewContent({
   );
 
   const renderStatSection = (title: string, icon: string, stats: CategoryStats[]) => (
-    <Animated.View 
-      key={title} 
+    <Animated.View
+      key={title}
       entering={FadeInDown.delay(200).springify()}
       style={{ marginHorizontal: 16 }}
       className="mb-6 bg-[#1e1e1e] rounded-2xl overflow-hidden border border-white/5"
@@ -386,7 +388,7 @@ export function PlayerOverviewContent({
   );
 
   const renderLifetimeContent = () => (
-    <ScrollView 
+    <ScrollView
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
       className="flex-1"
     >
@@ -409,12 +411,12 @@ export function PlayerOverviewContent({
     const isRadiant = item.player_slot < 128;
     const isWin = (isRadiant && item.radiant_win) || (!isRadiant && !item.radiant_win);
     const heroName = HEROES[item.hero_id]?.localized_name || `Hero ${item.hero_id}`;
-    
+
     return (
       <PressableScale onPress={() => onMatchPress(item.match_id)}>
-        <Animated.View 
+        <Animated.View
           entering={FadeInDown.delay(index * 100).springify()}
-          style={{ 
+          style={{
             marginHorizontal: 16,
             backgroundColor: '#1e1e2e',
             padding: 16,
@@ -430,8 +432,8 @@ export function PlayerOverviewContent({
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <Image 
-              source={{ uri: getHeroImageUrl(item.hero_id) }} 
+            <Image
+              source={{ uri: getHeroImageUrl(item.hero_id) }}
               style={{ width: 48, height: 48, borderRadius: 8, marginRight: 12 }}
               resizeMode="cover"
             />
@@ -458,17 +460,26 @@ export function PlayerOverviewContent({
   const renderHeroRow = ({ item, index }: { item: any, index: number }) => {
     const heroInfo = HEROES[Number(item.hero_id)];
     const winRate = (item.win / item.games) * 100;
-    
+
     return (
-      <TouchableOpacity 
-        onPress={() => {
-          setSelectedHeroId(Number(item.hero_id));
-          setHeroModalVisible(true);
+      <TouchableOpacity
+        onPress={async () => {
+          try {
+            const allHeroes = await getHeroStats(); // ✅ no argument
+            const heroStats = allHeroes.find(
+              (h) => h.id === Number(item.hero_id)
+            ) || null;
+
+            setSelectedHero(heroStats);
+            setHeroModalVisible(true);
+          } catch (e) {
+            console.error('Failed to load hero stats', e);
+          }
         }}
         className="mx-4 mb-3 bg-[#1e1e2e] p-4 rounded-xl border border-white/5 flex-row items-center"
       >
-        <Image 
-          source={{ uri: getHeroImageUrl(Number(item.hero_id)) }} 
+        <Image
+          source={{ uri: getHeroImageUrl(Number(item.hero_id)) }}
           className="w-14 h-14 rounded-lg mr-4 bg-zinc-900"
           resizeMode="cover"
         />
@@ -477,7 +488,7 @@ export function PlayerOverviewContent({
             <Text className="text-white font-outfit-bold text-lg">{heroInfo?.localized_name || 'Hero'}</Text>
             <Text className="text-gray-400 font-outfit-bold text-xs uppercase">{item.games} Games</Text>
           </View>
-          
+
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-0.5">Performance</Text>
@@ -488,7 +499,7 @@ export function PlayerOverviewContent({
                 {item.avg_kills.toFixed(1)} / {item.avg_deaths.toFixed(1)} / {item.avg_assists.toFixed(1)}
               </Text>
             </View>
-            
+
             <View className="items-end">
               <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-0.5">Win Rate</Text>
               <Text className={`font-outfit-bold text-lg ${winRate >= 55 ? 'text-win' : winRate < 45 ? 'text-loss' : 'text-white'}`}>
@@ -537,8 +548,11 @@ export function PlayerOverviewContent({
 
       <HeroDetailModal
         visible={heroModalVisible}
-        heroId={selectedHeroId}
-        onClose={() => setHeroModalVisible(false)}
+        hero={selectedHero} // ✅ correct prop + correct type
+        onClose={() => {
+          setHeroModalVisible(false);
+          setSelectedHero(null); // ✅ optional cleanup
+        }}
       />
     </View>
   );
