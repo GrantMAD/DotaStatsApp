@@ -26,10 +26,18 @@ import {
 import { getHeroImageUrl, HEROES, REGIONS } from '../services/constants';
 import { RankBadge } from './RankBadge';
 import PressableScale from './PressableScale';
-import Skeleton from './Skeleton';
+import Skeleton, { PlayerProfileSkeleton } from './Skeleton';
 import MeshGradient from './MeshGradient';
+import GlassModal from './GlassModal';
 import { useSteamAuth } from '../hooks/useSteamAuth';
-import { useEncounterHistory, usePlayerHeroes } from '../hooks/useOpenDota';
+import { 
+  useEncounterHistory, 
+  usePlayerHeroes, 
+  usePlayerPeers,
+  usePlayerProfile,
+  usePlayerWinLoss,
+  useRecentMatches
+} from '../hooks/useOpenDota';
 import HeroDetailModal from './HeroDetailModal';
 
 function LifetimeStatsSkeleton() {
@@ -61,7 +69,7 @@ function LifetimeStatsSkeleton() {
   );
 }
 
-type ProfileTab = 'Recent' | 'Heroes' | 'Lifetime';
+type ProfileTab = 'Recent' | 'Heroes' | 'Network' | 'Lifetime';
 
 interface CategoryStats {
   label: string;
@@ -102,11 +110,24 @@ export function PlayerOverviewContent({
   const { accountId: currentUserId } = useSteamAuth();
   const peer = useEncounterHistory(currentUserId, accountId);
   const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
+  const { data: peers = [], isLoading: peersLoading } = usePlayerPeers(accountId);
   const [activeTab, setActiveTab] = useState<ProfileTab>('Recent');
+  const [networkSubTab, setNetworkSubTab] = useState<'Allies' | 'Opponents'>('Allies');
 
   // Hero Detail State
   const [selectedHero, setSelectedHero] = useState<HeroStats | null>(null);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
+
+  // Player Detail Modal State (for Peers)
+  const [selectedPeerId, setSelectedPeerId] = useState<number | null>(null);
+  const [peerModalVisible, setPeerModalVisible] = useState(false);
+
+  // Queries for Peer Detail Modal
+  const { data: selectedPeerProfile, isLoading: peerProfileLoading } = usePlayerProfile(selectedPeerId);
+  const { data: selectedPeerWL, isLoading: peerWLLoading } = usePlayerWinLoss(selectedPeerId);
+  const { data: selectedPeerMatches = [], isLoading: peerMatchesLoading } = useRecentMatches(selectedPeerId, 5);
+
+  const peerDetailsLoading = peerProfileLoading || peerWLLoading || peerMatchesLoading;
 
   // Lifetime Stats State
   const [totals, setTotals] = useState<PlayerTotal[]>([]);
@@ -242,14 +263,14 @@ export function PlayerOverviewContent({
 
         {/* Profile Tabs */}
         <View className="flex-row bg-[#2a2a2a] rounded-xl p-1 mb-4">
-          {(['Recent', 'Heroes', 'Lifetime'] as ProfileTab[]).map((tab) => (
+          {(['Recent', 'Heroes', 'Network', 'Lifetime'] as ProfileTab[]).map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
             >
               <Text className={`font-outfit-bold text-[10px] ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
-                {tab === 'Recent' ? 'RECENT' : tab === 'Heroes' ? 'HEROES' : 'LIFETIME'}
+                {tab === 'Recent' ? 'RECENT' : tab === 'Heroes' ? 'HEROES' : tab === 'Network' ? 'NETWORK' : 'LIFETIME'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -386,6 +407,117 @@ export function PlayerOverviewContent({
       </View>
     </Animated.View>
   );
+
+  const renderNetworkContent = () => {
+    const sortedPeers = [...peers]
+      .filter(p => networkSubTab === 'Allies' ? p.with_games > 0 : p.against_games > 0)
+      .sort((a, b) => networkSubTab === 'Allies' 
+        ? b.with_games - a.with_games 
+        : b.against_games - a.against_games
+      );
+
+    const duo = [...peers].sort((a, b) => b.with_games - a.with_games)[0];
+    const nemesis = [...peers]
+      .filter(p => p.against_games >= 3)
+      .sort((a, b) => (a.against_win / a.against_games) - (b.against_win / b.against_games))[0];
+
+    return (
+      <FlatList
+        data={sortedPeers.slice(0, 50)}
+        keyExtractor={(item) => item.account_id.toString()}
+        ListHeaderComponent={
+          <>
+            {renderHeader()}
+            
+            {/* Highlights */}
+            <View className="flex-row px-4 mb-6">
+              {duo && duo.with_games > 1 && (
+                <View className="flex-1 bg-win/10 border border-win/20 p-3 rounded-xl mr-2">
+                  <Text className="text-win text-[10px] font-outfit-black uppercase mb-2">Dynamic Duo</Text>
+                  <View className="flex-row items-center">
+                    <Image source={{ uri: duo.avatar }} className="w-8 h-8 rounded-full mr-2" />
+                    <View className="flex-1">
+                      <Text className="text-white font-outfit-bold text-xs" numberOfLines={1}>{duo.personaname}</Text>
+                      <Text className="text-gray-400 text-[10px]">{duo.with_games} Games</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+              {nemesis && nemesis.against_games >= 3 && (
+                <View className="flex-1 bg-loss/10 border border-loss/20 p-3 rounded-xl ml-2">
+                  <Text className="text-loss text-[10px] font-outfit-black uppercase mb-2">Nemesis</Text>
+                  <View className="flex-row items-center">
+                    <Image source={{ uri: nemesis.avatar }} className="w-8 h-8 rounded-full mr-2" />
+                    <View className="flex-1">
+                      <Text className="text-white font-outfit-bold text-xs" numberOfLines={1}>{nemesis.personaname}</Text>
+                      <Text className="text-gray-400 text-[10px]">{nemesis.against_games} Games</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Sub Tabs */}
+            <View className="flex-row px-4 mb-4 border-b border-white/5">
+              {(['Allies', 'Opponents'] as const).map((sub) => (
+                <TouchableOpacity
+                  key={sub}
+                  onPress={() => setNetworkSubTab(sub)}
+                  className={`mr-6 pb-2 border-b-2 ${networkSubTab === sub ? 'border-gamingAccent' : 'border-transparent'}`}
+                >
+                  <Text className={`font-outfit-bold text-[10px] ${networkSubTab === sub ? 'text-white' : 'text-gray-500'}`}>
+                    {sub.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        }
+        renderItem={({ item }) => {
+          const games = networkSubTab === 'Allies' ? item.with_games : item.against_games;
+          const wins = networkSubTab === 'Allies' ? item.with_win : (item.against_games - item.against_win);
+          const winRate = (wins / games) * 100;
+
+          return (
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedPeerId(item.account_id);
+                setPeerModalVisible(true);
+              }}
+              className="mx-4 mb-3 bg-[#1e1e2e] p-4 rounded-xl border border-white/5 flex-row items-center"
+            >
+              <Image source={{ uri: item.avatarfull || item.avatar }} className="w-12 h-12 rounded-full mr-4 bg-zinc-900" />
+              <View className="flex-1">
+                <Text className="text-white font-outfit-bold text-base">{item.personaname}</Text>
+                <Text className="text-gray-500 text-xs font-outfit">
+                  {games} {networkSubTab === 'Allies' ? 'Matches with' : 'Matches against'}
+                </Text>
+              </View>
+              <View className="items-end">
+                <Text className={`font-outfit-bold text-lg ${winRate >= 50 ? 'text-win' : 'text-loss'}`}>
+                  {winRate.toFixed(0)}%
+                </Text>
+                <Text className="text-gray-600 text-[8px] uppercase font-outfit-bold">Win Rate</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
+        ListEmptyComponent={
+          peersLoading ? (
+            <View className="py-20 items-center"><ActivityIndicator color="#8b5cf6" /></View>
+          ) : (
+            <View className="py-20 items-center px-10">
+              <Ionicons name="people-outline" size={48} color="#3f3f46" />
+              <Text className="text-gray-500 font-outfit text-center mt-4">No network data found for this player.</Text>
+            </View>
+          )
+        }
+        ListFooterComponent={<View style={{ height: 40 }} />}
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      />
+    );
+  };
 
   const renderLifetimeContent = () => (
     <ScrollView
@@ -542,6 +674,8 @@ export function PlayerOverviewContent({
           refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
+      ) : activeTab === 'Network' ? (
+        renderNetworkContent()
       ) : (
         renderLifetimeContent()
       )}
@@ -554,6 +688,36 @@ export function PlayerOverviewContent({
           setSelectedHero(null); // ✅ optional cleanup
         }}
       />
+
+      <GlassModal
+        visible={peerModalVisible}
+        onClose={() => setPeerModalVisible(false)}
+      >
+        {peerDetailsLoading ? (
+          <PlayerProfileSkeleton />
+        ) : selectedPeerProfile ? (
+          <View className="flex-1">
+            <View className="p-4 border-b border-zinc-800 flex-row justify-between items-center bg-[#1e1e1e]">
+               <Text className="text-white font-outfit-bold ml-2">Player Details</Text>
+               <TouchableOpacity onPress={() => setPeerModalVisible(false)} className="p-2">
+                 <Ionicons name="close" size={28} color="white" />
+               </TouchableOpacity>
+            </View>
+            <PlayerOverviewContent
+              accountId={selectedPeerProfile.profile.account_id.toString()}
+              profile={selectedPeerProfile}
+              wl={selectedPeerWL || null}
+              matches={selectedPeerMatches}
+              onMatchPress={(id) => {
+                setPeerModalVisible(false);
+                onMatchPress(id);
+              }}
+            />
+          </View>
+        ) : (
+          <View className="flex-1 justify-center items-center"><Text className="text-red-500">Failed to load data.</Text></View>
+        )}
+      </GlassModal>
     </View>
   );
 }
