@@ -143,7 +143,7 @@ export default function SearchScreen() {
 
     return (
       <PressableScale onPress={() => pushPlayer(item.account_id)}>
-        <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+        <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
           <View className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center">
             <Image
               source={{ uri: item.avatarfull }}

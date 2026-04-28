@@ -1,4 +1,4 @@
-const OPENDOTA_BASE_URL = 'https://api.opendota.com/api';
+export const OPENDOTA_BASE_URL = 'https://api.opendota.com/api';
 
 export interface PlayerProfile {
   profile: {
@@ -617,3 +617,26 @@ export async function getProMatches(limit: number = 10): Promise<ProMatch[]> {
     return [];
   }
 }
+
+export const openDotaApi = {
+  searchPlayers,
+  getPlayerHeroes,
+  getPlayerProfile,
+  getPlayerWinLoss,
+  getPlayerTotals,
+  getPlayerCounts,
+  getRecentMatches,
+  getPlayerPeers,
+  getMatchDetails,
+  requestMatchParse,
+  getLiveGames,
+  getGlobalRecords,
+  getProPlayers,
+  getProTeams,
+  getLeagues,
+  getTeamRoster,
+  getTeamMatches,
+  getLeagueMatches,
+  getHeroStats,
+  getProMatches,
+};

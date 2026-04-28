@@ -20,8 +20,7 @@ import {
   getPlayerWinLoss,
   getPlayerTotals,
   getPlayerCounts,
-  HeroStats,
-  getHeroStats
+  HeroStats
 } from '../services/opendota';
 import { getHeroImageUrl, HEROES, REGIONS } from '../services/constants';
 import { RankBadge } from './RankBadge';
@@ -36,7 +35,8 @@ import {
   usePlayerPeers,
   usePlayerProfile,
   usePlayerWinLoss,
-  useRecentMatches
+  useRecentMatches,
+  useHeroStats
 } from '../hooks/useOpenDota';
 import HeroDetailModal from './HeroDetailModal';
 
@@ -111,6 +111,7 @@ export function PlayerOverviewContent({
   const peer = useEncounterHistory(currentUserId, accountId);
   const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
   const { data: peers = [], isLoading: peersLoading } = usePlayerPeers(accountId);
+  const { data: allHeroStats = [] } = useHeroStats();
   const [activeTab, setActiveTab] = useState<ProfileTab>('Recent');
   const [networkSubTab, setNetworkSubTab] = useState<'Allies' | 'Opponents'>('Allies');
 
@@ -547,7 +548,7 @@ export function PlayerOverviewContent({
     return (
       <PressableScale onPress={() => onMatchPress(item.match_id)}>
         <Animated.View
-          entering={FadeInDown.delay(index * 100).springify()}
+          entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}
           style={{
             marginHorizontal: 16,
             backgroundColor: '#1e1e2e',
@@ -595,18 +596,13 @@ export function PlayerOverviewContent({
 
     return (
       <TouchableOpacity
-        onPress={async () => {
-          try {
-            const allHeroes = await getHeroStats(); // ✅ no argument
-            const heroStats = allHeroes.find(
-              (h) => h.id === Number(item.hero_id)
-            ) || null;
+        onPress={() => {
+          const heroStats = allHeroStats.find(
+            (h) => h.id === Number(item.hero_id)
+          ) || null;
 
-            setSelectedHero(heroStats);
-            setHeroModalVisible(true);
-          } catch (e) {
-            console.error('Failed to load hero stats', e);
-          }
+          setSelectedHero(heroStats);
+          setHeroModalVisible(true);
         }}
         className="mx-4 mb-3 bg-[#1e1e2e] p-4 rounded-xl border border-white/5 flex-row items-center"
       >

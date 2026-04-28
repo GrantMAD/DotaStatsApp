@@ -339,7 +339,7 @@ export default function ProSceneScreen() {
             renderItem={({ item, index }) => {
               if (activeTab === 'Tournaments') {
                 return (
-                  <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                  <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
                     <LeagueCard league={item as League} onPress={handleLeaguePress} />
                   </Animated.View>
                 );
@@ -347,13 +347,13 @@ export default function ProSceneScreen() {
                 const team = item as ProTeam;
                 const rank = teams.indexOf(team) + 1;
                 return (
-                  <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                  <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
                     <TeamListItem team={team} rank={rank} onPress={handleTeamPress} />
                   </Animated.View>
                 );
               } else {
                 return (
-                  <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+                  <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
                     <ProPlayerItem
                       player={item as ProPlayer}
                       onPress={handlePlayerPress}

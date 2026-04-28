@@ -172,7 +172,7 @@ function ProBanItem({ hero, index, onPress }: { hero: ProcessedHero; index: numb
   return (
     <PressableScale onPress={onPress}>
       <Animated.View 
-        entering={FadeInDown.delay(index * 100).springify()}
+        entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -473,7 +473,7 @@ export default function HomeScreen() {
           keyExtractor={(item) => `wr-${item.id}`}
           renderItem={({ item, index }) => (
             <PressableScale onPress={() => openHeroModal(item.id)}>
-              <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
                 <HeroStatsCard
                   heroName={item.name}
                   heroImg={item.img}
@@ -499,7 +499,7 @@ export default function HomeScreen() {
           keyExtractor={(item) => `pk-${item.id}`}
           renderItem={({ item, index }) => (
             <PressableScale onPress={() => openHeroModal(item.id)}>
-              <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
                 <HeroStatsCard
                   heroName={item.name}
                   heroImg={item.img}
@@ -525,7 +525,7 @@ export default function HomeScreen() {
           keyExtractor={(item) => `pp-${item.id}`}
           renderItem={({ item, index }) => (
             <PressableScale onPress={() => openHeroModal(item.id)}>
-              <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
                 <HeroStatsCard
                   heroName={item.name}
                   heroImg={item.img}
@@ -559,7 +559,7 @@ export default function HomeScreen() {
           keyExtractor={(item) => `pm-${item.match_id}`}
           renderItem={({ item, index }) => (
             <PressableScale onPress={() => openMatchModal(item)}>
-              <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
                 <ProMatchCard
                   radiantName={item.radiant_name}
                   direName={item.dire_name}
@@ -588,7 +588,7 @@ export default function HomeScreen() {
             keyExtractor={(item) => `live-${item.match_id}`}
             renderItem={({ item, index }) => (
               <PressableScale onPress={() => openMatchById(item.match_id)}>
-                <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+                <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
                   <LiveGameCard game={item} onPress={openMatchById} />
                 </Animated.View>
               </PressableScale>

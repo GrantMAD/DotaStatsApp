@@ -13,10 +13,9 @@ export default function NotificationsScreen() {
 
   const renderItem = ({ item, index }: { item: AppNotification; index: number }) => {
     return (
-      <Animated.View 
-        entering={FadeInDown.delay(index * 50).springify()}
-        style={{
-          backgroundColor: '#1E1E2E',
+      <Animated.View
+        entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}
+        style={{          backgroundColor: '#1E1E2E',
           padding: 16,
           marginHorizontal: 16,
           marginBottom: 12,

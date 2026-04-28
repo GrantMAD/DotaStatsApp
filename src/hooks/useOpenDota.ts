@@ -1,8 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import * as openDotaApi from '../services/opendota';
+import { 
+  openDotaApi, 
+  PlayerHero, 
+  HeroStats, 
+  OPENDOTA_BASE_URL 
+} from '../services/opendota';
 
 /**
- * Hook to fetch a player's profile and core stats.
+ * Hook to fetch a player's profile data.
  */
 export function usePlayerProfile(accountId: string | number | null) {
   return useQuery({
@@ -13,20 +18,20 @@ export function usePlayerProfile(accountId: string | number | null) {
 }
 
 /**
- * Hook to fetch player's hero performance.
+ * Hook to fetch per-hero statistics for a player.
  */
 export function usePlayerHeroes(accountId: string | number | null) {
   return useQuery({
     queryKey: ['playerHeroes', accountId],
+    staleTime: 1000 * 60 * 30, // 30 minutes
     queryFn: async () => {
       if (!accountId) return [];
-      
+
       const [heroes, matches] = await Promise.all([
         openDotaApi.getPlayerHeroes(accountId),
-        // Fetch matches with projected fields for KDA calculation
-        fetch(`https://api.opendota.com/api/players/${accountId}/matches?project=hero_id&project=kills&project=deaths&project=assists`).then(res => res.json())
+        // Fetch matches with projected fields and limit to 500 for KDA calculation
+        fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/matches?project=hero_id&project=kills&project=deaths&project=assists&limit=500`).then(res => res.json())
       ]);
-
       // Aggregate KDA per hero
       const matchStats: Record<number, { kills: number; deaths: number; assists: number; count: number }> = {};
       matches.forEach((m: any) => {
