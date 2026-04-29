@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -205,7 +205,7 @@ export function PlayerOverviewContent({
     }
   };
 
-  const renderHeader = () => (
+  const memoizedHeader = useMemo(() => (
     <View className="mb-4">
       <MeshGradient
         intensity="low"
@@ -377,7 +377,7 @@ export function PlayerOverviewContent({
         )}
       </View>
     </View>
-  );
+  ), [profile, accountId, isCurrentUser, onStatsPress, friendsCount, followingCount, isPrivate, activeTab, peer, wl, totals]);
 
   const renderStatSection = (title: string, icon: string, stats: CategoryStats[]) => (
     <Animated.View
@@ -428,7 +428,7 @@ export function PlayerOverviewContent({
         keyExtractor={(item) => item.account_id.toString()}
         ListHeaderComponent={
           <>
-            {renderHeader()}
+            {memoizedHeader}
             
             {/* Highlights */}
             <View className="flex-row px-4 mb-6">
@@ -525,7 +525,7 @@ export function PlayerOverviewContent({
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
       className="flex-1"
     >
-      {renderHeader()}
+      {memoizedHeader}
       {statsLoading ? (
         <LifetimeStatsSkeleton />
       ) : (
@@ -650,7 +650,7 @@ export function PlayerOverviewContent({
           data={matches}
           keyExtractor={(item) => item.match_id.toString()}
           renderItem={renderMatch}
-          ListHeaderComponent={renderHeader()}
+          ListHeaderComponent={memoizedHeader}
           ListFooterComponent={<View style={{ height: 40 }} />}
           refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -660,7 +660,7 @@ export function PlayerOverviewContent({
           data={playerHeroes.sort((a, b) => b.games - a.games).slice(0, 50)}
           keyExtractor={(item) => item.hero_id}
           renderItem={renderHeroRow}
-          ListHeaderComponent={renderHeader()}
+          ListHeaderComponent={memoizedHeader}
           ListEmptyComponent={
             heroesLoading ? (
               <View className="py-20 items-center"><ActivityIndicator color="#8b5cf6" /></View>

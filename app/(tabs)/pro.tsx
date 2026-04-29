@@ -175,7 +175,7 @@ export default function ProSceneScreen() {
     setMatchModalVisible(true);
   };
 
-  const renderHeader = () => (
+  const memoizedHeader = useMemo(() => (
     <View style={{ paddingBottom: 20, paddingTop: 10 }}>
       <View style={{ paddingHorizontal: 20, paddingBottom: 16 }}>
         <Text style={{ color: '#fff', fontSize: 28, fontFamily: 'Outfit_900Black', marginBottom: 4 }}>
@@ -288,7 +288,7 @@ export default function ProSceneScreen() {
         )}
       </View>
     </View>
-  );
+  ), [activeTab, subTab, searchQuery]);
   return (
     <LinearGradient
       colors={['#1a1a2e', '#121212']}
@@ -327,7 +327,7 @@ export default function ProSceneScreen() {
               if (activeTab === 'Teams') return `t-${item.team_id}`;
               return `p-${item.account_id}`;
             }}
-            ListHeaderComponent={renderHeader()}
+            ListHeaderComponent={memoizedHeader}
             contentContainerStyle={{ paddingBottom: 40 }}
             refreshControl={
               <RefreshControl
