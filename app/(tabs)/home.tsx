@@ -18,7 +18,7 @@ import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import LiveGameCard from '../../src/components/LiveGameCard';
 import RecordCard from '../../src/components/RecordCard';
 import { SearchResult } from '../../src/services/opendota';
-import { useHeroStats, useProMatches, useLiveGames, useGlobalRecords } from '../../src/hooks/useOpenDota';
+import { useHeroStats, useProMatches, useLiveGames, useGlobalRecordsMulti } from '../../src/hooks/useOpenDota';
 import { queryClient } from '../../src/services/queryClient';
 import Skeleton from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
@@ -221,9 +221,7 @@ export default function HomeScreen() {
   const { data: heroesData = [], isLoading: loadingHeroes, refetch: refetchHeroes } = useHeroStats();
   const { data: proMatchesData = [], isLoading: loadingMatches, refetch: refetchMatches } = useProMatches(10);
   const { data: liveGames = [], refetch: refetchLive } = useLiveGames();
-  const { data: gpmRecords = [], refetch: refetchGpm } = useGlobalRecords('gold_per_min');
-  const { data: killRecords = [], refetch: refetchKills } = useGlobalRecords('kills');
-  const { data: healRecords = [], refetch: refetchHealing } = useGlobalRecords('hero_healing');
+  const { data: multiRecords = {}, refetch: refetchRecords } = useGlobalRecordsMulti(['gold_per_min', 'kills', 'hero_healing']);
 
   const isLoading = loadingHeroes || loadingMatches;
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -313,17 +311,15 @@ export default function HomeScreen() {
       refetchHeroes(),
       refetchMatches(),
       refetchLive(),
-      refetchGpm(),
-      refetchKills(),
-      refetchHealing(),
+      refetchRecords(),
     ]);
     setIsRefreshing(false);
-  }, [refetchHeroes, refetchMatches, refetchLive, refetchGpm, refetchKills, refetchHealing]);
+  }, [refetchHeroes, refetchMatches, refetchLive, refetchRecords]);
 
   const records = {
-    gpm: gpmRecords[0] || null,
-    kills: killRecords[0] || null,
-    healing: healRecords[0] || null
+    gpm: multiRecords.gold_per_min?.[0] || null,
+    kills: multiRecords.kills?.[0] || null,
+    healing: multiRecords.hero_healing?.[0] || null
   };
 
   return (

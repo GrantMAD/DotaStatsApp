@@ -137,6 +137,7 @@ export function useLiveGames() {
     queryKey: ['liveGames'],
     queryFn: openDotaApi.getLiveGames,
     refetchInterval: 1000 * 60, // Refresh every minute
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -224,6 +225,26 @@ export function useGlobalRecords(field: string) {
   return useQuery({
     queryKey: ['globalRecords', field],
     queryFn: () => openDotaApi.getGlobalRecords(field),
+    staleTime: 1000 * 60 * 60 * 24, // Records don't change often
+  });
+}
+
+/**
+ * Hook to fetch multiple global records in one go.
+ */
+export function useGlobalRecordsMulti(fields: string[]) {
+  return useQuery({
+    queryKey: ['globalRecordsMulti', ...fields],
+    queryFn: async () => {
+      const results = await Promise.all(
+        fields.map(field => openDotaApi.getGlobalRecords(field))
+      );
+      // Map back to an object with fields as keys
+      return fields.reduce((acc, field, index) => {
+        acc[field] = results[index];
+        return acc;
+      }, {} as Record<string, any[]>);
+    },
     staleTime: 1000 * 60 * 60 * 24, // Records don't change often
   });
 }

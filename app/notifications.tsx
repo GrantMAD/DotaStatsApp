@@ -109,7 +109,7 @@ export default function NotificationsScreen() {
         rightComponent={
           notifications.some(n => !n.is_read) ? (
             <TouchableOpacity 
-              onPress={markAllAsRead} 
+              onPress={() => markAllAsRead()} 
               style={{
                 paddingHorizontal: 12,
                 paddingVertical: 6,
