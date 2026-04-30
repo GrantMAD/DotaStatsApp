@@ -218,7 +218,7 @@ export async function searchPlayers(query: string): Promise<SearchResult[]> {
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s for fuzzy search
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s for fuzzy search
 
   try {
     const response = await fetch(`${OPENDOTA_BASE_URL}/search?q=${encodeURIComponent(query)}`, {
@@ -234,7 +234,7 @@ export async function searchPlayers(query: string): Promise<SearchResult[]> {
   } catch (error: any) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      throw new Error('Search request timed out. OpenDota servers are under heavy load. Try using a Steam ID for instant results.');
+      throw new Error('Search timed out. Try using a Steam ID for instant results.');
     }
     throw error;
   }
@@ -324,15 +324,16 @@ export async function getPlayerCounts(accountId: string | number): Promise<Playe
 }
 
 /**
- * Fetches the most recent 10 matches for the player.
+ * Fetches recent matches for the player with a custom limit.
  */
-export async function getRecentMatches(accountId: string | number, limit: number = 10): Promise<RecentMatch[]> {
+export async function getRecentMatches(accountId: string | number, limit: number = 20): Promise<RecentMatch[]> {
   try {
-    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/recentMatches?limit=${limit}`);
-    if (!response.ok) throw new Error('Failed to fetch recent matches');
+    // The /matches endpoint is more flexible than /recentMatches for larger limits
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/matches?limit=${limit}`);
+    if (!response.ok) throw new Error('Failed to fetch matches');
     return await response.json();
   } catch (error) {
-    console.error('Error fetching recent matches:', error);
+    console.error('Error fetching matches:', error);
     return [];
   }
 }

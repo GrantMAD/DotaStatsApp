@@ -19,10 +19,22 @@ const RANK_LABELS: Record<string, { name: string; color: string }> = {
   '8': { name: 'Immortal', color: '#ffd700' },
 };
 
+export interface PlayerHeroStats {
+  hero_id: string;
+  last_played: number;
+  games: number;
+  win: number;
+  avg_kills: number;
+  avg_deaths: number;
+  avg_assists: number;
+  kda: number;
+}
+
 interface Props {
   hero: HeroStats | null;
   visible: boolean;
   onClose: () => void;
+  playerStats?: PlayerHeroStats | null;
 }
 
 function StatRow({ label, value, color }: { label: string; value: string; color?: string }) {
@@ -58,13 +70,17 @@ function WinRateBar({ picks, wins, label, color }: { picks: number; wins: number
   );
 }
 
-export default function HeroDetailModal({ hero, visible, onClose }: Props) {
+export default function HeroDetailModal({ hero, visible, onClose, playerStats }: Props) {
   if (!hero) return null;
 
   const imgUrl = `${STEAM_CDN}${hero.img}`;
   const pubWinRate = hero.pub_pick > 0 ? (hero.pub_win / hero.pub_pick) * 100 : 0;
   const proWinRate = hero.pro_pick > 0 ? (hero.pro_win / hero.pro_pick) * 100 : 0;
   const turboWinRate = hero.turbo_picks > 0 ? (hero.turbo_wins / hero.turbo_picks) * 100 : 0;
+
+  // Personal Stats
+  const personalWinRate = playerStats && playerStats.games > 0 ? (playerStats.win / playerStats.games) * 100 : 0;
+  const lastPlayedDate = playerStats ? new Date(playerStats.last_played * 1000).toLocaleDateString() : '';
 
   // Build bracket data
   const brackets = ['1', '2', '3', '4', '5', '6', '7', '8'].map(b => {
@@ -168,6 +184,43 @@ export default function HeroDetailModal({ hero, visible, onClose }: Props) {
               {(hero.pub_pick / 1000).toFixed(0)}k matches played
             </Text>
           </View>
+
+          {/* Your Stats (Optional) */}
+          {playerStats && (
+            <View style={{
+              backgroundColor: 'rgba(139, 92, 246, 0.1)', borderRadius: 14, padding: 16, marginBottom: 20,
+              borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.3)',
+            }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ color: '#8b5cf6', fontSize: 12, fontWeight: '800' }}>
+                  YOUR STATS
+                </Text>
+                <Text style={{ color: '#666', fontSize: 10, fontWeight: '600' }}>
+                  LAST PLAYED: {lastPlayedDate}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                <View>
+                  <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>
+                    {personalWinRate.toFixed(1)}%
+                  </Text>
+                  <Text style={{ color: '#999', fontSize: 10, fontWeight: '600' }}>WIN RATE</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>
+                    {playerStats.games}
+                  </Text>
+                  <Text style={{ color: '#999', fontSize: 10, fontWeight: '600' }}>GAMES</Text>
+                </View>
+              </View>
+
+              <StatRow label="Average KDA" value={playerStats.kda.toFixed(2)} color="#8b5cf6" />
+              <StatRow label="Average Kills" value={playerStats.avg_kills.toFixed(1)} />
+              <StatRow label="Average Deaths" value={playerStats.avg_deaths.toFixed(1)} />
+              <StatRow label="Average Assists" value={playerStats.avg_assists.toFixed(1)} />
+            </View>
+          )}
 
           {/* Key Stats */}
           <View style={{

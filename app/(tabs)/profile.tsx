@@ -35,9 +35,10 @@ export default function ProfileScreen() {
   const { friends, following } = useFriends();
   
   // Main Profile Queries
+  const [matchesLimit, setMatchesLimit] = useState(20);
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(accountId);
   const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(accountId);
-  const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(accountId);
+  const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(accountId, matchesLimit);
 
   const isDataLoading = profileLoading || wlLoading || matchesLoading;
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -144,6 +145,8 @@ export default function ProfileScreen() {
           friendsCount={friends.length}
           followingCount={following.length}
           onStatsPress={() => router.push('/friends')}
+          matchesLimit={matchesLimit}
+          setMatchesLimit={setMatchesLimit}
         />
       )}
 

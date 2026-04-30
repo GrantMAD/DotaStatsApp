@@ -38,7 +38,7 @@ import {
   useRecentMatches,
   useHeroStats
 } from '../hooks/useOpenDota';
-import HeroDetailModal from './HeroDetailModal';
+import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
 
 function LifetimeStatsSkeleton() {
   return (
@@ -91,7 +91,59 @@ interface PlayerOverviewContentProps {
   followingCount?: number;
   onStatsPress?: () => void;
   isPrivate?: boolean;
+  matchesLimit?: number;
+  setMatchesLimit?: (limit: number) => void;
 }
+
+const MatchItem = React.memo(({ item, index, onMatchPress }: { item: RecentMatch, index: number, onMatchPress: (id: number) => void }) => {
+  const isRadiant = item.player_slot < 128;
+  const isWin = (isRadiant && item.radiant_win) || (!isRadiant && !item.radiant_win);
+  const heroName = HEROES[item.hero_id]?.localized_name || `Hero ${item.hero_id}`;
+
+  return (
+    <PressableScale onPress={() => onMatchPress(item.match_id)}>
+      <Animated.View
+        entering={FadeInDown.delay(Math.min(index, 5) * 50).springify()}
+        style={{
+          marginHorizontal: 16,
+          backgroundColor: '#1e1e2e',
+          padding: 16,
+          marginBottom: 12,
+          borderRadius: 14,
+          borderLeftWidth: 4,
+          borderLeftColor: isWin ? '#22c55e' : '#ef4444',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.05)'
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <Image
+            source={{ uri: getHeroImageUrl(item.hero_id) }}
+            style={{ width: 48, height: 48, borderRadius: 8, marginRight: 12 }}
+            resizeMode="cover"
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: isWin ? '#22c55e' : '#ef4444', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>
+              {isWin ? 'Victory' : 'Defeat'}
+            </Text>
+            <Text style={{ color: '#d1d5db', fontFamily: 'Outfit_600SemiBold', fontSize: 14 }}>{heroName}</Text>
+            <Text style={{ color: '#6b7280', fontFamily: 'Outfit_400Regular', fontSize: 12 }}>KDA: {item.kills}/{item.deaths}/{item.assists}</Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
+          <Text style={{ color: '#9ca3af', fontFamily: 'Outfit_600SemiBold', fontSize: 13, marginRight: 8 }}>
+            {Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, '0')}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color="#4b5563" />
+        </View>
+      </Animated.View>
+    </PressableScale>
+  );
+});
 
 export function PlayerOverviewContent({
   accountId,
@@ -105,7 +157,9 @@ export function PlayerOverviewContent({
   friendsCount = 0,
   followingCount = 0,
   onStatsPress,
-  isPrivate = false
+  isPrivate = false,
+  matchesLimit = 20,
+  setMatchesLimit
 }: PlayerOverviewContentProps) {
   const { accountId: currentUserId } = useSteamAuth();
   const peer = useEncounterHistory(currentUserId, accountId);
@@ -117,6 +171,7 @@ export function PlayerOverviewContent({
 
   // Hero Detail State
   const [selectedHero, setSelectedHero] = useState<HeroStats | null>(null);
+  const [selectedPlayerHeroStats, setSelectedPlayerHeroStats] = useState<PlayerHeroStats | null>(null);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
 
   // Player Detail Modal State (for Peers)
@@ -540,55 +595,13 @@ export function PlayerOverviewContent({
     </ScrollView>
   );
 
-  const renderMatch = ({ item, index }: { item: RecentMatch, index: number }) => {
-    const isRadiant = item.player_slot < 128;
-    const isWin = (isRadiant && item.radiant_win) || (!isRadiant && !item.radiant_win);
-    const heroName = HEROES[item.hero_id]?.localized_name || `Hero ${item.hero_id}`;
-
-    return (
-      <PressableScale onPress={() => onMatchPress(item.match_id)}>
-        <Animated.View
-          entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}
-          style={{
-            marginHorizontal: 16,
-            backgroundColor: '#1e1e2e',
-            padding: 16,
-            marginBottom: 12,
-            borderRadius: 14,
-            borderLeftWidth: 4,
-            borderLeftColor: isWin ? '#22c55e' : '#ef4444',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.05)'
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <Image
-              source={{ uri: getHeroImageUrl(item.hero_id) }}
-              style={{ width: 48, height: 48, borderRadius: 8, marginRight: 12 }}
-              resizeMode="cover"
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: isWin ? '#22c55e' : '#ef4444', fontFamily: 'Outfit_700Bold', fontSize: 18 }}>
-                {isWin ? 'Victory' : 'Defeat'}
-              </Text>
-              <Text style={{ color: '#d1d5db', fontFamily: 'Outfit_600SemiBold', fontSize: 14 }}>{heroName}</Text>
-              <Text style={{ color: '#6b7280', fontFamily: 'Outfit_400Regular', fontSize: 12 }}>KDA: {item.kills}/{item.deaths}/{item.assists}</Text>
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
-            <Text style={{ color: '#9ca3af', fontFamily: 'Outfit_600SemiBold', fontSize: 13, marginRight: 8 }}>
-              {Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, '0')}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color="#4b5563" />
-          </View>
-        </Animated.View>
-      </PressableScale>
-    );
-  };
+  const renderMatch = ({ item, index }: { item: RecentMatch, index: number }) => (
+    <MatchItem 
+      item={item} 
+      index={index} 
+      onMatchPress={onMatchPress} 
+    />
+  );
 
   const renderHeroRow = ({ item, index }: { item: any, index: number }) => {
     const heroInfo = HEROES[Number(item.hero_id)];
@@ -602,6 +615,7 @@ export function PlayerOverviewContent({
           ) || null;
 
           setSelectedHero(heroStats);
+          setSelectedPlayerHeroStats(item);
           setHeroModalVisible(true);
         }}
         className="mx-4 mb-3 bg-[#1e1e2e] p-4 rounded-xl border border-white/5 flex-row items-center"
@@ -651,7 +665,26 @@ export function PlayerOverviewContent({
           keyExtractor={(item) => item.match_id.toString()}
           renderItem={renderMatch}
           ListHeaderComponent={memoizedHeader}
-          ListFooterComponent={<View style={{ height: 40 }} />}
+          ListFooterComponent={
+            <View style={{ paddingBottom: 60, alignItems: 'center' }}>
+              {setMatchesLimit && matches.length >= matchesLimit && (
+                <TouchableOpacity 
+                  onPress={() => setMatchesLimit(matchesLimit + 20)}
+                  style={{ 
+                    backgroundColor: '#1e1e2e', 
+                    paddingVertical: 12, 
+                    paddingHorizontal: 24, 
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#8b5cf633',
+                    marginTop: 8
+                  }}
+                >
+                  <Text style={{ color: '#8b5cf6', fontFamily: 'Outfit_700Bold' }}>Load More Matches</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          }
           refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
@@ -678,10 +711,12 @@ export function PlayerOverviewContent({
 
       <HeroDetailModal
         visible={heroModalVisible}
-        hero={selectedHero} // ✅ correct prop + correct type
+        hero={selectedHero}
+        playerStats={selectedPlayerHeroStats}
         onClose={() => {
           setHeroModalVisible(false);
-          setSelectedHero(null); // ✅ optional cleanup
+          setSelectedHero(null);
+          setSelectedPlayerHeroStats(null);
         }}
       />
 

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
   openDotaApi, 
   PlayerHero, 
@@ -74,11 +74,12 @@ export function usePlayerWinLoss(accountId: string | number | null) {
 /**
  * Hook to fetch recent matches for a player.
  */
-export function useRecentMatches(accountId: string | number | null, limit: number = 10) {
+export function useRecentMatches(accountId: string | number | null, limit: number = 20) {
   return useQuery({
     queryKey: ['recentMatches', accountId, limit],
     queryFn: () => (accountId ? openDotaApi.getRecentMatches(accountId, limit) : []),
     enabled: !!accountId,
+    placeholderData: keepPreviousData,
   });
 }
 
