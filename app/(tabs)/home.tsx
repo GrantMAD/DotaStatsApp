@@ -245,6 +245,9 @@ export default function HomeScreen() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerModalVisible, setPlayerModalVisible] = useState(false);
 
+  // Pro Bans Expand State
+  const [isBansExpanded, setIsBansExpanded] = useState(false);
+
   const processedStats = useMemo(() => processHeroStats(heroesData), [heroesData]);
   const { topWinRate, mostPicked, proPicks, proBans } = processedStats;
 
@@ -539,9 +542,39 @@ export default function HomeScreen() {
       {/* Pro Bans */}
       <SectionHeader icon="ban" title="Pro Scene — Most Banned" color="#ef4444" />
       {isLoading ? <ProBanSkeleton /> : (
-        proBans.slice(0, 5).map((hero, index) => (
-          <ProBanItem key={`ban-${hero.id}`} hero={hero} index={index} onPress={() => openHeroModal(hero.id)} />
-        ))
+        <>
+          {(isBansExpanded ? proBans : proBans.slice(0, 5)).map((hero, index) => (
+            <ProBanItem key={`ban-${hero.id}`} hero={hero} index={index} onPress={() => openHeroModal(hero.id)} />
+          ))}
+          
+          {proBans.length > 5 && (
+            <TouchableOpacity 
+              onPress={() => setIsBansExpanded(!isBansExpanded)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 12,
+                paddingVertical: 12,
+                backgroundColor: '#1e1e2e',
+                marginHorizontal: 20,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#2a2a3e',
+                marginBottom: 10
+              }}
+            >
+              <Text style={{ color: '#8b5cf6', fontWeight: '800', marginRight: 6, textTransform: 'uppercase', fontSize: 12 }}>
+                {isBansExpanded ? 'Show Less' : `Show All (${proBans.length})`}
+              </Text>
+              <Ionicons 
+                name={isBansExpanded ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color="#8b5cf6" 
+              />
+            </TouchableOpacity>
+          )}
+        </>
       )}
 
       {/* Recent Pro Matches */}

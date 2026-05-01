@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useFriends, Follow } from '../../src/hooks/useFriends';
@@ -18,12 +18,28 @@ export default function FriendsScreen() {
   const { setMenuVisible } = useMenu();
   const { friends, following, loading, fetchFriends, unfollowUser } = useFriends();
   const [activeTab, setActiveTab] = useState<TabType>('Friends');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [playerModalVisible, setPlayerModalVisible] = useState(false);
   
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
   const [matchModalVisible, setMatchModalVisible] = useState(false);
+
+  const filteredFriends = friends.filter(friend => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    const name = friend.users?.steam_name?.toLowerCase() || '';
+    const id = friend.users?.steam_account_id?.toString() || '';
+    return name.includes(q) || id.includes(q);
+  });
+
+  const filteredFollowing = following.filter(follow => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    const id = follow.followed_steam_id.toString();
+    return id.includes(q);
+  });
 
   const openPlayerDetails = (accountId: string) => {
     setSelectedPlayerId(accountId);
@@ -96,12 +112,35 @@ export default function FriendsScreen() {
           </Text>
         </View>
 
+        {/* Search Bar */}
+        <View className="px-5 mt-4">
+          <View className="flex-row items-center bg-[#1e1e2e] rounded-xl px-4 py-3 border border-zinc-800">
+            <Ionicons name="search" size={20} color="#4b5563" />
+            <TextInput
+              placeholder={activeTab === 'Friends' ? "Search by name or ID..." : "Search by ID..."}
+              placeholderTextColor="#4b5563"
+              className="flex-1 ml-3 text-white font-outfit"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color="#4b5563" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         {/* Tab Selector */}
-        <View className="flex-row mx-5 mt-4 mb-2 bg-[#1e1e1e] p-1 rounded-xl border border-zinc-800">
+        <View className="flex-row mx-5 mt-4 mb-2 bg-[#1e1e2e] p-1 rounded-xl border border-zinc-800">
           {(['Friends', 'Following'] as TabType[]).map((tab) => (
             <TouchableOpacity
               key={tab}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => {
+                setActiveTab(tab);
+                setSearchQuery('');
+              }}
               className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent' : ''}`}
             >
               <Text className={`font-outfit-bold text-sm ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
@@ -117,7 +156,7 @@ export default function FriendsScreen() {
           </View>
         ) : (
           <FlatList
-            data={activeTab === 'Friends' ? friends : following}
+            data={activeTab === 'Friends' ? filteredFriends : filteredFollowing}
             keyExtractor={(item) => item.id}
             renderItem={activeTab === 'Friends' ? renderFriend : renderFollowing}
             onRefresh={fetchFriends}
@@ -126,14 +165,16 @@ export default function FriendsScreen() {
             ListEmptyComponent={
               <View className="flex-1 justify-center items-center py-20 px-10">
                 <Ionicons 
-                  name={activeTab === 'Friends' ? "people-outline" : "person-add-outline"} 
+                  name={searchQuery ? "search-outline" : (activeTab === 'Friends' ? "people-outline" : "person-add-outline")} 
                   size={64} 
                   color="#374151" 
                 />
                 <Text className="text-gray-400 text-center mt-4 font-outfit-semibold text-lg">
-                  {activeTab === 'Friends' 
-                    ? "No friends yet. Search for players to add them!" 
-                    : "You aren't following anyone yet."}
+                  {searchQuery 
+                    ? `No matches found for "${searchQuery}"`
+                    : (activeTab === 'Friends' 
+                        ? "No friends yet. Search for players to add them!" 
+                        : "You aren't following anyone yet.")}
                 </Text>
               </View>
             }

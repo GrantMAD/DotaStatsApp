@@ -26,7 +26,7 @@ import { useMenu } from './_layout';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { steamAccountId, session } = useSupabaseAuth();
+  const { steamAccountId, session, matchLimit } = useSupabaseAuth();
   const { login, isLoading: steamLoading } = useSteamAuth();
   const { setMenuVisible } = useMenu();
   const accountId = steamAccountId ? steamAccountId.toString() : null;
@@ -35,10 +35,9 @@ export default function ProfileScreen() {
   const { friends, following } = useFriends();
   
   // Main Profile Queries
-  const [matchesLimit, setMatchesLimit] = useState(20);
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(accountId);
   const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(accountId);
-  const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(accountId, matchesLimit);
+  const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(accountId, matchLimit);
 
   const isDataLoading = profileLoading || wlLoading || matchesLoading;
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -145,8 +144,7 @@ export default function ProfileScreen() {
           friendsCount={friends.length}
           followingCount={following.length}
           onStatsPress={() => router.push('/friends')}
-          matchesLimit={matchesLimit}
-          setMatchesLimit={setMatchesLimit}
+          matchesLimit={matchLimit}
         />
       )}
 

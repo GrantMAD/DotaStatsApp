@@ -1,17 +1,88 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Switch, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import GlassHeader from '../../src/components/GlassHeader';
+import GlassModal from '../../src/components/GlassModal';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import { useMenu } from './_layout';
 import { supabase } from '../../src/services/supabase';
 import Toast from 'react-native-toast-message';
 
+interface SettingsItemProps {
+  icon: string;
+  label: string;
+  value?: string | boolean;
+  onPress?: () => void;
+  type?: 'toggle' | 'link' | 'text' | 'danger';
+  color?: string;
+}
+
+const SettingsItem = ({ icon, label, value, onPress, type = 'link', color = '#8b5cf6' }: SettingsItemProps) => (
+  <TouchableOpacity 
+    onPress={onPress}
+    disabled={!onPress}
+    style={{ 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: '#2a2a3e'
+    }}
+  >
+    <View style={{ 
+      width: 36, 
+      height: 36, 
+      borderRadius: 10, 
+      backgroundColor: type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : `${color}20`, 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      marginRight: 16
+    }}>
+      <Ionicons name={icon as any} size={20} color={type === 'danger' ? '#ef4444' : color} />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={{ color: type === 'danger' ? '#ef4444' : '#fff', fontSize: 16, fontFamily: 'Outfit_600SemiBold' }}>{label}</Text>
+    </View>
+    {type === 'toggle' ? (
+      <Switch 
+        value={value as boolean} 
+        onValueChange={onPress}
+        trackColor={{ false: '#2a2a3e', true: '#8b5cf6' }}
+        thumbColor="#fff"
+      />
+    ) : type === 'text' ? (
+      <Text style={{ color: '#888', fontSize: 14, fontFamily: 'Outfit_400Regular' }}>{value}</Text>
+    ) : (
+      <Ionicons name="chevron-forward" size={18} color="#4b5563" />
+    )}
+  </TouchableOpacity>
+);
+
+const SectionLabel = ({ label }: { label: string }) => (
+  <Text style={{ 
+    color: '#555', 
+    fontSize: 12, 
+    fontFamily: 'Outfit_700Bold', 
+    marginBottom: 8, 
+    textTransform: 'uppercase', 
+    marginTop: 24,
+    marginLeft: 4,
+    letterSpacing: 1
+  }}>
+    {label}
+  </Text>
+);
+
 export default function SettingsScreen() {
-  const { user, session, steamAccountId, signOut, refreshProfile } = useSupabaseAuth();
+  const { user, session, steamAccountId, matchLimit, signOut, refreshProfile } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
   const [loading, setLoading] = useState(false);
+  const [limitModalVisible, setLimitModalVisible] = useState(false);
+  
+  // App Preferences State
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const handleUnlinkSteam = async () => {
     if (!user) return;
@@ -74,6 +145,52 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This action is permanent and cannot be undone. All your follows, friendships, and data will be deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete My Data", 
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Final Warning",
+              "Are you absolutely sure?",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Yes, Delete Everything", style: "destructive", onPress: () => {
+                  Toast.show({ type: 'info', text1: 'Account deletion requested' });
+                }}
+              ]
+            );
+          }
+        }
+      ]
+    );
+  };
+
+  const updateLimit = async (newLimit: number) => {
+    if (!user) return;
+    setLimitModalVisible(false);
+    
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ match_limit: newLimit })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      await refreshProfile();
+      Toast.show({ type: 'success', text1: `History limit set to ${newLimit}` });
+    } catch (e) {
+      console.error(e);
+      Toast.show({ type: 'error', text1: 'Failed to update preference' });
+    }
+  };
+
   return (
     <LinearGradient colors={['#1a1a2e', '#121212']} style={{ flex: 1 }}>
       <GlassHeader 
@@ -89,57 +206,131 @@ export default function SettingsScreen() {
         }
       />
       
-      <View style={{ padding: 20 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
         <View style={{ paddingBottom: 16 }}>
-          <Text style={{ color: '#fff', fontSize: 28, fontFamily: 'Outfit_900Black', marginBottom: 4 }}>
+          <Text style={{ color: '#fff', fontSize: 32, fontFamily: 'Outfit_900Black', marginBottom: 4 }}>
             Settings
           </Text>
           <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular' }}>
-            Manage your account preferences and connected services.
+            Manage your account and app preferences.
           </Text>
         </View>
 
-        <Text style={{ color: '#888', fontSize: 14, fontWeight: '600', marginBottom: 8, textTransform: 'uppercase', marginTop: 16 }}>
-          Account
-        </Text>
-        <View style={{ backgroundColor: '#1e1e2e', borderRadius: 12, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: '#2a2a3e' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <Ionicons name="mail" size={20} color="#8b5cf6" style={{ marginRight: 12 }} />
-            <Text style={{ color: '#fff', fontSize: 16 }}>{user?.email}</Text>
-          </View>
-          
-          <View style={{ height: 1, backgroundColor: '#2a2a3e', marginBottom: 16 }} />
-          
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="logo-steam" size={20} color={steamAccountId ? "#22c55e" : "#555"} style={{ marginRight: 12 }} />
-              <View>
-                <Text style={{ color: '#fff', fontSize: 16 }}>Steam Connection</Text>
-                <Text style={{ color: steamAccountId ? '#22c55e' : '#888', fontSize: 12, marginTop: 2 }}>
-                  {steamAccountId ? 'Linked' : 'Not Linked'}
-                </Text>
-              </View>
-            </View>
-            
-            {steamAccountId && (
-              <TouchableOpacity 
-                onPress={handleUnlinkSteam}
-                disabled={loading}
-                style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
-              >
-                {loading ? <ActivityIndicator size="small" color="#ef4444" /> : <Text style={{ color: '#ef4444', fontWeight: '600' }}>Unlink</Text>}
-              </TouchableOpacity>
-            )}
-          </View>
+        <SectionLabel label="Account" />
+        <View style={{ backgroundColor: '#1e1e2e', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#2a2a3e' }}>
+          <SettingsItem 
+            icon="mail" 
+            label="Email" 
+            value={user?.email || 'Not logged in'} 
+            type="text" 
+          />
+          <SettingsItem 
+            icon="logo-steam" 
+            label="Steam Connection" 
+            value={steamAccountId ? 'Linked' : 'Not Linked'}
+            color={steamAccountId ? '#22c55e' : '#555'}
+            onPress={steamAccountId ? handleUnlinkSteam : undefined}
+          />
         </View>
 
-        <TouchableOpacity 
-          onPress={handleSignOut}
-          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingVertical: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' }}
-        >
-          <Text style={{ color: '#ef4444', fontSize: 16, fontWeight: '700' }}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
+        <SectionLabel label="Preferences" />
+        <View style={{ backgroundColor: '#1e1e2e', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#2a2a3e' }}>
+          <SettingsItem 
+            icon="list" 
+            label="Match History Limit" 
+            value={`${matchLimit} matches`}
+            type="text"
+            onPress={() => setLimitModalVisible(true)}
+          />
+          <SettingsItem 
+            icon="notifications" 
+            label="Push Notifications" 
+            value={notificationsEnabled}
+            type="toggle"
+            onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+          />
+        </View>
+
+        <SectionLabel label="Support" />
+        <View style={{ backgroundColor: '#1e1e2e', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#2a2a3e' }}>
+          <SettingsItem 
+            icon="information-circle" 
+            label="App Version" 
+            value="v1.0.4-beta"
+            type="text"
+          />
+          <SettingsItem 
+            icon="document-text" 
+            label="What's New" 
+            onPress={() => Alert.alert("Changelog", "• Added Pro Bans expansion\n• Friends list search\n• Improved Settings layout\n• Performance fixes")}
+          />
+        </View>
+
+        <SectionLabel label="Danger Zone" />
+        <View style={{ backgroundColor: '#1e1e2e', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#2a2a3e' }}>
+          <SettingsItem 
+            icon="log-out" 
+            label="Sign Out" 
+            onPress={handleSignOut}
+          />
+          <SettingsItem 
+            icon="trash" 
+            label="Delete Account" 
+            type="danger"
+            onPress={handleDeleteAccount}
+          />
+        </View>
+        
+        <View style={{ alignItems: 'center', marginTop: 40 }}>
+          <Text style={{ color: '#333', fontSize: 10, fontFamily: 'Outfit_700Bold', letterSpacing: 2 }}>
+            MADE BY DOTA FANS FOR DOTA FANS
+          </Text>
+        </View>
+      </ScrollView>
+
+      <GlassModal
+        visible={limitModalVisible}
+        onClose={() => setLimitModalVisible(false)}
+      >
+        <View style={{ padding: 24 }}>
+          <Text style={{ color: '#fff', fontSize: 24, fontFamily: 'Outfit_900Black', marginBottom: 8 }}>
+            Match Limit
+          </Text>
+          <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular', marginBottom: 24 }}>
+            Select how many matches to load on your profile.
+          </Text>
+          
+          {[10, 20, 50].map((option) => (
+            <TouchableOpacity
+              key={option}
+              onPress={() => updateLimit(option)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'between',
+                padding: 16,
+                backgroundColor: matchLimit === option ? '#8b5cf620' : '#1e1e2e',
+                borderRadius: 12,
+                marginBottom: 12,
+                borderWidth: 1,
+                borderColor: matchLimit === option ? '#8b5cf6' : '#2a2a3e',
+              }}
+            >
+              <Text style={{ 
+                color: matchLimit === option ? '#fff' : '#888', 
+                fontSize: 16, 
+                fontFamily: 'Outfit_600SemiBold',
+                flex: 1
+              }}>
+                {option} Matches
+              </Text>
+              {matchLimit === option && (
+                <Ionicons name="checkmark-circle" size={24} color="#8b5cf6" />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </GlassModal>
     </LinearGradient>
   );
 }

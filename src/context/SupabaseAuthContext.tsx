@@ -6,6 +6,7 @@ interface SupabaseAuthContextType {
   session: Session | null;
   user: User | null;
   steamAccountId: string | null;
+  matchLimit: number;
   isLoading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -15,6 +16,7 @@ export const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
   session: null,
   user: null,
   steamAccountId: null,
+  matchLimit: 20,
   isLoading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
@@ -26,24 +28,29 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [steamAccountId, setSteamAccountId] = useState<string | null>(null);
+  const [matchLimit, setMatchLimit] = useState(20);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshProfile = async (currentUser?: User | null) => {
     const activeUser = currentUser !== undefined ? currentUser : user;
     if (!activeUser) {
       setSteamAccountId(null);
+      setMatchLimit(20);
       return;
     }
 
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('steam_account_id')
+        .select('steam_account_id, match_limit')
         .eq('id', activeUser.id)
         .single();
         
       if (!error && data) {
         setSteamAccountId(data.steam_account_id);
+        if (data.match_limit) {
+          setMatchLimit(data.match_limit);
+        }
       }
     } catch (e) {
       console.error("Error fetching user profile:", e);
@@ -70,6 +77,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         refreshProfile(session.user).finally(() => setIsLoading(false));
       } else {
         setSteamAccountId(null);
+        setMatchLimit(20);
         setIsLoading(false);
       }
     });
@@ -84,7 +92,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <SupabaseAuthContext.Provider value={{ session, user, steamAccountId, isLoading, signOut, refreshProfile }}>
+    <SupabaseAuthContext.Provider value={{ session, user, steamAccountId, matchLimit, isLoading, signOut, refreshProfile }}>
       {children}
     </SupabaseAuthContext.Provider>
   );
