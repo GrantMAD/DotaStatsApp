@@ -7,9 +7,12 @@ interface SupabaseAuthContextType {
   user: User | null;
   steamAccountId: string | null;
   matchLimit: number;
+  notificationsEnabled: boolean;
+  pushToken: string | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateNotificationPrefs: (enabled: boolean, token?: string | null) => Promise<void>;
 }
 
 export const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
@@ -17,9 +20,12 @@ export const SupabaseAuthContext = createContext<SupabaseAuthContextType>({
   user: null,
   steamAccountId: null,
   matchLimit: 20,
+  notificationsEnabled: false,
+  pushToken: null,
   isLoading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
+  updateNotificationPrefs: async () => {},
 });
 
 export const useSupabaseAuth = () => useContext(SupabaseAuthContext);
@@ -29,6 +35,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [steamAccountId, setSteamAccountId] = useState<string | null>(null);
   const [matchLimit, setMatchLimit] = useState(20);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [pushToken, setPushToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshProfile = async (currentUser?: User | null) => {
@@ -36,13 +44,15 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (!activeUser) {
       setSteamAccountId(null);
       setMatchLimit(20);
+      setNotificationsEnabled(false);
+      setPushToken(null);
       return;
     }
 
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('steam_account_id, match_limit')
+        .select('steam_account_id, match_limit, notifications_enabled, push_token')
         .eq('id', activeUser.id)
         .single();
         
@@ -51,9 +61,35 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         if (data.match_limit) {
           setMatchLimit(data.match_limit);
         }
+        setNotificationsEnabled(!!data.notifications_enabled);
+        setPushToken(data.push_token);
       }
     } catch (e) {
       console.error("Error fetching user profile:", e);
+    }
+  };
+
+  const updateNotificationPrefs = async (enabled: boolean, token?: string | null) => {
+    if (!user) return;
+
+    try {
+      const updateData: any = { notifications_enabled: enabled };
+      if (token !== undefined) {
+        updateData.push_token = token;
+      }
+
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setNotificationsEnabled(enabled);
+      if (token !== undefined) setPushToken(token);
+    } catch (e) {
+      console.error("Error updating notification prefs:", e);
+      throw e;
     }
   };
 
@@ -78,6 +114,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       } else {
         setSteamAccountId(null);
         setMatchLimit(20);
+        setNotificationsEnabled(false);
+        setPushToken(null);
         setIsLoading(false);
       }
     });
@@ -92,7 +130,18 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <SupabaseAuthContext.Provider value={{ session, user, steamAccountId, matchLimit, isLoading, signOut, refreshProfile }}>
+    <SupabaseAuthContext.Provider value={{ 
+      session, 
+      user, 
+      steamAccountId, 
+      matchLimit, 
+      notificationsEnabled,
+      pushToken,
+      isLoading, 
+      signOut, 
+      refreshProfile,
+      updateNotificationPrefs
+    }}>
       {children}
     </SupabaseAuthContext.Provider>
   );

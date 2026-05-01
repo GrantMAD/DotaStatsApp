@@ -15,7 +15,8 @@ export default function NotificationsScreen() {
     return (
       <Animated.View
         entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}
-        style={{          backgroundColor: '#1E1E2E',
+        style={{
+          backgroundColor: '#1E1E2E',
           padding: 16,
           marginHorizontal: 16,
           marginBottom: 12,
@@ -29,7 +30,7 @@ export default function NotificationsScreen() {
           elevation: 3,
         }}
       >
-        <View className="flex-row items-center">
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View 
             style={{
               width: 44,
@@ -47,7 +48,7 @@ export default function NotificationsScreen() {
               color={item.is_read ? '#6b7280' : '#8b5cf6'} 
             />
           </View>
-          <View className="flex-1">
+          <View style={{ flex: 1 }}>
             <Text 
               style={{
                 color: '#fff',
@@ -71,7 +72,7 @@ export default function NotificationsScreen() {
         </View>
 
         {item.type === 'friend_request' && !item.is_read && (
-          <View className="flex-row mt-4 space-x-3">
+          <View style={{ flexDirection: 'row', marginTop: 16 }}>
             <TouchableOpacity 
               onPress={() => handleFriendRequest(item, true)}
               style={{
@@ -80,6 +81,7 @@ export default function NotificationsScreen() {
                 paddingVertical: 10,
                 borderRadius: 10,
                 alignItems: 'center',
+                marginRight: 12
               }}
             >
               <Text style={{ color: '#fff', fontFamily: 'Outfit_700Bold' }}>Accept</Text>
@@ -139,7 +141,7 @@ export default function NotificationsScreen() {
         }
         contentContainerStyle={{ paddingBottom: 32 }}
         ListEmptyComponent={
-          <View className="flex-1 justify-center items-center py-20 px-10">
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80, paddingHorizontal: 40 }}>
             <View style={{
               width: 100,
               height: 100,

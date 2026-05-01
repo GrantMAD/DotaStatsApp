@@ -13,11 +13,9 @@ import HeroStatsCard from '../../src/components/HeroStatsCard';
 import ProMatchCard from '../../src/components/ProMatchCard';
 import HeroDetailModal from '../../src/components/HeroDetailModal';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
-import UnifiedSearchModal from '../../src/components/UnifiedSearchModal';
 import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import LiveGameCard from '../../src/components/LiveGameCard';
 import RecordCard from '../../src/components/RecordCard';
-import { SearchResult } from '../../src/services/opendota';
 import { useHeroStats, useProMatches, useLiveGames, useGlobalRecordsMulti } from '../../src/hooks/useOpenDota';
 import { queryClient } from '../../src/services/queryClient';
 import Skeleton from '../../src/components/Skeleton';
@@ -234,12 +232,6 @@ export default function HomeScreen() {
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [searchModalVisible, setSearchModalVisible] = useState(false);
-  const [searchResults, setSearchResults] = useState<{ heroes: HeroStats[]; players: SearchResult[]; matchId?: number }>({
-    heroes: [],
-    players: [],
-  });
 
   // Player Detail within Search
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
@@ -251,38 +243,10 @@ export default function HomeScreen() {
   const processedStats = useMemo(() => processHeroStats(heroesData), [heroesData]);
   const { topWinRate, mostPicked, proPicks, proBans } = processedStats;
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchQuery.trim()) return;
-
-    setSearching(true);
-    setSearchModalVisible(true);
-    
-    try {
-      const queryLower = searchQuery.toLowerCase().trim();
-      
-      // 1. Search Heroes (local filtering on already-fetched heroStats)
-      const matchingHeroes = heroesData.filter(h => 
-        h.localized_name.toLowerCase().includes(queryLower)
-      );
-
-      // 2. Search for Match ID (if numeric)
-      const isMatchId = /^\d+$/.test(queryLower);
-      const matchId = isMatchId ? parseInt(queryLower) : undefined;
-
-      // 3. Search Players (API call)
-      // Use queryClient to fetch search if we want to cache it, but manual fetch is fine here
-      const players = await searchPlayers(searchQuery);
-
-      setSearchResults({
-        heroes: matchingHeroes,
-        players: players,
-        matchId: matchId
-      });
-    } catch (e) {
-      console.error('Search failed:', e);
-    } finally {
-      setSearching(false);
-    }
+    router.push({ pathname: '/search', params: { q: searchQuery.trim() } });
+    setSearchQuery('');
   };
 
   const openHeroModal = useCallback((heroId: number) => {
@@ -677,34 +641,12 @@ export default function HomeScreen() {
         onPushPlayer={openPlayerDetails}
       />
 
-      {/* Unified Search Modal */}
-      <UnifiedSearchModal
-        visible={searchModalVisible}
-        onClose={() => setSearchModalVisible(false)}
-        searching={searching}
-        query={searchQuery}
-        results={searchResults}
-        onHeroPress={(id) => {
-          setSearchModalVisible(false);
-          openHeroModal(id);
-        }}
-        onMatchPress={(id) => {
-          setSearchModalVisible(false);
-          openMatchById(id);
-        }}
-        onPlayerPress={(id) => {
-          openPlayerDetails(id);
-        }}
-      />
-
-      {/* Player Detail Modal */}
       <PlayerDetailModal
         visible={playerModalVisible}
         accountId={selectedPlayerId}
         onClose={() => setPlayerModalVisible(false)}
         onMatchPress={(id) => {
           setPlayerModalVisible(false);
-          setSearchModalVisible(false);
           openMatchById(id);
         }}
       />

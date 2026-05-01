@@ -7,9 +7,12 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../src/services/queryClient';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold, Outfit_900Black } from '@expo-google-fonts/outfit';
-import { SupabaseAuthProvider } from '../src/context/SupabaseAuthContext';
+import { SupabaseAuthProvider, useSupabaseAuth } from '../src/context/SupabaseAuthContext';
 import { SteamAuthProvider } from '../src/context/SteamAuthContext';
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
+import { useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import { addNotificationListeners } from '../src/services/notifications';
 
 const toastConfig = {
   success: (props: any) => (
@@ -48,6 +51,33 @@ const toastConfig = {
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
+function NotificationManager({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { session } = useSupabaseAuth();
+
+  useEffect(() => {
+    if (!session) return;
+
+    const removeListeners = addNotificationListeners(
+      (notification) => {
+        // Handle foreground notification (e.g., show a toast)
+        console.log('Foreground notification:', notification.request.content.title);
+      },
+      (response) => {
+        // Handle notification tap
+        const data = response.notification.request.content.data;
+        if (data?.type === 'friend_request' || data?.notificationId) {
+          router.push('/notifications');
+        }
+      }
+    );
+
+    return () => removeListeners();
+  }, [session, router]);
+
+  return <>{children}</>;
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Outfit_400Regular,
@@ -70,21 +100,24 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <SupabaseAuthProvider>
-        <SteamAuthProvider>
-          <StatusBar style="light" />
-          <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-            <Stack 
-              screenOptions={{ headerShown: false }}
-            >
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="welcome" />
-              <Stack.Screen name="sign-in" />
-              <Stack.Screen name="sign-up" />
-            </Stack>
-          </View>
-          <Toast config={toastConfig} />
-        </SteamAuthProvider>
+        <NotificationManager>
+          <SteamAuthProvider>
+            <StatusBar style="light" />
+            <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+              <Stack 
+                screenOptions={{ headerShown: false }}
+              >
+                <Stack.Screen name="index" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="welcome" />
+                <Stack.Screen name="sign-in" />
+                <Stack.Screen name="sign-up" />
+                <Stack.Screen name="notifications" />
+              </Stack>
+            </View>
+            <Toast config={toastConfig} />
+          </SteamAuthProvider>
+        </NotificationManager>
       </SupabaseAuthProvider>
     </QueryClientProvider>
   );

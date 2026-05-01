@@ -6,15 +6,18 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import {
   SearchResult,
   Peer,
+  HeroStats,
 } from '../../src/services/opendota';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
+import HeroDetailModal from '../../src/components/HeroDetailModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
-import { useSearchPlayers, usePlayerProfile, usePlayerWinLoss, useRecentMatches, usePlayerPeers } from '../../src/hooks/useOpenDota';
+import { useSearchPlayers, usePlayerProfile, usePlayerWinLoss, useRecentMatches, usePlayerPeers, useHeroStats } from '../../src/hooks/useOpenDota';
 import { useFriends } from '../../src/hooks/useFriends';
 import { supabase } from '../../src/services/supabase';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
@@ -24,11 +27,12 @@ import GlassHeader from '../../src/components/GlassHeader';
 import GlassModal from '../../src/components/GlassModal';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
-
+import { getHeroImageUrl } from '../../src/services/constants';
 
 type StackItem =
   | { type: 'player', id: number | string }
-  | { type: 'match', id: number };
+  | { type: 'match', id: number }
+  | { type: 'hero', id: number };
 
 function SearchSkeleton() {
   return (
@@ -59,25 +63,59 @@ function SearchSkeleton() {
 
 export default function SearchScreen() {
   const router = useRouter();
+  const { q } = useLocalSearchParams<{ q: string }>();
   const { accountId: steamAccountId } = useSteamAuth();
   const { user, session } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
-  const [query, setQuery] = useState('');
-  const [activeQuery, setActiveQuery] = useState('');
+  const [query, setQuery] = useState(q || '');
+  const [activeQuery, setActiveQuery] = useState(q || '');
   const [searchMode, setSearchMode] = useState<'global' | 'steam'>('global');
 
   const { data: globalResults = [], isLoading: searchingGlobal, error } = useSearchPlayers(activeQuery);
   const { data: peers = [], isLoading: loadingPeers } = usePlayerPeers(searchMode === 'steam' ? steamAccountId : null);
+  const { data: heroesData = [] } = useHeroStats();
   const { sendFriendRequest, followUser, unfollowUser, isFollowing, isFriend } = useFriends();
 
   // Cross-reference with app users
   const [appUsersMap, setAppUsersMap] = useState<Record<number, string>>({});
   const [steamFriendsResults, setSteamFriendsResults] = useState<SearchResult[]>([]);
 
+  // Hero & Match ID Results
+  const matchingHeroes = React.useMemo(() => {
+    if (!activeQuery || searchMode === 'steam') return [];
+    const qLower = activeQuery.toLowerCase().trim();
+    return heroesData.filter(h => h.localized_name.toLowerCase().includes(qLower)).slice(0, 5);
+  }, [heroesData, activeQuery, searchMode]);
+
+  const matchingMatchId = React.useMemo(() => {
+    if (!activeQuery || searchMode === 'steam') return null;
+    const isMatchId = /^\d+$/.test(activeQuery.trim());
+    return isMatchId ? parseInt(activeQuery.trim()) : null;
+  }, [activeQuery, searchMode]);
+
   const results = searchMode === 'global'
     ? globalResults
     : steamFriendsResults.filter(p => p.personaname.toLowerCase().includes(query.toLowerCase()));
   const searching = searchMode === 'global' ? searchingGlobal : loadingPeers;
+
+  // Handle incoming query param
+  React.useEffect(() => {
+    if (q) {
+      setQuery(q);
+      setActiveQuery(q);
+    }
+  }, [q]);
+
+  // Reset search when navigating away
+  useFocusEffect(
+    React.useCallback(() => {
+      return () => {
+        // This runs when the screen is blurred (navigated away)
+        setQuery('');
+        setActiveQuery('');
+      };
+    }, [])
+  );
 
   React.useEffect(() => {
     async function checkAppUsers() {
@@ -130,6 +168,10 @@ export default function SearchScreen() {
 
   const pushMatch = (matchId: number) => {
     setModalStack(prev => [...prev, { type: 'match', id: matchId }]);
+  };
+
+  const pushHero = (heroId: number) => {
+    setModalStack(prev => [...prev, { type: 'hero', id: heroId }]);
   };
 
   const popStack = () => {
@@ -220,7 +262,7 @@ export default function SearchScreen() {
                 Search
               </Text>
               <Text style={{ color: '#9ca3af', fontSize: 14, fontFamily: 'Outfit_400Regular', marginBottom: 16 }}>
-                Find any Dota 2 player by their name or Steam ID.
+                Find players, heroes, or match IDs from the archives.
               </Text>
 
               {steamAccountId && (
@@ -310,7 +352,7 @@ export default function SearchScreen() {
                 </View>
               )}
 
-              {!results.length && !searching && (
+              {!results.length && !searching && !matchingHeroes.length && !matchingMatchId && (
                 <View style={{ paddingVertical: 80, justifyContent: 'center', alignItems: 'center' }}>
                   <View style={{
                     width: 100,
@@ -335,13 +377,84 @@ export default function SearchScreen() {
                   </Text>
                 </View>
               )}
+
+              {/* Hero Results Section */}
+              {matchingHeroes.length > 0 && searchMode === 'global' && (
+                <View style={{ marginTop: 20 }}>
+                  <Text style={{ color: '#8b5cf6', fontSize: 12, fontFamily: 'Outfit_800ExtraBold', marginBottom: 12, letterSpacing: 1 }}>
+                    MATCHING HEROES
+                  </Text>
+                  {matchingHeroes.map(hero => (
+                    <TouchableOpacity 
+                      key={hero.id} 
+                      onPress={() => pushHero(hero.id)} 
+                      style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'center', 
+                        padding: 12,
+                        backgroundColor: '#1E1E2E',
+                        marginBottom: 8,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#2a2a3e'
+                      }}
+                    >
+                      <Image 
+                        source={{ uri: getHeroImageUrl(hero.id) }} 
+                        style={{ width: 44, height: 26, borderRadius: 4, marginRight: 12 }}
+                      />
+                      <Text style={{ color: '#fff', fontSize: 16, fontFamily: 'Outfit_700Bold', flex: 1 }}>
+                        {hero.localized_name}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={16} color="#4b5563" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {/* Match ID Section */}
+              {matchingMatchId && searchMode === 'global' && (
+                <View style={{ marginTop: 20 }}>
+                  <Text style={{ color: '#3b82f6', fontSize: 12, fontFamily: 'Outfit_800ExtraBold', marginBottom: 12, letterSpacing: 1 }}>
+                    MATCH ID
+                  </Text>
+                  <TouchableOpacity 
+                    onPress={() => pushMatch(matchingMatchId)}
+                    style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center', 
+                      padding: 16,
+                      backgroundColor: '#1E1E2E',
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#3b82f6'
+                    }}
+                  >
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#111', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <Ionicons name="game-controller" size={18} color="#3b82f6" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#fff', fontSize: 16, fontFamily: 'Outfit_700Bold' }}>Match {matchingMatchId}</Text>
+                      <Text style={{ color: '#3b82f6', fontSize: 10, fontFamily: 'Outfit_600SemiBold' }}>VIEW DETAILS</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#3b82f6" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Players Header */}
+              {results.length > 0 && (
+                <Text style={{ color: '#22c55e', fontSize: 12, fontFamily: 'Outfit_800ExtraBold', marginTop: 24, marginBottom: 12, letterSpacing: 1 }}>
+                  PLAYERS
+                </Text>
+              )}
             </View>
           }
-          ListFooterComponent={searching ? <SearchSkeleton /> : null}
+          ListFooterComponent={searching && !matchingHeroes.length && !matchingMatchId ? <SearchSkeleton /> : null}
           contentContainerStyle={{ paddingBottom: 40 }}
         />
 
-        {error && (
+        {error && !matchingHeroes.length && !matchingMatchId && (
           <View className="absolute inset-0 justify-center items-center px-10 bg-black/40">
              <View className="bg-[#1e1e1e] p-6 rounded-2xl border border-red-500/30 items-center">
                 <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
@@ -363,6 +476,7 @@ export default function SearchScreen() {
           onClose={popStack}
           onPushPlayer={pushPlayer}
           onPushMatch={pushMatch}
+          onPushHero={pushHero}
         />
       ))}
     </LinearGradient>
@@ -372,13 +486,15 @@ export default function SearchScreen() {
 /**
  * A self-contained modal that handles its own data fetching via hooks
  */
-function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch }: {
+function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, onPushHero }: {
   item: StackItem;
   onClose: () => void;
   onPushPlayer: (id: number | string) => void;
   onPushMatch: (id: number) => void;
+  onPushHero: (id: number) => void;
 }) {
-  // Player Queries (only enabled if item.type === 'player')
+  // Queries
+  const { data: heroesData = [] } = useHeroStats();
   const { data: profile, isLoading: pProfileLoading } = usePlayerProfile(item.type === 'player' ? item.id : null);
   const { data: wl, isLoading: pWLLoading } = usePlayerWinLoss(item.type === 'player' ? item.id : null);
   const { data: matches = [], isLoading: pMatchesLoading } = useRecentMatches(item.type === 'player' ? item.id : null, 10);
@@ -432,6 +548,14 @@ function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch }: {
           matchId={item.id as number}
           onClose={onClose}
           onPushPlayer={onPushPlayer}
+        />
+      )}
+
+      {item.type === 'hero' && (
+        <HeroDetailModal
+          visible={true}
+          hero={heroesData.find(h => h.id === item.id) || null}
+          onClose={onClose}
         />
       )}
     </>

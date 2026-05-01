@@ -688,92 +688,108 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
                 <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Match Trends</Text>
 
                 {matchData.radiant_gold_adv && matchData.radiant_xp_adv ? (
-                  <>
-                    <View className="bg-[#2a2a2a] p-5 rounded-xl mb-4 border border-zinc-800">
-                      <Text className="text-white font-bold mb-4 text-center">Final Team Advantages</Text>
+                  (() => {
+                    const finalGoldAdv = matchData.radiant_gold_adv.slice(-1)[0];
+                    const maxGoldAdv = Math.max(...matchData.radiant_gold_adv.map(Math.abs), 1);
+                    const goldPct = `${Math.min((Math.abs(finalGoldAdv) / maxGoldAdv) * 50, 50).toFixed(1)}%`;
 
-                      {/* Gold Adv */}
-                      <View className="flex-row items-center mb-6">
-                        <View className="w-16"><Text className="text-gray-500 text-[10px] font-bold">GOLD</Text></View>
-                        <View className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden flex-row">
-                          {matchData.radiant_gold_adv.slice(-1)[0] > 0 ? (
-                            <>
-                              <View className="flex-1" />
-                              <View style={{ width: '50%' }} className="bg-win" />
-                            </>
-                          ) : (
-                            <>
-                              <View style={{ width: '50%' }} className="bg-loss" />
-                              <View className="flex-1" />
-                            </>
-                          )}
-                        </View>
-                        <View className="w-20 items-end">
-                          <Text className={`text-xs font-bold ${matchData.radiant_gold_adv.slice(-1)[0] > 0 ? 'text-win' : 'text-loss'}`}>
-                            {Math.abs(matchData.radiant_gold_adv.slice(-1)[0]).toLocaleString()}
-                          </Text>
-                        </View>
-                      </View>
+                    const finalXpAdv = matchData.radiant_xp_adv.slice(-1)[0];
+                    const maxXpAdv = Math.max(...matchData.radiant_xp_adv.map(Math.abs), 1);
+                    const xpPct = `${Math.min((Math.abs(finalXpAdv) / maxXpAdv) * 50, 50).toFixed(1)}%`;
 
-                      {/* XP Adv */}
-                      <View className="flex-row items-center">
-                        <View className="w-16"><Text className="text-gray-500 text-[10px] font-bold">XP</Text></View>
-                        <View className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden flex-row">
-                          {matchData.radiant_xp_adv.slice(-1)[0] > 0 ? (
-                            <>
-                              <View className="flex-1" />
-                              <View style={{ width: '50%' }} className="bg-win" />
-                            </>
-                          ) : (
-                            <>
-                              <View style={{ width: '50%' }} className="bg-loss" />
-                              <View className="flex-1" />
-                            </>
-                          )}
-                        </View>
-                        <View className="w-20 items-end">
-                          <Text className={`text-xs font-bold ${matchData.radiant_xp_adv.slice(-1)[0] > 0 ? 'text-win' : 'text-loss'}`}>
-                            {Math.abs(matchData.radiant_xp_adv.slice(-1)[0]).toLocaleString()}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
+                    return (
+                      <>
+                        <View className="bg-[#2a2a2a] p-5 rounded-xl mb-4 border border-zinc-800">
+                          <Text className="text-white font-bold mb-4 text-center">Final Team Advantages</Text>
 
-                    <View className="bg-[#2a2a2a] p-4 rounded-xl border border-zinc-800 mb-4">
-                      <Text className="text-white font-bold mb-4 text-center">Net Worth & XP Difference</Text>
-                      <LineChart
-                        data={{
-                          labels: matchData.radiant_gold_adv.map((_, i) => i % 10 === 0 ? `${i}` : ''),
-                          datasets: [
-                            {
-                              data: matchData.radiant_gold_adv,
-                              color: (opacity = 1) => `rgba(234, 179, 8, ${opacity})`, // Gold color
-                              strokeWidth: 2
-                            },
-                            {
-                              data: matchData.radiant_xp_adv,
-                              color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`, // Purple color
-                              strokeWidth: 2
-                            }
-                          ],
-                          legend: ["Net Worth", "Experience"]
-                        }}
-                        width={screenWidth}
-                        height={220}
-                        chartConfig={{
-                          backgroundColor: "#1e1e1e",
-                          backgroundGradientFrom: "#2a2a2a",
-                          backgroundGradientTo: "#2a2a2a",
-                          decimalPlaces: 0,
-                          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                          labelColor: (opacity = 1) => `rgba(156, 163, 175, ${opacity})`,
-                          propsForDots: { r: "0" },
-                        }}
-                        bezier
-                        style={{ marginVertical: 8, borderRadius: 16 }}
-                      />
-                    </View>
-                  </>
+                          {/* Gold Adv */}
+                          <View className="flex-row items-center mb-6">
+                            <View className="w-16"><Text className="text-gray-500 text-[10px] font-bold">GOLD</Text></View>
+                            <View className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden flex-row">
+                              {finalGoldAdv > 0 ? (
+                                <>
+                                  <View className="flex-1" />
+                                  <View style={{ width: goldPct as any }} className="bg-win" />
+                                  <View style={{ width: `${50 - parseFloat(goldPct)}%` as any }} />
+                                </>
+                              ) : (
+                                <>
+                                  <View style={{ width: `${50 - parseFloat(goldPct)}%` as any }} />
+                                  <View style={{ width: goldPct as any }} className="bg-loss" />
+                                  <View className="flex-1" />
+                                </>
+                              )}
+                            </View>
+                            <View className="w-20 items-end">
+                              <Text className={`text-xs font-bold ${finalGoldAdv > 0 ? 'text-win' : 'text-loss'}`}>
+                                {Math.abs(finalGoldAdv).toLocaleString()}
+                              </Text>
+                            </View>
+                          </View>
+
+                          {/* XP Adv */}
+                          <View className="flex-row items-center">
+                            <View className="w-16"><Text className="text-gray-500 text-[10px] font-bold">XP</Text></View>
+                            <View className="flex-1 h-3 bg-zinc-800 rounded-full overflow-hidden flex-row">
+                              {finalXpAdv > 0 ? (
+                                <>
+                                  <View className="flex-1" />
+                                  <View style={{ width: xpPct as any }} className="bg-win" />
+                                  <View style={{ width: `${50 - parseFloat(xpPct)}%` as any }} />
+                                </>
+                              ) : (
+                                <>
+                                  <View style={{ width: `${50 - parseFloat(xpPct)}%` as any }} />
+                                  <View style={{ width: xpPct as any }} className="bg-loss" />
+                                  <View className="flex-1" />
+                                </>
+                              )}
+                            </View>
+                            <View className="w-20 items-end">
+                              <Text className={`text-xs font-bold ${finalXpAdv > 0 ? 'text-win' : 'text-loss'}`}>
+                                {Math.abs(finalXpAdv).toLocaleString()}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        <View className="bg-[#2a2a2a] p-4 rounded-xl border border-zinc-800 mb-4">
+                          <Text className="text-white font-bold mb-4 text-center">Net Worth & XP Difference</Text>
+                          <LineChart
+                            data={{
+                              labels: matchData.radiant_gold_adv.map((_, i) => i % 10 === 0 ? `${i}` : ''),
+                              datasets: [
+                                {
+                                  data: matchData.radiant_gold_adv,
+                                  color: (opacity = 1) => `rgba(234, 179, 8, ${opacity})`, // Gold color
+                                  strokeWidth: 2
+                                },
+                                {
+                                  data: matchData.radiant_xp_adv,
+                                  color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`, // Purple color
+                                  strokeWidth: 2
+                                }
+                              ],
+                              legend: ["Net Worth", "Experience"]
+                            }}
+                            width={screenWidth}
+                            height={220}
+                            chartConfig={{
+                              backgroundColor: "#1e1e1e",
+                              backgroundGradientFrom: "#2a2a2a",
+                              backgroundGradientTo: "#2a2a2a",
+                              decimalPlaces: 0,
+                              color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                              labelColor: (opacity = 1) => `rgba(156, 163, 175, ${opacity})`,
+                              propsForDots: { r: "0" },
+                            }}
+                            bezier
+                            style={{ marginVertical: 8, borderRadius: 16 }}
+                          />
+                        </View>
+                      </>
+                    );
+                  })()
                 ) : (
                   renderParseInstructions("Economy trends and graphs are only available for parsed matches.")
                 )}

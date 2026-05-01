@@ -13,7 +13,7 @@ interface SettingsItemProps {
   icon: string;
   label: string;
   value?: string | boolean;
-  onPress?: () => void;
+  onPress?: (val?: any) => void;
   type?: 'toggle' | 'link' | 'text' | 'danger';
   color?: string;
 }
@@ -48,7 +48,7 @@ const SettingsItem = ({ icon, label, value, onPress, type = 'link', color = '#8b
     {type === 'toggle' ? (
       <Switch 
         value={value as boolean} 
-        onValueChange={onPress}
+        onValueChange={(val) => onPress && onPress(val)}
         trackColor={{ false: '#2a2a3e', true: '#8b5cf6' }}
         thumbColor="#fff"
       />
@@ -76,13 +76,19 @@ const SectionLabel = ({ label }: { label: string }) => (
 );
 
 export default function SettingsScreen() {
-  const { user, session, steamAccountId, matchLimit, signOut, refreshProfile } = useSupabaseAuth();
+  const { 
+    user, 
+    session, 
+    steamAccountId, 
+    matchLimit, 
+    notificationsEnabled,
+    updateNotificationPrefs,
+    signOut, 
+    refreshProfile 
+  } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
   const [loading, setLoading] = useState(false);
   const [limitModalVisible, setLimitModalVisible] = useState(false);
-  
-  // App Preferences State
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const handleUnlinkSteam = async () => {
     if (!user) return;
@@ -171,23 +177,42 @@ export default function SettingsScreen() {
     );
   };
 
-  const updateLimit = async (newLimit: number) => {
-    if (!user) return;
-    setLimitModalVisible(false);
+  const handleToggleNotifications = async () => {
+    const newState = !notificationsEnabled;
     
+    setLoading(true);
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ match_limit: newLimit })
-        .eq('id', user.id);
-
-      if (error) throw error;
-      
-      await refreshProfile();
-      Toast.show({ type: 'success', text1: `History limit set to ${newLimit}` });
-    } catch (e) {
+      if (newState) {
+        // Turning ON: Request permissions and get token
+        const { registerForPushNotificationsAsync } = await import('../../src/services/notifications');
+        const token = await registerForPushNotificationsAsync();
+        
+        if (token) {
+          await updateNotificationPrefs(true, token);
+          Toast.show({
+            type: 'success',
+            text1: 'Notifications Enabled',
+            text2: 'You will now receive push alerts.'
+          });
+        }
+      } else {
+        // Turning OFF: Just update the flag
+        await updateNotificationPrefs(false);
+        Toast.show({
+          type: 'info',
+          text1: 'Notifications Disabled',
+          text2: 'You will no longer receive push alerts.'
+        });
+      }
+    } catch (e: any) {
       console.error(e);
-      Toast.show({ type: 'error', text1: 'Failed to update preference' });
+      Toast.show({
+        type: 'error',
+        text1: 'Update Failed',
+        text2: e.message || 'Could not update preferences'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -247,7 +272,7 @@ export default function SettingsScreen() {
             label="Push Notifications" 
             value={notificationsEnabled}
             type="toggle"
-            onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+            onPress={handleToggleNotifications}
           />
         </View>
 
@@ -303,11 +328,27 @@ export default function SettingsScreen() {
           {[10, 20, 50].map((option) => (
             <TouchableOpacity
               key={option}
-              onPress={() => updateLimit(option)}
+              onPress={async () => {
+                if (!user) return;
+                setLimitModalVisible(false);
+                try {
+                  const { error } = await supabase
+                    .from('users')
+                    .update({ match_limit: option })
+                    .eq('id', user.id);
+
+                  if (error) throw error;
+                  await refreshProfile();
+                  Toast.show({ type: 'success', text1: `History limit set to ${option}` });
+                } catch (e) {
+                  console.error(e);
+                  Toast.show({ type: 'error', text1: 'Failed to update preference' });
+                }
+              }}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'between',
+                justifyContent: 'space-between',
                 padding: 16,
                 backgroundColor: matchLimit === option ? '#8b5cf620' : '#1e1e2e',
                 borderRadius: 12,
