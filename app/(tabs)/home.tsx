@@ -17,7 +17,7 @@ import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import LiveGameCard from '../../src/components/LiveGameCard';
 import RecordCard from '../../src/components/RecordCard';
 import ErrorCard from '../../src/components/ErrorCard';
-import { useHeroStats, useProMatches, useLiveGames, useGlobalRecordsMulti } from '../../src/hooks/useOpenDota';
+import { useHeroStats, useProMatches, useLiveGames, useGlobalRecordsMulti, usePlayerProfile } from '../../src/hooks/useOpenDota';
 import { queryClient } from '../../src/services/queryClient';
 import Skeleton from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
@@ -25,6 +25,7 @@ import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { useModals } from '../../src/context/ModalContext';
+import { calculateTierList, getBracketFromRankTier, BRACKET_NAMES, TierHero } from '../../src/services/tierList';
 
 // Minimum picks threshold to avoid heroes with tiny sample sizes
 const MIN_PICKS = 5000;
@@ -224,6 +225,14 @@ export default function HomeScreen() {
   const { data: liveGames = [], refetch: refetchLive } = useLiveGames();
   const { data: multiRecords = {}, refetch: refetchRecords } = useGlobalRecordsMulti(['gold_per_min', 'kills', 'hero_healing']);
 
+  // Get user rank for default bracket
+  const { data: userProfile } = usePlayerProfile(steamAccountId || null);
+  const userBracket = useMemo(() => getBracketFromRankTier(userProfile?.rank_tier), [userProfile?.rank_tier]);
+  const [selectedBracket, setSelectedBracket] = useState<number | null>(null);
+  
+  // Final bracket to use (user's or manually selected)
+  const activeBracket = selectedBracket || userBracket;
+
   const isLoading = loadingHeroes || loadingMatches;
   const hasError = (errorHeroes && heroesData.length === 0) && (errorMatches && proMatchesData.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -236,6 +245,15 @@ export default function HomeScreen() {
 
   const processedStats = useMemo(() => processHeroStats(heroesData), [heroesData]);
   const { topWinRate, mostPicked, proPicks, proBans } = processedStats;
+
+  // Tier List Calculation
+  const tierList = useMemo(() => {
+    if (!heroesData.length) return [];
+    return calculateTierList(heroesData, activeBracket);
+  }, [heroesData, activeBracket]);
+
+  const sTier = useMemo(() => tierList.filter(h => h.tier === 'S'), [tierList]);
+  const aTier = useMemo(() => tierList.filter(h => h.tier === 'A').slice(0, 10), [tierList]);
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
@@ -419,6 +437,64 @@ export default function HomeScreen() {
           />
         ) : (
           <>
+            {/* ─── Section 0: Hero Meta Tier List ─── */}
+            <SectionHeader icon="analytics" title="Hero Meta Tier List" color="#8b5cf6" />
+            
+            {/* Bracket Selector */}
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={{ paddingHorizontal: 20, marginBottom: 16 }}
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((b) => (
+                <TouchableOpacity
+                  key={`bracket-${b}`}
+                  onPress={() => setSelectedBracket(b)}
+                  style={{
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 20,
+                    marginRight: 8,
+                    backgroundColor: activeBracket === b ? '#8b5cf6' : '#1e1e2e',
+                    borderWidth: 1,
+                    borderColor: activeBracket === b ? '#a78bfa' : '#2a2a3e',
+                  }}
+                >
+                  <Text style={{ 
+                    color: activeBracket === b ? '#fff' : '#888', 
+                    fontSize: 12, 
+                    fontWeight: '700' 
+                  }}>
+                    {BRACKET_NAMES[b]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {isLoading ? <HeroCardSkeleton /> : (
+              <FlatList
+                data={[...sTier, ...aTier]}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+                keyExtractor={(item) => `tier-${item.id}`}
+                renderItem={({ item, index }) => (
+                  <PressableScale onPress={() => openHeroModal(item.id)}>
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                      <HeroStatsCard
+                        heroName={item.name}
+                        heroImg={item.img}
+                        winRate={item.winRate}
+                        pickCount={item.picks}
+                        tier={item.tier}
+                        mode="winrate"
+                      />
+                    </Animated.View>
+                  </PressableScale>
+                )}
+              />
+            )}
+
             {/* ─── Section 1: Top Win Rate Heroes ─── */}
             <SectionHeader icon="trophy" title="Highest Win Rate" color="#f59e0b" />
             {isLoading ? <HeroCardSkeleton /> : (

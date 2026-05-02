@@ -9,12 +9,21 @@ interface HeroStatsCardProps {
   winRate: number;  // 0-100
   pickCount: number;
   rank?: number;    // 1, 2, 3... for medal display
+  tier?: 'S' | 'A' | 'B' | 'C' | 'D'; // For meta tier display
   mode?: 'winrate' | 'picks';
 }
 
-export default function HeroStatsCard({ heroName, heroImg, winRate, pickCount, rank, mode = 'winrate' }: HeroStatsCardProps) {
+export default function HeroStatsCard({ heroName, heroImg, winRate, pickCount, rank, tier, mode = 'winrate' }: HeroStatsCardProps) {
   const imgUrl = `${STEAM_CDN}${heroImg}`;
   const winColor = winRate >= 52 ? '#22c55e' : winRate >= 48 ? '#eab308' : '#ef4444';
+
+  const tierColors: Record<string, string> = {
+    S: '#f59e0b', // Amber/Gold
+    A: '#8b5cf6', // Purple
+    B: '#3b82f6', // Blue
+    C: '#94a3b8', // Slate
+    D: '#475569', // Gray
+  };
 
   const formatPicks = (count: number) => {
     if (count >= 1000) {
@@ -51,9 +60,30 @@ export default function HeroStatsCard({ heroName, heroImg, winRate, pickCount, r
             height: 22,
             alignItems: 'center',
             justifyContent: 'center',
+            zIndex: 1,
           }}>
             <Text style={{ color: '#000', fontSize: 12, fontWeight: '800' }}>
               {rank}
+            </Text>
+          </View>
+        )}
+        {tier && (
+          <View style={{
+            position: 'absolute',
+            top: 6,
+            right: 6,
+            backgroundColor: tierColors[tier] || '#475569',
+            borderRadius: 6,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.2)',
+          }}>
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>
+              {tier}
             </Text>
           </View>
         )}
