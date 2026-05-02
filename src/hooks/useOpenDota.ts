@@ -293,3 +293,15 @@ export function usePlayerMatches(accountId: string | number | null, filters: any
     enabled: !!accountId,
   });
 }
+
+/**
+ * Hook to fetch player word cloud data.
+ */
+export function usePlayerWordCloud(accountId: string | number | null) {
+  return useQuery({
+    queryKey: ['playerWordCloud', accountId],
+    queryFn: () => (accountId ? openDotaApi.getPlayerWordCloud(accountId) : null),
+    enabled: !!accountId,
+    staleTime: 1000 * 60 * 60 * 24, // Chat stats change slowly
+  });
+}

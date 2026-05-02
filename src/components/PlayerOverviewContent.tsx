@@ -44,6 +44,7 @@ import {
 import { useModals } from '../context/ModalContext';
 import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
 import PerformanceTrends from './PerformanceTrends';
+import { WordCloud } from './WordCloud';
 
 function LifetimeStatsSkeleton() {
   return (
@@ -74,7 +75,7 @@ function LifetimeStatsSkeleton() {
   );
 }
 
-type ProfileTab = 'Recent' | 'Heroes' | 'Network' | 'Lifetime';
+type ProfileTab = 'Recent' | 'Heroes' | 'Network' | 'Social' | 'Lifetime';
 
 interface CategoryStats {
   label: string;
@@ -336,14 +337,14 @@ export function PlayerOverviewContent({
 
         {/* Profile Tabs */}
         <View className="flex-row bg-[#2a2a2a] rounded-xl p-1 mb-4">
-          {(['Recent', 'Heroes', 'Network', 'Lifetime'] as ProfileTab[]).map((tab) => (
+          {(['Recent', 'Heroes', 'Network', 'Social', 'Lifetime'] as ProfileTab[]).map((tab) => (
             <TouchableOpacity
               key={tab}
               onPress={() => setActiveTab(tab)}
               className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
             >
-              <Text className={`font-outfit-bold text-[10px] ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
-                {tab === 'Recent' ? 'RECENT' : tab === 'Heroes' ? 'HEROES' : tab === 'Network' ? 'NETWORK' : 'LIFETIME'}
+              <Text className={`font-outfit-bold text-[9px] ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
+                {tab.toUpperCase()}
               </Text>
             </TouchableOpacity>
           ))}
@@ -761,6 +762,15 @@ export function PlayerOverviewContent({
         />
       ) : activeTab === 'Network' ? (
         renderNetworkContent()
+      ) : activeTab === 'Social' ? (
+        <ScrollView
+          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
+          className="flex-1"
+        >
+          {memoizedHeader}
+          <WordCloud accountId={Number(accountId)} />
+          <View className="h-10" />
+        </ScrollView>
       ) : (
         renderLifetimeContent()
       )}

@@ -661,6 +661,25 @@ export async function getProMatches(limit: number = 10): Promise<ProMatch[]> {
   }
 }
 
+export interface WordCloudData {
+  my_word_counts: Record<string, number>;
+  all_word_counts: Record<string, number>;
+}
+
+/**
+ * Fetches the word cloud data for a specific player.
+ */
+export async function getPlayerWordCloud(accountId: string | number): Promise<WordCloudData | null> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/wordcloud`);
+    if (!response.ok) throw new Error('Failed to fetch word cloud');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching word cloud:', error);
+    return null;
+  }
+}
+
 export const openDotaApi = {
   searchPlayers,
   getPlayerHeroes,
@@ -683,4 +702,5 @@ export const openDotaApi = {
   getLeagueMatches,
   getHeroStats,
   getProMatches,
+  getPlayerWordCloud,
 };
