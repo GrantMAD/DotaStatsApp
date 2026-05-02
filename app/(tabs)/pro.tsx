@@ -27,6 +27,7 @@ import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
+import { useModals } from '../../src/context/ModalContext';
 
 type TabType = 'Tournaments' | 'Teams' | 'Players';
 type SubTabType = 'Premium' | 'Professional' | 'Amateur';
@@ -34,7 +35,7 @@ type SubTabType = 'Premium' | 'Professional' | 'Amateur';
 function ProSkeleton() {
   return (
     <View style={{ paddingHorizontal: 20 }}>
-      {[1, 2, 3, 4, 5, 6].map(i => (
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
         <View key={i} style={{
           backgroundColor: '#1e1e2e',
           height: 80,
@@ -61,6 +62,7 @@ function ProSkeleton() {
 export default function ProSceneScreen() {
   const { session } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
+  const { pushModal } = useModals();
   const [activeTab, setActiveTab] = useState<TabType>('Tournaments');
   const [subTab, setSubTab] = useState<SubTabType>('Premium');
   const [searchQuery, setSearchQuery] = useState('');
@@ -72,16 +74,6 @@ export default function ProSceneScreen() {
 
   const loading = loadingLeagues || loadingTeams || loadingPlayers;
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Modal State
-  const [selectedLeague, setSelectedLeague] = useState<League | null>(null);
-  const [leagueModalVisible, setLeagueModalVisible] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<ProTeam | null>(null);
-  const [teamModalVisible, setTeamModalVisible] = useState(false);
-  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
-  const [matchModalVisible, setMatchModalVisible] = useState(false);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
-  const [playerModalVisible, setPlayerModalVisible] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -150,29 +142,19 @@ export default function ProSceneScreen() {
   }, [players, teams, searchQuery, subTab]);
 
   const handleLeaguePress = (id: number) => {
-    const league = leagues.find((l) => l.leagueid === id);
-    if (league) {
-      setSelectedLeague(league);
-      setLeagueModalVisible(true);
-    }
+    pushModal('league', id);
   };
 
   const handleTeamPress = (id: number) => {
-    const team = teams.find((t) => t.team_id === id);
-    if (team) {
-      setSelectedTeam(team);
-      setTeamModalVisible(true);
-    }
+    pushModal('team', id);
   };
 
   const handlePlayerPress = (id: number) => {
-    setSelectedPlayerId(id);
-    setPlayerModalVisible(true);
+    pushModal('player', id);
   };
 
   const handleMatchPress = (id: number) => {
-    setSelectedMatchId(id);
-    setMatchModalVisible(true);
+    pushModal('match', id);
   };
 
   const memoizedHeader = useMemo(() => (
@@ -373,29 +355,6 @@ export default function ProSceneScreen() {
           />
         )}
       </View>
-
-      <LeagueDetailModal
-        visible={leagueModalVisible}
-        league={selectedLeague}
-        onClose={() => setLeagueModalVisible(false)}
-      />
-      <TeamDetailModal
-        visible={teamModalVisible}
-        team={selectedTeam}
-        onClose={() => setTeamModalVisible(false)}
-      />
-      <PlayerDetailModal
-        visible={playerModalVisible}
-        accountId={selectedPlayerId}
-        onClose={() => setPlayerModalVisible(false)}
-        onMatchPress={handleMatchPress}
-      />
-      <MatchOverviewModal
-        visible={matchModalVisible}
-        matchId={selectedMatchId}
-        onClose={() => setMatchModalVisible(false)}
-        onPushPlayer={handlePlayerPress}
-      />
     </LinearGradient>
   );
 }

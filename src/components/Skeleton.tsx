@@ -84,7 +84,7 @@ export function PlayerProfileSkeleton() {
       </View>
 
       {/* Match List Skeleton */}
-      {[1, 2, 3, 4, 5].map(i => (
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
         <View key={i} className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row justify-between items-center border-l-4 border-zinc-800">
            <View className="flex-row items-center flex-1">
              <Skeleton width={48} height={48} borderRadius={8} style={{ marginRight: 12 }} />
@@ -136,7 +136,7 @@ export function MatchOverviewSkeleton() {
 
       {/* Content */}
       <View className="p-4">
-        {[1, 2, 3, 4, 5].map(i => (
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
           <View key={i} className="mb-4 bg-[#222] p-3 rounded-xl border border-zinc-800 flex-row items-center">
             <Skeleton width={40} height={28} borderRadius={4} style={{ marginRight: 12 }} />
             <View className="flex-1">

@@ -14,30 +14,14 @@ import {
   Peer,
   HeroStats,
 } from '../../src/services/opendota';
-import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
-import HeroDetailModal from '../../src/components/HeroDetailModal';
-import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
-import { useSearchPlayers, usePlayerProfile, usePlayerWinLoss, useRecentMatches, usePlayerPeers, useHeroStats } from '../../src/hooks/useOpenDota';
-import { useFriends } from '../../src/hooks/useFriends';
-import { supabase } from '../../src/services/supabase';
-import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
-import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
-import PressableScale from '../../src/components/PressableScale';
-import GlassHeader from '../../src/components/GlassHeader';
-import GlassModal from '../../src/components/GlassModal';
-import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { getHeroImageUrl } from '../../src/services/constants';
-
-type StackItem =
-  | { type: 'player', id: number | string }
-  | { type: 'match', id: number }
-  | { type: 'hero', id: number };
+import { useModals } from '../../src/context/ModalContext';
 
 function SearchSkeleton() {
   return (
     <View style={{ paddingVertical: 20 }}>
-      {[1, 2, 3, 4, 5].map(i => (
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
         <View key={i} style={{
           backgroundColor: '#1e1e2e',
           padding: 16,
@@ -154,28 +138,9 @@ export default function SearchScreen() {
     checkAppUsers();
   }, [globalResults, peers, searchMode]);
 
-  // The Navigation Stack
-  const [modalStack, setModalStack] = useState<StackItem[]>([]);
-
   const handleSearch = () => {
     if (!query.trim()) return;
     setActiveQuery(query);
-  };
-
-  const pushPlayer = (accountId: number | string) => {
-    setModalStack(prev => [...prev, { type: 'player', id: accountId }]);
-  };
-
-  const pushMatch = (matchId: number) => {
-    setModalStack(prev => [...prev, { type: 'match', id: matchId }]);
-  };
-
-  const pushHero = (heroId: number) => {
-    setModalStack(prev => [...prev, { type: 'hero', id: heroId }]);
-  };
-
-  const popStack = () => {
-    setModalStack(prev => prev.slice(0, -1));
   };
 
   const renderResult = ({ item, index }: { item: SearchResult, index: number }) => {
@@ -184,7 +149,7 @@ export default function SearchScreen() {
     const friend = appUserId ? isFriend(appUserId) : false;
 
     return (
-      <PressableScale onPress={() => pushPlayer(item.account_id)}>
+      <PressableScale onPress={() => pushModal('player', item.account_id)}>
         <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
           <View className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center">
             <Image
@@ -387,7 +352,7 @@ export default function SearchScreen() {
                   {matchingHeroes.map(hero => (
                     <TouchableOpacity 
                       key={hero.id} 
-                      onPress={() => pushHero(hero.id)} 
+                      onPress={() => pushModal('hero', hero.id)} 
                       style={{ 
                         flexDirection: 'row', 
                         alignItems: 'center', 
@@ -419,7 +384,7 @@ export default function SearchScreen() {
                     MATCH ID
                   </Text>
                   <TouchableOpacity 
-                    onPress={() => pushMatch(matchingMatchId)}
+                    onPress={() => pushModal('match', matchingMatchId)}
                     style={{ 
                       flexDirection: 'row', 
                       alignItems: 'center', 
@@ -467,97 +432,6 @@ export default function SearchScreen() {
           </View>
         )}
       </View>
-
-      {/* Modal Stack Rendering */}
-      {modalStack.map((item, index) => (
-        <DrillDownModal
-          key={`${item.type}-${item.id}-${index}`}
-          item={item}
-          onClose={popStack}
-          onPushPlayer={pushPlayer}
-          onPushMatch={pushMatch}
-          onPushHero={pushHero}
-        />
-      ))}
     </LinearGradient>
   );
-}
-
-/**
- * A self-contained modal that handles its own data fetching via hooks
- */
-function DrillDownModal({ item, onClose, onPushPlayer, onPushMatch, onPushHero }: {
-  item: StackItem;
-  onClose: () => void;
-  onPushPlayer: (id: number | string) => void;
-  onPushMatch: (id: number) => void;
-  onPushHero: (id: number) => void;
-}) {
-  // Queries
-  const { data: heroesData = [] } = useHeroStats();
-  const { data: profile, isLoading: pProfileLoading } = usePlayerProfile(item.type === 'player' ? item.id : null);
-  const { data: wl, isLoading: pWLLoading } = usePlayerWinLoss(item.type === 'player' ? item.id : null);
-  const { data: matches = [], isLoading: pMatchesLoading } = useRecentMatches(item.type === 'player' ? item.id : null, 10);
-
-  const loading = pProfileLoading || pWLLoading || pMatchesLoading;
-  const isPrivate = profile && !profile.last_match_time;
-
-  return (
-    <>
-      {item.type === 'player' && ( // Conditionally render GlassModal for player
-        <GlassModal visible={true} onClose={onClose}>
-          {loading ? (
-            <PlayerProfileSkeleton />
-          ) : ( // Loading is false, now check profile status
-            profile ? ( // Profile data loaded successfully
-              <View className="flex-1">
-                <View className="p-4 border-b border-zinc-800 flex-row justify-between items-center bg-[#1e1e1e]">
-                   <Text className="text-white font-outfit-bold ml-2">Player Details</Text>
-                   <TouchableOpacity onPress={onClose} className="p-2">
-                     <Ionicons name="close" size={28} color="white" />
-                   </TouchableOpacity>
-                </View>
-                <PlayerOverviewContent
-                  accountId={item.id}
-                  profile={profile}
-                  wl={wl || null}
-                  matches={matches}
-                  onMatchPress={(matchId) => onPushMatch(matchId)}
-                  isPrivate={!!isPrivate}
-                />
-              </View>
-            ) : ( // Profile data is null after loading, likely private or error
-              <View className="flex-1 justify-center items-center px-6">
-                <Ionicons name="eye-off-outline" size={48} color="#f97316" />
-                <Text className="text-orange-500 text-center mt-4 font-bold text-lg">Profile Not Available</Text>
-                <Text className="text-gray-400 text-center mt-2 font-outfit text-sm">
-                  This player's profile data could not be loaded. They may have a private account or there was an issue fetching the details.
-                </Text>
-                <PressableScale onPress={onClose} className="mt-8 bg-zinc-800 px-6 py-2 rounded-lg">
-                  <Text className="text-white font-outfit-bold">Close</Text>
-                </PressableScale>
-              </View>
-            )
-          )}
-        </GlassModal>
-      )}
-
-      {item.type === 'match' && ( // Conditionally render MatchOverviewModal for match
-        <MatchOverviewModal
-          visible={true}
-          matchId={item.id as number}
-          onClose={onClose}
-          onPushPlayer={onPushPlayer}
-        />
-      )}
-
-      {item.type === 'hero' && (
-        <HeroDetailModal
-          visible={true}
-          hero={heroesData.find(h => h.id === item.id) || null}
-          onClose={onClose}
-        />
-      )}
-    </>
-  );
-}
+  }

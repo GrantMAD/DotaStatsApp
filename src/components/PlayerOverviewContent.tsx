@@ -38,12 +38,13 @@ import {
   useRecentMatches,
   useHeroStats
 } from '../hooks/useOpenDota';
+import { useModals } from '../context/ModalContext';
 import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
 
 function LifetimeStatsSkeleton() {
   return (
     <View className="flex-1">
-      {[1, 2, 3].map(i => (
+      {[1, 2, 3, 4, 5].map(i => (
         <View key={i} className="mx-4 mb-6 bg-[#1e1e1e] rounded-2xl overflow-hidden border border-white/5">
           <View className="flex-row items-center bg-zinc-800/50 p-4 border-b border-white/5">
             <Skeleton width={20} height={20} borderRadius={10} style={{ marginRight: 12 }} />
@@ -166,6 +167,7 @@ export function PlayerOverviewContent({
   const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
   const { data: peers = [], isLoading: peersLoading } = usePlayerPeers(accountId);
   const { data: allHeroStats = [] } = useHeroStats();
+  const { pushModal } = useModals();
   const [activeTab, setActiveTab] = useState<ProfileTab>('Recent');
   const [networkSubTab, setNetworkSubTab] = useState<'Allies' | 'Opponents'>('Allies');
 
@@ -173,17 +175,6 @@ export function PlayerOverviewContent({
   const [selectedHero, setSelectedHero] = useState<HeroStats | null>(null);
   const [selectedPlayerHeroStats, setSelectedPlayerHeroStats] = useState<PlayerHeroStats | null>(null);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
-
-  // Player Detail Modal State (for Peers)
-  const [selectedPeerId, setSelectedPeerId] = useState<number | null>(null);
-  const [peerModalVisible, setPeerModalVisible] = useState(false);
-
-  // Queries for Peer Detail Modal
-  const { data: selectedPeerProfile, isLoading: peerProfileLoading } = usePlayerProfile(selectedPeerId);
-  const { data: selectedPeerWL, isLoading: peerWLLoading } = usePlayerWinLoss(selectedPeerId);
-  const { data: selectedPeerMatches = [], isLoading: peerMatchesLoading } = useRecentMatches(selectedPeerId, 5);
-
-  const peerDetailsLoading = peerProfileLoading || peerWLLoading || peerMatchesLoading;
 
   // Lifetime Stats State
   const [totals, setTotals] = useState<PlayerTotal[]>([]);
@@ -536,10 +527,7 @@ export function PlayerOverviewContent({
 
           return (
             <TouchableOpacity
-              onPress={() => {
-                setSelectedPeerId(item.account_id);
-                setPeerModalVisible(true);
-              }}
+              onPress={() => pushModal('player', item.account_id)}
               className="mx-4 mb-3 bg-[#1e1e2e] p-4 rounded-xl border border-white/5 flex-row items-center"
             >
               <Image source={{ uri: item.avatarfull || item.avatar }} className="w-12 h-12 rounded-full mr-4 bg-zinc-900" />
@@ -719,36 +707,6 @@ export function PlayerOverviewContent({
           setSelectedPlayerHeroStats(null);
         }}
       />
-
-      <GlassModal
-        visible={peerModalVisible}
-        onClose={() => setPeerModalVisible(false)}
-      >
-        {peerDetailsLoading ? (
-          <PlayerProfileSkeleton />
-        ) : selectedPeerProfile ? (
-          <View className="flex-1">
-            <View className="p-4 border-b border-zinc-800 flex-row justify-between items-center bg-[#1e1e1e]">
-               <Text className="text-white font-outfit-bold ml-2">Player Details</Text>
-               <TouchableOpacity onPress={() => setPeerModalVisible(false)} className="p-2">
-                 <Ionicons name="close" size={28} color="white" />
-               </TouchableOpacity>
-            </View>
-            <PlayerOverviewContent
-              accountId={selectedPeerProfile.profile.account_id.toString()}
-              profile={selectedPeerProfile}
-              wl={selectedPeerWL || null}
-              matches={selectedPeerMatches}
-              onMatchPress={(id) => {
-                setPeerModalVisible(false);
-                onMatchPress(id);
-              }}
-            />
-          </View>
-        ) : (
-          <View className="flex-1 justify-center items-center"><Text className="text-red-500">Failed to load data.</Text></View>
-        )}
-      </GlassModal>
     </View>
   );
 }

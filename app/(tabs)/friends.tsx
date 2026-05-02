@@ -10,22 +10,18 @@ import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import UserListItem from '../../src/components/UserListItem';
+import { useModals } from '../../src/context/ModalContext';
 
 type TabType = 'Friends' | 'Following';
 
 export default function FriendsScreen() {
   const { session } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
+  const { pushModal } = useModals();
   const { friends, following, loading, fetchFriends, unfollowUser } = useFriends();
   const [activeTab, setActiveTab] = useState<TabType>('Friends');
   const [searchQuery, setSearchQuery] = useState('');
   
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [playerModalVisible, setPlayerModalVisible] = useState(false);
-  
-  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
-  const [matchModalVisible, setMatchModalVisible] = useState(false);
-
   const filteredFriends = friends.filter(friend => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -42,13 +38,11 @@ export default function FriendsScreen() {
   });
 
   const openPlayerDetails = (accountId: string) => {
-    setSelectedPlayerId(accountId);
-    setPlayerModalVisible(true);
+    pushModal('player', accountId);
   };
 
   const openMatchById = (matchId: number) => {
-    setSelectedMatchId(matchId);
-    setMatchModalVisible(true);
+    pushModal('match', matchId);
   };
 
   const renderFriend = ({ item, index }: { item: any; index: number }) => {
@@ -181,26 +175,6 @@ export default function FriendsScreen() {
           />
         )}
       </View>
-
-      <PlayerDetailModal
-        visible={playerModalVisible}
-        accountId={selectedPlayerId}
-        onClose={() => setPlayerModalVisible(false)}
-        onMatchPress={(id) => {
-          setPlayerModalVisible(false);
-          openMatchById(id);
-        }}
-      />
-
-      <MatchOverviewModal
-        matchId={selectedMatchId}
-        visible={matchModalVisible}
-        onClose={() => setMatchModalVisible(false)}
-        onPushPlayer={(id) => {
-          setMatchModalVisible(false);
-          openPlayerDetails(id.toString());
-        }}
-      />
     </LinearGradient>
   );
 }

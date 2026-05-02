@@ -16,6 +16,7 @@ import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import LiveGameCard from '../../src/components/LiveGameCard';
 import RecordCard from '../../src/components/RecordCard';
+import ErrorCard from '../../src/components/ErrorCard';
 import { useHeroStats, useProMatches, useLiveGames, useGlobalRecordsMulti } from '../../src/hooks/useOpenDota';
 import { queryClient } from '../../src/services/queryClient';
 import Skeleton from '../../src/components/Skeleton';
@@ -23,6 +24,7 @@ import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
+import { useModals } from '../../src/context/ModalContext';
 
 // Minimum picks threshold to avoid heroes with tiny sample sizes
 const MIN_PICKS = 5000;
@@ -96,8 +98,8 @@ function SectionHeader({ icon, title, color }: { icon: string; title: string; co
 
 function HeroCardSkeleton() {
   return (
-    <View style={{ flexDirection: 'row', paddingHorizontal: 20 }}>
-      {[1, 2, 3].map(i => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
         <View key={i} style={{
           width: 140, height: 180, backgroundColor: '#1e1e2e',
           borderRadius: 12, marginRight: 12, padding: 12,
@@ -110,14 +112,14 @@ function HeroCardSkeleton() {
           <Skeleton width="100%" height={24} borderRadius={6} />
         </View>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 function ProMatchSkeleton() {
   return (
-    <View style={{ flexDirection: 'row', paddingHorizontal: 20 }}>
-      {[1, 2].map(i => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
         <View key={i} style={{
           width: 280, height: 160, backgroundColor: '#1e1e2e',
           borderRadius: 16, marginRight: 12, padding: 16,
@@ -137,14 +139,14 @@ function ProMatchSkeleton() {
           </View>
         </View>
       ))}
-    </View>
+    </ScrollView>
   );
 }
 
 function ProBanSkeleton() {
   return (
     <View style={{ paddingHorizontal: 20 }}>
-      {[1, 2, 3, 4, 5].map(i => (
+      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
         <View key={i} style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -214,28 +216,20 @@ export default function HomeScreen() {
   const router = useRouter();
   const { session, steamAccountId } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
+  const { pushModal } = useModals();
 
   // Queries
-  const { data: heroesData = [], isLoading: loadingHeroes, refetch: refetchHeroes } = useHeroStats();
-  const { data: proMatchesData = [], isLoading: loadingMatches, refetch: refetchMatches } = useProMatches(10);
+  const { data: heroesData = [], isLoading: loadingHeroes, isError: errorHeroes, refetch: refetchHeroes } = useHeroStats();
+  const { data: proMatchesData = [], isLoading: loadingMatches, isError: errorMatches, refetch: refetchMatches } = useProMatches(10);
   const { data: liveGames = [], refetch: refetchLive } = useLiveGames();
   const { data: multiRecords = {}, refetch: refetchRecords } = useGlobalRecordsMulti(['gold_per_min', 'kills', 'hero_healing']);
 
   const isLoading = loadingHeroes || loadingMatches;
+  const hasError = (errorHeroes && heroesData.length === 0) && (errorMatches && proMatchesData.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Modal state
-  const [selectedHero, setSelectedHero] = useState<HeroStats | null>(null);
-  const [heroModalVisible, setHeroModalVisible] = useState(false);
-  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
-  const [matchModalVisible, setMatchModalVisible] = useState(false);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Player Detail within Search
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [playerModalVisible, setPlayerModalVisible] = useState(false);
 
   // Pro Bans Expand State
   const [isBansExpanded, setIsBansExpanded] = useState(false);
@@ -250,27 +244,20 @@ export default function HomeScreen() {
   };
 
   const openHeroModal = useCallback((heroId: number) => {
-    const hero = heroesData.find(h => h.id === heroId);
-    if (hero) {
-      setSelectedHero(hero);
-      setHeroModalVisible(true);
-    }
-  }, [heroesData]);
+    pushModal('hero', heroId);
+  }, [pushModal]);
 
   const openMatchModal = useCallback((match: ProMatch) => {
-    setSelectedMatchId(match.match_id);
-    setMatchModalVisible(true);
-  }, []);
+    pushModal('match', match.match_id);
+  }, [pushModal]);
 
   const openMatchById = useCallback((matchId: number) => {
-    setSelectedMatchId(matchId);
-    setMatchModalVisible(true);
-  }, []);
+    pushModal('match', matchId);
+  }, [pushModal]);
 
   const openPlayerDetails = useCallback((accountId: string | number) => {
-    setSelectedPlayerId(accountId.toString());
-    setPlayerModalVisible(true);
-  }, []);
+    pushModal('player', accountId);
+  }, [pushModal]);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -425,231 +412,217 @@ export default function HomeScreen() {
           </View>
         </View>
 
-      {/* ─── Section 1: Top Win Rate Heroes ─── */}
-      <SectionHeader icon="trophy" title="Highest Win Rate" color="#f59e0b" />
-      {isLoading ? <HeroCardSkeleton /> : (
-        <FlatList
-          data={topWinRate}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
-          keyExtractor={(item) => `wr-${item.id}`}
-          renderItem={({ item, index }) => (
-            <PressableScale onPress={() => openHeroModal(item.id)}>
-              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                <HeroStatsCard
-                  heroName={item.name}
-                  heroImg={item.img}
-                  winRate={item.winRate}
-                  pickCount={item.picks}
-                  rank={index + 1}
-                  mode="winrate"
-                />
-              </Animated.View>
-            </PressableScale>
-          )}
-        />
-      )}
-
-      {/* ─── Section 2: Most Picked Heroes ─── */}
-      <SectionHeader icon="flame" title="Most Picked" color="#ef4444" />
-      {isLoading ? <HeroCardSkeleton /> : (
-        <FlatList
-          data={mostPicked}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
-          keyExtractor={(item) => `pk-${item.id}`}
-          renderItem={({ item, index }) => (
-            <PressableScale onPress={() => openHeroModal(item.id)}>
-              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                <HeroStatsCard
-                  heroName={item.name}
-                  heroImg={item.img}
-                  winRate={item.winRate}
-                  pickCount={item.picks}
-                  rank={index + 1}
-                  mode="picks"
-                />
-              </Animated.View>
-            </PressableScale>
-          )}
-        />
-      )}
-
-      {/* ─── Section 3: Pro Scene ─── */}
-      <SectionHeader icon="star" title="Pro Scene — Top Picks" color="#8b5cf6" />
-      {isLoading ? <HeroCardSkeleton /> : (
-        <FlatList
-          data={proPicks}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
-          keyExtractor={(item) => `pp-${item.id}`}
-          renderItem={({ item, index }) => (
-            <PressableScale onPress={() => openHeroModal(item.id)}>
-              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                <HeroStatsCard
-                  heroName={item.name}
-                  heroImg={item.img}
-                  winRate={item.winRate}
-                  pickCount={item.picks}
-                  rank={index + 1}
-                  mode="picks"
-                />
-              </Animated.View>
-            </PressableScale>
-          )}
-        />
-      )}
-
-      {/* Pro Bans */}
-      <SectionHeader icon="ban" title="Pro Scene — Most Banned" color="#ef4444" />
-      {isLoading ? <ProBanSkeleton /> : (
-        <>
-          {(isBansExpanded ? proBans : proBans.slice(0, 5)).map((hero, index) => (
-            <ProBanItem key={`ban-${hero.id}`} hero={hero} index={index} onPress={() => openHeroModal(hero.id)} />
-          ))}
-          
-          {proBans.length > 5 && (
-            <TouchableOpacity 
-              onPress={() => setIsBansExpanded(!isBansExpanded)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 12,
-                paddingVertical: 12,
-                backgroundColor: '#1e1e2e',
-                marginHorizontal: 20,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: '#2a2a3e',
-                marginBottom: 10
-              }}
-            >
-              <Text style={{ color: '#8b5cf6', fontWeight: '800', marginRight: 6, textTransform: 'uppercase', fontSize: 12 }}>
-                {isBansExpanded ? 'Show Less' : `Show All (${proBans.length})`}
-              </Text>
-              <Ionicons 
-                name={isBansExpanded ? "chevron-up" : "chevron-down"} 
-                size={16} 
-                color="#8b5cf6" 
+        {hasError ? (
+          <ErrorCard 
+            message="We couldn't load the latest Dota data. Check your connection and try again."
+            onRetry={onRefresh}
+          />
+        ) : (
+          <>
+            {/* ─── Section 1: Top Win Rate Heroes ─── */}
+            <SectionHeader icon="trophy" title="Highest Win Rate" color="#f59e0b" />
+            {isLoading ? <HeroCardSkeleton /> : (
+              <FlatList
+                data={topWinRate}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+                keyExtractor={(item) => `wr-${item.id}`}
+                renderItem={({ item, index }) => (
+                  <PressableScale onPress={() => openHeroModal(item.id)}>
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                      <HeroStatsCard
+                        heroName={item.name}
+                        heroImg={item.img}
+                        winRate={item.winRate}
+                        pickCount={item.picks}
+                        rank={index + 1}
+                        mode="winrate"
+                      />
+                    </Animated.View>
+                  </PressableScale>
+                )}
               />
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-
-      {/* Recent Pro Matches */}
-      <SectionHeader icon="game-controller" title="Recent Pro Matches" color="#3b82f6" />
-      {isLoading ? <ProMatchSkeleton /> : (
-        <FlatList
-          data={proMatchesData}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20 }}
-          keyExtractor={(item) => `pm-${item.match_id}`}
-          renderItem={({ item, index }) => (
-            <PressableScale onPress={() => openMatchModal(item)}>
-              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                <ProMatchCard
-                  radiantName={item.radiant_name}
-                  direName={item.dire_name}
-                  radiantScore={item.radiant_score}
-                  direScore={item.dire_score}
-                  radiantWin={item.radiant_win}
-                  duration={item.duration}
-                  leagueName={item.league_name}
-                  startTime={item.start_time}
-                />
-              </Animated.View>
-            </PressableScale>
-          )}
-        />
-      )}
-
-      {/* ─── Section 4: Live High-MMR Games ─── */}
-      {liveGames.length > 0 && (
-        <>
-          <SectionHeader icon="radio" title="Live High-MMR Games" color="#ef4444" />
-          <FlatList
-            data={liveGames}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20 }}
-            keyExtractor={(item) => `live-${item.match_id}`}
-            renderItem={({ item, index }) => (
-              <PressableScale onPress={() => openMatchById(item.match_id)}>
-                <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                  <LiveGameCard game={item} onPress={openMatchById} />
-                </Animated.View>
-              </PressableScale>
             )}
 
-          />
-        </>
-      )}
+            {/* ─── Section 2: Most Picked Heroes ─── */}
+            <SectionHeader icon="flame" title="Most Picked" color="#ef4444" />
+            {isLoading ? <HeroCardSkeleton /> : (
+              <FlatList
+                data={mostPicked}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+                keyExtractor={(item) => `pk-${item.id}`}
+                renderItem={({ item, index }) => (
+                  <PressableScale onPress={() => openHeroModal(item.id)}>
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                      <HeroStatsCard
+                        heroName={item.name}
+                        heroImg={item.img}
+                        winRate={item.winRate}
+                        pickCount={item.picks}
+                        rank={index + 1}
+                        mode="picks"
+                      />
+                    </Animated.View>
+                  </PressableScale>
+                )}
+              />
+            )}
 
-      {/* ─── Section 6: Global Records ─── */}
-      {(records.gpm || records.kills || records.healing) && (
-        <>
-          <SectionHeader icon="medal" title="Global All-Time Records" color="#f59e0b" />
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <RecordCard 
-              title="Highest GPM Ever" 
-              field="gold_per_min" 
-              record={records.gpm} 
-              icon="cash" 
-              color="#eab308" 
-              onPress={openMatchById} 
-            />
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(200).springify()}>
-            <RecordCard 
-              title="Most Kills in a Match" 
-              field="kills" 
-              record={records.kills} 
-              icon="skull" 
-              color="#ef4444" 
-              onPress={openMatchById} 
-            />
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(300).springify()}>
-            <RecordCard 
-              title="Legendary Support Impact" 
-              field="hero_healing" 
-              record={records.healing} 
-              icon="heart" 
-              color="#3b82f6" 
-              onPress={openMatchById} 
-            />
-          </Animated.View>
-        </>
-      )}
+            {/* ─── Section 3: Pro Scene ─── */}
+            <SectionHeader icon="star" title="Pro Scene — Top Picks" color="#8b5cf6" />
+            {isLoading ? <HeroCardSkeleton /> : (
+              <FlatList
+                data={proPicks}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+                keyExtractor={(item) => `pp-${item.id}`}
+                renderItem={({ item, index }) => (
+                  <PressableScale onPress={() => openHeroModal(item.id)}>
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                      <HeroStatsCard
+                        heroName={item.name}
+                        heroImg={item.img}
+                        winRate={item.winRate}
+                        pickCount={item.picks}
+                        rank={index + 1}
+                        mode="picks"
+                      />
+                    </Animated.View>
+                  </PressableScale>
+                )}
+              />
+            )}
 
-      {/* Modals */}
-      <HeroDetailModal
-        hero={selectedHero}
-        visible={heroModalVisible}
-        onClose={() => setHeroModalVisible(false)}
-      />
-      <MatchOverviewModal
-        matchId={selectedMatchId}
-        visible={matchModalVisible}
-        onClose={() => setMatchModalVisible(false)}
-        onPushPlayer={openPlayerDetails}
-      />
+            {/* Pro Bans */}
+            <SectionHeader icon="ban" title="Pro Scene — Most Banned" color="#ef4444" />
+            {isLoading ? <ProBanSkeleton /> : (
+              <>
+                {(isBansExpanded ? proBans : proBans.slice(0, 5)).map((hero, index) => (
+                  <ProBanItem key={`ban-${hero.id}`} hero={hero} index={index} onPress={() => openHeroModal(hero.id)} />
+                ))}
+                
+                {proBans.length > 5 && (
+                  <TouchableOpacity 
+                    onPress={() => setIsBansExpanded(!isBansExpanded)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: 12,
+                      paddingVertical: 12,
+                      backgroundColor: '#1e1e2e',
+                      marginHorizontal: 20,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: '#2a2a3e',
+                      marginBottom: 10
+                    }}
+                  >
+                    <Text style={{ color: '#8b5cf6', fontWeight: '800', marginRight: 6, textTransform: 'uppercase', fontSize: 12 }}>
+                      {isBansExpanded ? 'Show Less' : `Show All (${proBans.length})`}
+                    </Text>
+                    <Ionicons 
+                      name={isBansExpanded ? "chevron-up" : "chevron-down"} 
+                      size={16} 
+                      color="#8b5cf6" 
+                    />
+                  </TouchableOpacity>
+                )}
+              </>
+            )}
 
-      <PlayerDetailModal
-        visible={playerModalVisible}
-        accountId={selectedPlayerId}
-        onClose={() => setPlayerModalVisible(false)}
-        onMatchPress={(id) => {
-          setPlayerModalVisible(false);
-          openMatchById(id);
-        }}
-      />
+            {/* Recent Pro Matches */}
+            <SectionHeader icon="game-controller" title="Recent Pro Matches" color="#3b82f6" />
+            {isLoading ? <ProMatchSkeleton /> : (
+              <FlatList
+                data={proMatchesData}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20 }}
+                keyExtractor={(item) => `pm-${item.match_id}`}
+                renderItem={({ item, index }) => (
+                  <PressableScale onPress={() => openMatchModal(item)}>
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                      <ProMatchCard
+                        radiantName={item.radiant_name}
+                        direName={item.dire_name}
+                        radiantScore={item.radiant_score}
+                        direScore={item.dire_score}
+                        radiantWin={item.radiant_win}
+                        duration={item.duration}
+                        leagueName={item.league_name}
+                        startTime={item.start_time}
+                      />
+                    </Animated.View>
+                  </PressableScale>
+                )}
+              />
+            )}
+
+            {/* ─── Section 4: Live High-MMR Games ─── */}
+            {liveGames.length > 0 && (
+              <>
+                <SectionHeader icon="radio" title="Live High-MMR Games" color="#ef4444" />
+                <FlatList
+                  data={liveGames}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20 }}
+                  keyExtractor={(item) => `live-${item.match_id}`}
+                  renderItem={({ item, index }) => (
+                    <PressableScale onPress={() => openMatchById(item.match_id)}>
+                      <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                        <LiveGameCard game={item} onPress={openMatchById} />
+                      </Animated.View>
+                    </PressableScale>
+                  )}
+
+                />
+              </>
+            )}
+
+            {/* ─── Section 6: Global Records ─── */}
+            {(records.gpm || records.kills || records.healing) && (
+              <>
+                <SectionHeader icon="medal" title="Global All-Time Records" color="#f59e0b" />
+                <Animated.View entering={FadeInDown.delay(100).springify()}>
+                  <RecordCard 
+                    title="Highest GPM Ever" 
+                    field="gold_per_min" 
+                    record={records.gpm} 
+                    icon="cash" 
+                    color="#eab308" 
+                    onPress={openMatchById} 
+                  />
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(200).springify()}>
+                  <RecordCard 
+                    title="Most Kills in a Match" 
+                    field="kills" 
+                    record={records.kills} 
+                    icon="skull" 
+                    color="#ef4444" 
+                    onPress={openMatchById} 
+                  />
+                </Animated.View>
+                <Animated.View entering={FadeInDown.delay(300).springify()}>
+                  <RecordCard 
+                    title="Legendary Support Impact" 
+                    field="hero_healing" 
+                    record={records.healing} 
+                    icon="heart" 
+                    color="#3b82f6" 
+                    onPress={openMatchById} 
+                  />
+                </Animated.View>
+              </>
+            )}
+          </>
+        )}
       </ScrollView>
     </LinearGradient>
   );

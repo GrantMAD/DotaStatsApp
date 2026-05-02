@@ -22,6 +22,7 @@ import GlassModal from '../../src/components/GlassModal';
 import MeshGradient from '../../src/components/MeshGradient';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
+import { useModals } from '../../src/context/ModalContext';
 
 
 export default function ProfileScreen() {
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const { steamAccountId, session, matchLimit } = useSupabaseAuth();
   const { login, isLoading: steamLoading } = useSteamAuth();
   const { setMenuVisible } = useMenu();
+  const { pushModal } = useModals();
   const accountId = steamAccountId ? steamAccountId.toString() : null;
 
   // Friends & Following Data
@@ -42,21 +44,6 @@ export default function ProfileScreen() {
   const isDataLoading = profileLoading || wlLoading || matchesLoading;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Match Details Modal State
-  const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null);
-  const [modalVisible, setModalVisible] = useState(false);
-
-  // Individual Player Detail State
-  const [selectedPlayerId, setSelectedPlayerId] = useState<number | null>(null);
-  const [playerModalVisible, setPlayerModalVisible] = useState(false);
-
-  // Queries for Player Detail Modal
-  const { data: selectedPlayerProfile, isLoading: pProfileLoading } = usePlayerProfile(selectedPlayerId);
-  const { data: selectedPlayerWL, isLoading: pWLLoading } = usePlayerWinLoss(selectedPlayerId);
-  const { data: selectedPlayerMatches = [], isLoading: pMatchesLoading } = useRecentMatches(selectedPlayerId, 5);
-
-  const playerDetailsLoading = pProfileLoading || pWLLoading || pMatchesLoading;
-
   const onRefresh = async () => {
     setIsRefreshing(true);
     await Promise.all([
@@ -68,14 +55,12 @@ export default function ProfileScreen() {
   };
 
   const handleMatchPress = (matchId: number) => {
-    setSelectedMatchId(matchId);
-    setModalVisible(true);
+    pushModal('match', matchId);
   };
 
   const handlePlayerPress = (pAccountId: number | null) => {
     if (!pAccountId) return;
-    setSelectedPlayerId(pAccountId);
-    setPlayerModalVisible(true);
+    pushModal('player', pAccountId);
   };
 
   if (isDataLoading && !profile && accountId) {
@@ -147,46 +132,6 @@ export default function ProfileScreen() {
           matchesLimit={matchLimit}
         />
       )}
-
-      {/* Match Details Modal */}
-      <MatchOverviewModal 
-        visible={modalVisible} 
-        matchId={selectedMatchId} 
-        onClose={() => setModalVisible(false)} 
-        onPushPlayer={(id) => handlePlayerPress(Number(id))}
-      />
-
-      {/* Player Detail Modal */}
-      {/* Player Profile Drill-down Modal */}
-      <GlassModal
-        visible={playerModalVisible}
-        onClose={() => setPlayerModalVisible(false)}
-      >
-            {playerDetailsLoading ? (
-              <PlayerProfileSkeleton />
-            ) : selectedPlayerProfile ? (
-              <View className="flex-1">
-                <View className="p-4 border-b border-zinc-800 flex-row justify-between items-center bg-[#1e1e1e]">
-                   <Text className="text-white font-outfit-bold ml-2">Player Details</Text>
-                   <TouchableOpacity onPress={() => setPlayerModalVisible(false)} className="p-2">
-                     <Ionicons name="close" size={28} color="white" />
-                   </TouchableOpacity>
-                </View>
-                <PlayerOverviewContent
-                  accountId={selectedPlayerProfile.profile.account_id.toString()}
-                  profile={selectedPlayerProfile}
-                  wl={selectedPlayerWL || null}
-                  matches={selectedPlayerMatches}
-                  onMatchPress={(id) => {
-                    setPlayerModalVisible(false);
-                    handleMatchPress(id);
-                  }}
-                />
-              </View>
-            ) : (
-              <View className="flex-1 justify-center items-center"><Text className="text-red-500">Failed to load data.</Text></View>
-            )}
-      </GlassModal>
     </LinearGradient>
   );
 }
