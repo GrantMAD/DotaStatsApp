@@ -282,3 +282,14 @@ export function usePlayerCounts(accountId: string | number | null) {
     enabled: !!accountId,
   });
 }
+
+/**
+ * Hook to fetch filtered player matches.
+ */
+export function usePlayerMatches(accountId: string | number | null, filters: any = {}) {
+  return useQuery({
+    queryKey: ['playerMatches', accountId, filters],
+    queryFn: () => (accountId ? openDotaApi.getPlayerMatches(accountId, filters) : []),
+    enabled: !!accountId,
+  });
+}

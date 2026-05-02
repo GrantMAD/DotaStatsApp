@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PlayerOverviewContent } from './PlayerOverviewContent';
-import { usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../hooks/useOpenDota';
+import { usePlayerProfile, usePlayerWinLoss } from '../hooks/useOpenDota';
 import { useRouter } from 'expo-router';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 
@@ -22,16 +22,14 @@ export default function PlayerDetailModal({
   const { steamAccountId } = useSupabaseAuth();
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(visible ? accountId : null);
   const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(visible ? accountId : null);
-  const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(visible ? accountId : null, 10);
 
-  const loading = profileLoading || wlLoading || matchesLoading;
+  const loading = profileLoading || wlLoading;
   const isPrivate = profile && !profile.last_match_time;
 
   const onRefresh = async () => {
     await Promise.all([
       refetchProfile(),
-      refetchWl(),
-      refetchMatches()
+      refetchWl()
     ]);
   };
 
@@ -60,7 +58,6 @@ export default function PlayerDetailModal({
                 accountId={accountId!.toString()}
                 profile={profile}
                 wl={wl || null}
-                matches={matches}
                 onMatchPress={onMatchPress}
                 onRefresh={onRefresh}
                 refreshing={loading}

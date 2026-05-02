@@ -20,8 +20,10 @@ import {
   getPlayerWinLoss,
   getPlayerTotals,
   getPlayerCounts,
-  HeroStats
+  HeroStats,
+  PlayerMatchFilters
 } from '../services/opendota';
+import MatchFilters from './MatchFilters';
 import { getHeroImageUrl, HEROES, REGIONS } from '../services/constants';
 import { RankBadge } from './RankBadge';
 import PressableScale from './PressableScale';
@@ -36,10 +38,12 @@ import {
   usePlayerProfile,
   usePlayerWinLoss,
   useRecentMatches,
-  useHeroStats
+  useHeroStats,
+  usePlayerMatches
 } from '../hooks/useOpenDota';
 import { useModals } from '../context/ModalContext';
 import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
+import PerformanceTrends from './PerformanceTrends';
 
 function LifetimeStatsSkeleton() {
   return (
@@ -83,7 +87,6 @@ interface PlayerOverviewContentProps {
   accountId: number | string;
   profile: PlayerProfile | null;
   wl: WinLossStats | null;
-  matches: RecentMatch[];
   onMatchPress: (matchId: number) => void;
   onRefresh?: () => void;
   refreshing?: boolean;
@@ -93,8 +96,6 @@ interface PlayerOverviewContentProps {
   onStatsPress?: () => void;
   onComparePress?: () => void;
   isPrivate?: boolean;
-  matchesLimit?: number;
-  setMatchesLimit?: (limit: number) => void;
 }
 
 const MatchItem = React.memo(({ item, index, onMatchPress }: { item: RecentMatch, index: number, onMatchPress: (id: number) => void }) => {
@@ -151,7 +152,6 @@ export function PlayerOverviewContent({
   accountId,
   profile,
   wl,
-  matches,
   onMatchPress,
   onRefresh,
   refreshing = false,
@@ -161,10 +161,20 @@ export function PlayerOverviewContent({
   onStatsPress,
   onComparePress,
   isPrivate = false,
-  matchesLimit = 20,
-  setMatchesLimit
 }: PlayerOverviewContentProps) {
   const { accountId: currentUserId } = useSteamAuth();
+  const [limit, setLimit] = useState(20);
+  const [filters, setFilters] = useState<PlayerMatchFilters>({ limit });
+  const { data: filteredMatches = [], isLoading: matchesLoading } = usePlayerMatches(accountId, filters);
+  const { data: richRecentMatches = [], isLoading: richLoading } = useRecentMatches(accountId, limit);
+  
+  const displayMatches = filteredMatches;
+  
+  // Use rich data for trends if no filters are applied
+  const trendMatches = (filters.win !== undefined || filters.date !== undefined || filters.game_mode !== undefined)
+    ? filteredMatches 
+    : richRecentMatches;
+
   const peer = useEncounterHistory(currentUserId, accountId);
   const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
   const { data: peers = [], isLoading: peersLoading } = usePlayerPeers(accountId);
@@ -186,11 +196,16 @@ export function PlayerOverviewContent({
   const [sideStats, setSideStats] = useState<CategoryStats[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
 
+  const isTrendsLoading = (filters.win !== undefined || filters.date !== undefined || filters.game_mode !== undefined)
+    ? matchesLoading || statsLoading
+    : richLoading || statsLoading;
+  const [recentView, setRecentView] = useState<'matches' | 'trends'>('matches');
+
   useEffect(() => {
-    if (activeTab === 'Lifetime' && totals.length === 0) {
+    if ((activeTab === 'Lifetime' || recentView === 'trends') && totals.length === 0) {
       loadLifetimeData();
     }
-  }, [activeTab, accountId]);
+  }, [activeTab, recentView, accountId]);
 
   const loadLifetimeData = async () => {
     try {
@@ -660,15 +675,57 @@ export function PlayerOverviewContent({
     <View className="flex-1">
       {activeTab === 'Recent' ? (
         <FlatList
-          data={matches}
+          data={recentView === 'matches' ? displayMatches : []}
           keyExtractor={(item) => item.match_id.toString()}
           renderItem={renderMatch}
-          ListHeaderComponent={memoizedHeader}
+          ListHeaderComponent={
+            <View>
+              {memoizedHeader}
+              {!isPrivate && (
+                <View>
+                  <View className="flex-row px-4 mb-2 mt-2">
+                    <TouchableOpacity 
+                      onPress={() => setRecentView('matches')}
+                      className={`flex-1 py-2 items-center rounded-l-xl border-y border-l ${recentView === 'matches' ? 'bg-purple-500 border-purple-400' : 'bg-zinc-800/50 border-zinc-700'}`}
+                    >
+                      <Text className={`text-[10px] font-outfit-black uppercase ${recentView === 'matches' ? 'text-white' : 'text-gray-500'}`}>Match History</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => setRecentView('trends')}
+                      className={`flex-1 py-2 items-center rounded-r-xl border ${recentView === 'trends' ? 'bg-purple-500 border-purple-400' : 'bg-zinc-800/50 border-zinc-700'}`}
+                    >
+                      <Text className={`text-[10px] font-outfit-black uppercase ${recentView === 'trends' ? 'text-white' : 'text-gray-500'}`}>Performance Trends</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {recentView === 'matches' ? (
+                    <MatchFilters 
+                      filters={filters} 
+                      onFilterChange={setFilters} 
+                    />
+                  ) : (
+                    <View className="mt-4 px-4">
+                      <PerformanceTrends 
+                        matches={trendMatches} 
+                        totals={totals} 
+                        loading={isTrendsLoading}
+                      />
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          }
           ListFooterComponent={
             <View style={{ paddingBottom: 60, alignItems: 'center' }}>
-              {setMatchesLimit && matches.length >= matchesLimit && (
+              {matchesLoading && <ActivityIndicator color="#8b5cf6" style={{ marginBottom: 20 }} />}
+              {recentView === 'matches' && displayMatches.length >= limit && (
                 <TouchableOpacity 
-                  onPress={() => setMatchesLimit(matchesLimit + 20)}
+                  onPress={() => {
+                    const newLimit = limit + 20;
+                    setLimit(newLimit);
+                    setFilters(prev => ({ ...prev, limit: newLimit }));
+                  }}
                   style={{ 
                     backgroundColor: '#1e1e2e', 
                     paddingVertical: 12, 

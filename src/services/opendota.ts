@@ -51,6 +51,14 @@ export interface RecentMatch {
   kills: number;
   deaths: number;
   assists: number;
+  gold_per_min: number;
+  xp_per_min: number;
+  hero_damage?: number;
+  tower_damage?: number;
+  last_hits?: number;
+  hero_healing?: number;
+  lane?: number | null;
+  lane_role?: number | null;
 }
 
 export interface ChatMessage {
@@ -309,6 +317,16 @@ export async function getPlayerTotals(accountId: string | number, params: Record
   }
 }
 
+export interface PlayerMatchFilters {
+  win?: number;
+  hero_id?: number;
+  game_mode?: number;
+  lobby_type?: number;
+  date?: number;
+  limit?: number;
+  offset?: number;
+}
+
 /**
  * Fetches aggregated counts for various categories (region, game_mode, etc.)
  */
@@ -324,16 +342,40 @@ export async function getPlayerCounts(accountId: string | number): Promise<Playe
 }
 
 /**
- * Fetches recent matches for the player with a custom limit.
+ * Fetches matches for a player with filters.
  */
-export async function getRecentMatches(accountId: string | number, limit: number = 20): Promise<RecentMatch[]> {
+export async function getPlayerMatches(accountId: string | number, filters: PlayerMatchFilters = {}): Promise<RecentMatch[]> {
   try {
-    // The /matches endpoint is more flexible than /recentMatches for larger limits
-    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/matches?limit=${limit}`);
+    const params = new URLSearchParams();
+    if (filters.limit) params.append('limit', filters.limit.toString());
+    if (filters.offset) params.append('offset', filters.offset.toString());
+    if (filters.win !== undefined) params.append('win', filters.win.toString());
+    if (filters.hero_id) params.append('hero_id', filters.hero_id.toString());
+    if (filters.game_mode) params.append('game_mode', filters.game_mode.toString());
+    if (filters.lobby_type) params.append('lobby_type', filters.lobby_type.toString());
+    if (filters.date) params.append('date', filters.date.toString());
+
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/matches?${params.toString()}`);
     if (!response.ok) throw new Error('Failed to fetch matches');
     return await response.json();
   } catch (error) {
-    console.error('Error fetching matches:', error);
+    console.error('Error fetching filtered matches:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetches recent matches for the player with a custom limit.
+ * (Provides richer data like GPM/XPM than the /matches endpoint)
+ */
+export async function getRecentMatches(accountId: string | number, limit: number = 20): Promise<RecentMatch[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/recentMatches`);
+    if (!response.ok) throw new Error('Failed to fetch recent matches');
+    const data = await response.json();
+    return data.slice(0, limit);
+  } catch (error) {
+    console.error('Error fetching recent matches:', error);
     return [];
   }
 }
@@ -626,6 +668,7 @@ export const openDotaApi = {
   getPlayerWinLoss,
   getPlayerTotals,
   getPlayerCounts,
+  getPlayerMatches,
   getRecentMatches,
   getPlayerPeers,
   getMatchDetails,

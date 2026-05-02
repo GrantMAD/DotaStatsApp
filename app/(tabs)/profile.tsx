@@ -13,7 +13,7 @@ import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
-import { usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../../src/hooks/useOpenDota';
+import { usePlayerProfile, usePlayerWinLoss } from '../../src/hooks/useOpenDota';
 import { useFriends } from '../../src/hooks/useFriends';
 import { useRouter } from 'expo-router';
 import Skeleton, { PlayerProfileSkeleton } from '../../src/components/Skeleton';
@@ -39,17 +39,15 @@ export default function ProfileScreen() {
   // Main Profile Queries
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(accountId);
   const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(accountId);
-  const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(accountId, matchLimit);
 
-  const isDataLoading = profileLoading || wlLoading || matchesLoading;
+  const isDataLoading = profileLoading || wlLoading;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const onRefresh = async () => {
     setIsRefreshing(true);
     await Promise.all([
       refetchProfile(),
-      refetchWl(),
-      refetchMatches()
+      refetchWl()
     ]);
     setIsRefreshing(false);
   };
@@ -121,7 +119,6 @@ export default function ProfileScreen() {
           accountId={accountId!}
           profile={profile || null}
           wl={wl || null}
-          matches={matches}
           onMatchPress={handleMatchPress}
           onRefresh={onRefresh}
           refreshing={isRefreshing}
@@ -130,7 +127,6 @@ export default function ProfileScreen() {
           followingCount={following.length}
           onStatsPress={() => router.push('/friends')}
           onComparePress={() => router.push('/compare?p1=' + accountId)}
-          matchesLimit={matchLimit}
         />
       )}
     </LinearGradient>
