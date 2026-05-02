@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import GlassHeader from '../../src/components/GlassHeader';
 import GlassModal from '../../src/components/GlassModal';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
+import { useSteamAuth } from '../../src/hooks/useSteamAuth';
 import { useMenu } from './_layout';
 import { supabase } from '../../src/services/supabase';
 import Toast from 'react-native-toast-message';
@@ -16,19 +17,22 @@ interface SettingsItemProps {
   onPress?: (val?: any) => void;
   type?: 'toggle' | 'link' | 'text' | 'danger';
   color?: string;
+  loading?: boolean;
+  sublabel?: string;
 }
 
-const SettingsItem = ({ icon, label, value, onPress, type = 'link', color = '#8b5cf6' }: SettingsItemProps) => (
+const SettingsItem = ({ icon, label, value, onPress, type = 'link', color = '#8b5cf6', loading = false, sublabel }: SettingsItemProps) => (
   <TouchableOpacity 
     onPress={onPress}
-    disabled={!onPress}
+    disabled={!onPress || loading}
     style={{ 
       flexDirection: 'row', 
       alignItems: 'center', 
       paddingVertical: 14,
       paddingHorizontal: 16,
       borderBottomWidth: 1,
-      borderBottomColor: '#2a2a3e'
+      borderBottomColor: '#2a2a3e',
+      opacity: loading ? 0.6 : 1
     }}
   >
     <View style={{ 
@@ -40,10 +44,17 @@ const SettingsItem = ({ icon, label, value, onPress, type = 'link', color = '#8b
       justifyContent: 'center',
       marginRight: 16
     }}>
-      <Ionicons name={icon as any} size={20} color={type === 'danger' ? '#ef4444' : color} />
+      {loading ? (
+        <ActivityIndicator size="small" color={color} />
+      ) : (
+        <Ionicons name={icon as any} size={20} color={type === 'danger' ? '#ef4444' : color} />
+      )}
     </View>
     <View style={{ flex: 1 }}>
       <Text style={{ color: type === 'danger' ? '#ef4444' : '#fff', fontSize: 16, fontFamily: 'Outfit_600SemiBold' }}>{label}</Text>
+      {sublabel && (
+        <Text style={{ color: '#888', fontSize: 12, fontFamily: 'Outfit_400Regular', marginTop: 2 }}>{sublabel}</Text>
+      )}
     </View>
     {type === 'toggle' ? (
       <Switch 
@@ -86,9 +97,11 @@ export default function SettingsScreen() {
     signOut, 
     refreshProfile 
   } = useSupabaseAuth();
+  const { login: steamLogin, isLoading: steamLoading } = useSteamAuth();
   const { setMenuVisible } = useMenu();
   const [loading, setLoading] = useState(false);
   const [limitModalVisible, setLimitModalVisible] = useState(false);
+  const [steamModalVisible, setSteamModalVisible] = useState(false);
 
   const handleUnlinkSteam = async () => {
     if (!user) return;
@@ -252,9 +265,18 @@ export default function SettingsScreen() {
           <SettingsItem 
             icon="logo-steam" 
             label="Steam Connection" 
-            value={steamAccountId ? 'Linked' : 'Not Linked'}
+            sublabel={steamAccountId ? "Your account is linked" : undefined}
+            value={steamAccountId ? `ID: ${steamAccountId}` : 'Not Linked'}
             color={steamAccountId ? '#22c55e' : '#555'}
-            onPress={steamAccountId ? handleUnlinkSteam : undefined}
+            onPress={() => {
+              console.log('Steam Connection pressed. steamAccountId:', steamAccountId);
+              if (steamAccountId) {
+                setSteamModalVisible(true);
+              } else {
+                steamLogin();
+              }
+            }}
+            loading={steamLoading}
           />
         </View>
 
@@ -370,6 +392,72 @@ export default function SettingsScreen() {
               )}
             </TouchableOpacity>
           ))}
+        </View>
+      </GlassModal>
+
+      <GlassModal
+        visible={steamModalVisible}
+        onClose={() => setSteamModalVisible(false)}
+      >
+        <View style={{ padding: 24 }}>
+          <View style={{ alignItems: 'center', marginBottom: 20 }}>
+            <View style={{ 
+              width: 64, 
+              height: 64, 
+              borderRadius: 20, 
+              backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              marginBottom: 16
+            }}>
+              <Ionicons name="logo-steam" size={32} color="#22c55e" />
+            </View>
+            <Text style={{ color: '#fff', fontSize: 24, fontFamily: 'Outfit_900Black', textAlign: 'center' }}>
+              Steam Connected
+            </Text>
+            <Text style={{ color: '#888', fontSize: 14, fontFamily: 'Outfit_400Regular', marginTop: 4 }}>
+              Account ID: {steamAccountId}
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            onPress={() => {
+              setSteamModalVisible(false);
+              steamLogin();
+            }}
+            style={{
+              backgroundColor: '#1e1e2e',
+              padding: 16,
+              borderRadius: 12,
+              marginBottom: 12,
+              borderWidth: 1,
+              borderColor: '#2a2a3e',
+              flexDirection: 'row',
+              alignItems: 'center'
+            }}
+          >
+            <Ionicons name="swap-horizontal" size={20} color="#8b5cf6" style={{ marginRight: 12 }} />
+            <Text style={{ color: '#fff', fontSize: 16, fontFamily: 'Outfit_600SemiBold' }}>Change Account</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => {
+              setSteamModalVisible(false);
+              handleUnlinkSteam();
+            }}
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              padding: 16,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: 'rgba(239, 68, 68, 0.3)',
+              flexDirection: 'row',
+              alignItems: 'center'
+            }}
+          >
+            <Ionicons name="trash-outline" size={20} color="#ef4444" style={{ marginRight: 12 }} />
+            <Text style={{ color: '#ef4444', fontSize: 16, fontFamily: 'Outfit_600SemiBold' }}>Unlink Account</Text>
+          </TouchableOpacity>
         </View>
       </GlassModal>
     </LinearGradient>

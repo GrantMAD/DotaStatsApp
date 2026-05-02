@@ -50,8 +50,11 @@ export function SteamAuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async () => {
     try {
+      console.log('Initiating Steam login...');
       setIsLoading(true);
       const redirectUrl = AuthSession.makeRedirectUri();
+      console.log('Redirect URL:', redirectUrl);
+      
       const params = new URLSearchParams({
         'openid.ns': 'http://specs.openid.net/auth/2.0',
         'openid.mode': 'checkid_setup',
@@ -62,9 +65,13 @@ export function SteamAuthProvider({ children }: { children: ReactNode }) {
       });
 
       const authUrl = `${STEAM_OPENID_URL}?${params.toString()}`;
+      console.log('Auth URL:', authUrl);
+      
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+      console.log('Auth Result:', result);
 
       if (result.type === 'success' && result.url) {
+        console.log('Login success, parsing URL:', result.url);
         const urlParams = new URL(result.url).searchParams;
         const claimedId = urlParams.get('openid.claimed_id');
         

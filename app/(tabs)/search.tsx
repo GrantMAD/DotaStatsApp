@@ -9,6 +9,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSteamAuth } from '../../src/hooks/useSteamAuth';
+import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
+import { useSearchPlayers, usePlayerPeers, useHeroStats } from '../../src/hooks/useOpenDota';
+import { useFriends } from '../../src/hooks/useFriends';
+import { supabase } from '../../src/services/supabase';
 import {
   SearchResult,
   Peer,
@@ -17,6 +21,10 @@ import {
 import { useMenu } from './_layout';
 import { getHeroImageUrl } from '../../src/services/constants';
 import { useModals } from '../../src/context/ModalContext';
+import GlassHeader from '../../src/components/GlassHeader';
+import NotificationBell from '../../src/components/NotificationBell';
+import PressableScale from '../../src/components/PressableScale';
+import Skeleton from '../../src/components/Skeleton';
 
 function SearchSkeleton() {
   return (
@@ -48,9 +56,9 @@ function SearchSkeleton() {
 export default function SearchScreen() {
   const router = useRouter();
   const { q } = useLocalSearchParams<{ q: string }>();
-  const { accountId: steamAccountId } = useSteamAuth();
-  const { user, session } = useSupabaseAuth();
+  const { user, session, steamAccountId } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
+  const { pushModal } = useModals();
   const [query, setQuery] = useState(q || '');
   const [activeQuery, setActiveQuery] = useState(q || '');
   const [searchMode, setSearchMode] = useState<'global' | 'steam'>('global');
@@ -230,28 +238,60 @@ export default function SearchScreen() {
                 Find players, heroes, or match IDs from the archives.
               </Text>
 
-              {steamAccountId && (
-                <View className="flex-row mb-4 bg-[#1e1e1e] p-1 rounded-xl border border-zinc-800">
-                  <TouchableOpacity
-                    onPress={() => setSearchMode('global')}
-                    className={`flex-1 py-2 rounded-lg items-center flex-row justify-center ${searchMode === 'global' ? 'bg-gamingAccent' : ''}`}
-                  >
-                    <Ionicons name="globe-outline" size={16} color={searchMode === 'global' ? "white" : "#9ca3af"} />
-                    <Text className={`font-outfit-bold text-xs ml-2 ${searchMode === 'global' ? 'text-white' : 'text-gray-400'}`}>
-                      GLOBAL
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setSearchMode('steam')}
-                    className={`flex-1 py-2 rounded-lg items-center flex-row justify-center ${searchMode === 'steam' ? 'bg-gamingAccent' : ''}`}
-                  >
-                    <Ionicons name="logo-steam" size={16} color={searchMode === 'steam' ? "white" : "#9ca3af"} />
-                    <Text className={`font-outfit-bold text-xs ml-2 ${searchMode === 'steam' ? 'text-white' : 'text-gray-400'}`}>
-                      STEAM FRIENDS
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              <View style={{
+                flexDirection: 'row',
+                marginBottom: 16,
+                backgroundColor: '#1e1e1e',
+                padding: 4,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#2a2a3e'
+              }}>
+                <TouchableOpacity
+                  onPress={() => setSearchMode('global')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    backgroundColor: searchMode === 'global' ? '#8b5cf6' : 'transparent'
+                  }}
+                >
+                  <Ionicons name="globe-outline" size={16} color={searchMode === 'global' ? "white" : "#9ca3af"} />
+                  <Text style={{
+                    fontFamily: 'Outfit_700Bold',
+                    fontSize: 12,
+                    marginLeft: 8,
+                    color: searchMode === 'global' ? 'white' : '#9ca3af'
+                  }}>
+                    GLOBAL
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setSearchMode('steam')}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    backgroundColor: searchMode === 'steam' ? '#8b5cf6' : 'transparent'
+                  }}
+                >
+                  <Ionicons name="logo-steam" size={16} color={searchMode === 'steam' ? "white" : "#9ca3af"} />
+                  <Text style={{
+                    fontFamily: 'Outfit_700Bold',
+                    fontSize: 12,
+                    marginLeft: 8,
+                    color: searchMode === 'steam' ? 'white' : '#9ca3af'
+                  }}>
+                    STEAM FRIENDS
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={{
                 flexDirection: 'row',
@@ -309,9 +349,23 @@ export default function SearchScreen() {
               </View>
 
               {searchMode === 'steam' && (
-                <View className="bg-blue-900/20 p-4 rounded-xl border border-blue-500/30 flex-row items-center">
+                <View style={{
+                  backgroundColor: 'rgba(30, 58, 138, 0.2)',
+                  padding: 16,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: 'rgba(59, 130, 246, 0.3)',
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
                   <Ionicons name="information-circle" size={24} color="#60a5fa" />
-                  <Text className="text-blue-200 text-xs font-outfit-semibold ml-3 flex-1">
+                  <Text style={{
+                    color: '#bfdbfe',
+                    fontSize: 12,
+                    fontFamily: 'Outfit_600SemiBold',
+                    marginLeft: 12,
+                    flex: 1
+                  }}>
                     Showing players who have played with you and are registered on the app.
                   </Text>
                 </View>
@@ -333,13 +387,27 @@ export default function SearchScreen() {
                   <Text style={{ color: '#9ca3af', textAlign: 'center', fontFamily: 'Outfit_600SemiBold', fontSize: 18 }}>
                     {searchMode === 'global'
                       ? (activeQuery ? `No results found for "${activeQuery}"` : "Who are you looking for?")
-                      : "No Steam friends found using the app."}
+                      : (!steamAccountId ? "Steam Not Linked" : "No Friends Found")}
                   </Text>
                   <Text style={{ color: '#6b7280', textAlign: 'center', marginTop: 8, fontFamily: 'Outfit_400Regular' }}>
                     {searchMode === 'global'
                       ? "Search for players by name or Steam ID."
-                      : "We've matched your Steam frequent teammates with our users."}
+                      : (!steamAccountId ? "Link your Steam account to find your frequent teammates here." : "We've matched your Steam frequent teammates with our users.")}
                   </Text>
+                  {!steamAccountId && searchMode === 'steam' && (
+                    <TouchableOpacity 
+                      onPress={() => router.push('/profile')}
+                      style={{
+                        marginTop: 20,
+                        backgroundColor: '#8b5cf6',
+                        paddingHorizontal: 20,
+                        paddingVertical: 10,
+                        borderRadius: 10
+                      }}
+                    >
+                      <Text style={{ color: 'white', fontFamily: 'Outfit_700Bold' }}>Go to Profile</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
 

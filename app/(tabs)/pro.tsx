@@ -34,23 +34,13 @@ type SubTabType = 'Premium' | 'Professional' | 'Amateur';
 
 function ProSkeleton() {
   return (
-    <View style={{ paddingHorizontal: 20 }}>
+    <View className="px-5">
       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
-        <View key={i} style={{
-          backgroundColor: '#1e1e2e',
-          height: 80,
-          borderRadius: 12,
-          marginBottom: 12,
-          padding: 12,
-          flexDirection: 'row',
-          alignItems: 'center',
-          borderWidth: 1,
-          borderColor: '#2a2a3e'
-        }}>
+        <View key={i} className="bg-gamingCard h-20 rounded-xl mb-3 p-3 flex-row items-center border border-[#2a2a3e]">
           <Skeleton width={50} height={50} borderRadius={8} style={{ marginRight: 12 }} />
-          <View style={{ flex: 1 }}>
-             <Skeleton width="60%" height={18} borderRadius={4} style={{ marginBottom: 8 }} />
-             <Skeleton width="40%" height={12} borderRadius={4} />
+          <View className="flex-1">
+            <Skeleton width="60%" height={18} borderRadius={4} style={{ marginBottom: 8 }} />
+            <Skeleton width="40%" height={12} borderRadius={4} />
           </View>
           <Skeleton width={30} height={20} borderRadius={6} />
         </View>
@@ -167,16 +157,17 @@ export default function ProSceneScreen() {
           Stay updated with the professional Dota 2 scene.
         </Text>
       </View>
-      <View
-        style={{
-          flexDirection: 'row',
-          backgroundColor: '#1e1e2e',
-          padding: 4,
-          borderRadius: 12,
-          marginBottom: 16,
-          marginHorizontal: 20,
-        }}
-      >
+
+      <View style={{ 
+        flexDirection: 'row', 
+        backgroundColor: '#1e1e2e', 
+        padding: 4, 
+        borderRadius: 12, 
+        marginBottom: 16, 
+        marginHorizontal: 20,
+        borderWidth: 1,
+        borderColor: '#2a2a3e'
+      }}>
         {(['Tournaments', 'Teams', 'Players'] as TabType[]).map((tab) => (
           <PressableScale
             key={tab}
@@ -188,23 +179,22 @@ export default function ProSceneScreen() {
               flex: 1,
               paddingVertical: 10,
               alignItems: 'center',
-              backgroundColor: activeTab === tab ? '#8b5cf6' : 'transparent',
-              borderRadius: 10,
+              borderRadius: 8,
+              backgroundColor: activeTab === tab ? '#8b5cf6' : 'transparent'
             }}
           >
-            <Text
-              style={{
-                color: activeTab === tab ? '#fff' : '#666',
-                fontSize: 12,
-                fontWeight: '800',
-                textTransform: 'uppercase',
-              }}
-            >
+            <Text style={{ 
+              fontSize: 12, 
+              fontFamily: 'Outfit_800ExtraBold', 
+              textTransform: 'uppercase',
+              color: activeTab === tab ? 'white' : '#4b5563'
+            }}>
               {tab}
             </Text>
           </PressableScale>
         ))}
       </View>
+
       <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 20 }}>
         {(['Premium', 'Professional', 'Amateur'] as SubTabType[]).map((tab) => (
           <PressableScale
@@ -217,55 +207,58 @@ export default function ProSceneScreen() {
               paddingHorizontal: 16,
               paddingVertical: 6,
               marginHorizontal: 4,
-              backgroundColor: subTab === tab ? '#8b5cf6' : '#1e1e2e',
               borderRadius: 20,
               borderWidth: 1,
-              borderColor: subTab === tab ? '#8b5cf6' : '#2a2a3e',
+              backgroundColor: subTab === tab ? '#8b5cf6' : '#1e1e2e',
+              borderColor: subTab === tab ? '#8b5cf6' : '#2a2a3e'
             }}
           >
-            <Text
-              style={{
-                color: subTab === tab ? '#fff' : '#666',
-                fontSize: 10,
-                fontWeight: '900',
-                textTransform: 'uppercase',
-              }}
-            >
+            <Text style={{ 
+              fontSize: 10, 
+              fontFamily: 'Outfit_900Black', 
+              textTransform: 'uppercase',
+              color: subTab === tab ? 'white' : '#4b5563'
+            }}>
               {tab}
             </Text>
           </PressableScale>
         ))}
       </View>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: '#1e1e2e',
-          borderRadius: 12,
-          paddingHorizontal: 12,
-          height: 48,
-          borderWidth: 1,
-          borderColor: '#2a2a3e',
-          marginHorizontal: 20,
-        }}
-      >
-        <Ionicons name="search" size={18} color="#666" />
+
+      <View style={{ 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: '#1e1e2e', 
+        borderRadius: 12, 
+        paddingHorizontal: 12, 
+        height: 48, 
+        borderWidth: 1, 
+        borderColor: '#2a2a3e', 
+        marginHorizontal: 20 
+      }}>
+        <Ionicons name="search" size={18} color="#4b5563" />
         <TextInput
           placeholder={
             activeTab === 'Tournaments'
               ? `Search ${subTab} leagues...`
               : activeTab === 'Teams'
-              ? `Search ${subTab} teams...`
-              : `Search ${subTab} players...`
+                ? `Search ${subTab} teams...`
+                : `Search ${subTab} players...`
           }
-          placeholderTextColor="#444"
+          placeholderTextColor="#4b5563"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          style={{ flex: 1, color: '#fff', marginLeft: 10, fontSize: 14 }}
+          style={{
+            flex: 1,
+            color: '#fff',
+            marginLeft: 10,
+            fontSize: 14,
+            fontFamily: 'Outfit_400Regular'
+          }}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color="#444" />
+            <Ionicons name="close-circle" size={18} color="#4b5563" />
           </TouchableOpacity>
         )}
       </View>
@@ -276,10 +269,10 @@ export default function ProSceneScreen() {
       colors={['#1a1a2e', '#121212']}
       style={{ flex: 1 }}
     >
-      <GlassHeader 
+      <GlassHeader
         leftComponent={
           session ? (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setMenuVisible(true)}
               style={{ padding: 8, marginLeft: -8 }}
             >
@@ -287,12 +280,12 @@ export default function ProSceneScreen() {
             </TouchableOpacity>
           ) : undefined
         }
-        rightComponent={<NotificationBell />} 
+        rightComponent={<NotificationBell />}
       />
 
       <View style={{ flex: 1 }}>
         {loading ? (
-          <View style={{ marginTop: 20 }}>
+          <View className="mt-5">
             <ProSkeleton />
           </View>
         ) : (
@@ -301,8 +294,8 @@ export default function ProSceneScreen() {
               activeTab === 'Tournaments'
                 ? filteredLeagues
                 : activeTab === 'Teams'
-                ? filteredTeams
-                : filteredPlayers
+                  ? filteredTeams
+                  : filteredPlayers
             }
             keyExtractor={(item: any) => {
               if (activeTab === 'Tournaments') return `l-${item.leagueid}`;
@@ -345,9 +338,9 @@ export default function ProSceneScreen() {
               }
             }}
             ListEmptyComponent={
-              <View style={{ padding: 40, alignItems: 'center' }}>
+              <View className="p-10 items-center">
                 <Ionicons name="search-outline" size={48} color="#1e1e2e" />
-                <Text style={{ color: '#666', marginTop: 16, textAlign: 'center' }}>
+                <Text className="text-zinc-600 mt-4 text-center">
                   No {activeTab.toLowerCase()} found matching "{searchQuery}"
                 </Text>
               </View>
