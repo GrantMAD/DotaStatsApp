@@ -1,3 +1,5 @@
+export const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com';
+
 /**
  * Helper to map Hero IDs to localized names.
  * Data source: https://api.opendota.com/api/heroes
@@ -271,9 +273,9 @@ export const RANK_NAMES: Record<number, string> = {
  */
 export function getHeroImageUrl(heroId: number): string {
   const hero = HEROES[heroId];
-  if (!hero) return "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/unknown.png";
+  if (!hero) return `${STEAM_CDN_BASE}/apps/dota2/images/dota_react/heroes/unknown.png`;
   const shortName = hero.name.replace("npc_dota_hero_", "");
-  return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/heroes/${shortName}.png`;
+  return `${STEAM_CDN_BASE}/apps/dota2/images/dota_react/heroes/${shortName}.png`;
 }
 
 /**

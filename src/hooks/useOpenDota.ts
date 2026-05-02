@@ -260,3 +260,25 @@ export function useMatchDetails(matchId: number | null) {
     enabled: !!matchId,
   });
 }
+
+/**
+ * Hook to fetch player totals.
+ */
+export function usePlayerTotals(accountId: string | number | null) {
+  return useQuery({
+    queryKey: ['playerTotals', accountId],
+    queryFn: () => (accountId ? openDotaApi.getPlayerTotals(accountId) : []),
+    enabled: !!accountId,
+  });
+}
+
+/**
+ * Hook to fetch player counts.
+ */
+export function usePlayerCounts(accountId: string | number | null) {
+  return useQuery({
+    queryKey: ['playerCounts', accountId],
+    queryFn: () => (accountId ? openDotaApi.getPlayerCounts(accountId) : null),
+    enabled: !!accountId,
+  });
+}

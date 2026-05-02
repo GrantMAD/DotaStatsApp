@@ -5,6 +5,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { PlayerOverviewContent } from './PlayerOverviewContent';
 import { usePlayerProfile, usePlayerWinLoss, useRecentMatches } from '../hooks/useOpenDota';
+import { useRouter } from 'expo-router';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 
 interface PlayerDetailModalProps {
   visible: boolean;
@@ -16,6 +18,8 @@ interface PlayerDetailModalProps {
 export default function PlayerDetailModal({
   visible, accountId, onClose, onMatchPress
 }: PlayerDetailModalProps) {
+  const router = useRouter();
+  const { steamAccountId } = useSupabaseAuth();
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(visible ? accountId : null);
   const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(visible ? accountId : null);
   const { data: matches = [], isLoading: matchesLoading, refetch: refetchMatches } = useRecentMatches(visible ? accountId : null, 10);
@@ -61,6 +65,10 @@ export default function PlayerDetailModal({
                 onRefresh={onRefresh}
                 refreshing={loading}
                 isPrivate={!!isPrivate}
+                onComparePress={steamAccountId && steamAccountId !== accountId?.toString() ? () => {
+                  onClose();
+                  router.push(`/compare?p1=${steamAccountId}&p2=${accountId}`);
+                } : undefined}
               />
             </View>
           ) : (

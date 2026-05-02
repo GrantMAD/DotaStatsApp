@@ -129,6 +129,7 @@ export default function ProfileScreen() {
           friendsCount={friends.length}
           followingCount={following.length}
           onStatsPress={() => router.push('/friends')}
+          onComparePress={() => router.push('/compare?p1=' + accountId)}
           matchesLimit={matchLimit}
         />
       )}

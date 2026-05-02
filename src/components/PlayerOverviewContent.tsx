@@ -91,6 +91,7 @@ interface PlayerOverviewContentProps {
   friendsCount?: number;
   followingCount?: number;
   onStatsPress?: () => void;
+  onComparePress?: () => void;
   isPrivate?: boolean;
   matchesLimit?: number;
   setMatchesLimit?: (limit: number) => void;
@@ -158,6 +159,7 @@ export function PlayerOverviewContent({
   friendsCount = 0,
   followingCount = 0,
   onStatsPress,
+  onComparePress,
   isPrivate = false,
   matchesLimit = 20,
   setMatchesLimit
@@ -287,6 +289,15 @@ export function PlayerOverviewContent({
                   </Text>
                 </TouchableOpacity>
               </View>
+            )}
+            {onComparePress && (
+              <TouchableOpacity
+                onPress={onComparePress}
+                className="mt-3 bg-purple-500/20 px-4 py-2 rounded-xl border border-purple-500/30 self-start flex-row items-center"
+              >
+                <Ionicons name="git-compare-outline" size={16} color="#c084fc" className="mr-2" />
+                <Text className="text-purple-400 font-outfit-bold text-xs">COMPARE STATS</Text>
+              </TouchableOpacity>
             )}
           </View>
           <RankBadge rankTier={profile?.rank_tier || null} leaderboardRank={profile?.leaderboard_rank || null} size={60} />

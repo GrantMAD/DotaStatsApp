@@ -11,13 +11,15 @@ import { useMenu } from './_layout';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import UserListItem from '../../src/components/UserListItem';
 import { useModals } from '../../src/context/ModalContext';
+import { useRouter } from 'expo-router';
 
 type TabType = 'Friends' | 'Following';
 
 export default function FriendsScreen() {
-  const { session } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
   const { pushModal } = useModals();
+  const router = useRouter();
+  const { steamAccountId, session } = useSupabaseAuth();
   const { friends, following, loading, fetchFriends, unfollowUser } = useFriends();
   const [activeTab, setActiveTab] = useState<TabType>('Friends');
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +56,16 @@ export default function FriendsScreen() {
         user={friendUser} 
         index={index} 
         onPress={() => openPlayerDetails(friendUser.steam_account_id)} 
+        rightComponent={
+          steamAccountId && steamAccountId !== friendUser.steam_account_id ? (
+            <TouchableOpacity 
+              onPress={() => router.push(`/compare?p1=${steamAccountId}&p2=${friendUser.steam_account_id}`)}
+              className="bg-purple-500/10 px-3 py-1.5 rounded-lg border border-purple-500/20 mr-2"
+            >
+              <Ionicons name="git-compare-outline" size={16} color="#c084fc" />
+            </TouchableOpacity>
+          ) : undefined
+        }
       />
     );
   };
@@ -69,12 +81,22 @@ export default function FriendsScreen() {
         index={index} 
         onPress={() => openPlayerDetails(item.followed_steam_id)}
         rightComponent={
-          <TouchableOpacity 
-            onPress={() => unfollowUser(item.followed_steam_id)}
-            className="bg-zinc-800 px-3 py-1.5 rounded-lg mr-2"
-          >
-            <Text className="text-gray-300 text-xs font-outfit-bold">Unfollow</Text>
-          </TouchableOpacity>
+          <View className="flex-row items-center">
+            {steamAccountId && steamAccountId !== item.followed_steam_id && (
+              <TouchableOpacity 
+                onPress={() => router.push(`/compare?p1=${steamAccountId}&p2=${item.followed_steam_id}`)}
+                className="bg-purple-500/10 px-3 py-1.5 rounded-lg border border-purple-500/20 mr-2"
+              >
+                <Ionicons name="git-compare-outline" size={16} color="#c084fc" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+              onPress={() => unfollowUser(item.followed_steam_id)}
+              className="bg-zinc-800 px-3 py-1.5 rounded-lg mr-2"
+            >
+              <Text className="text-gray-300 text-xs font-outfit-bold">Unfollow</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
     );
