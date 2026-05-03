@@ -28,6 +28,7 @@ import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 import { useModals } from '../../src/context/ModalContext';
+import ErrorBoundary from '../../src/components/ErrorBoundary';
 
 type TabType = 'Tournaments' | 'Teams' | 'Players';
 type SubTabType = 'Premium' | 'Professional' | 'Amateur';
@@ -283,71 +284,73 @@ export default function ProSceneScreen() {
         rightComponent={<NotificationBell />}
       />
 
-      <View style={{ flex: 1 }}>
-        {loading ? (
-          <View className="mt-5">
-            <ProSkeleton />
-          </View>
-        ) : (
-          <FlatList
-            data={
-              activeTab === 'Tournaments'
-                ? filteredLeagues
-                : activeTab === 'Teams'
-                  ? filteredTeams
-                  : filteredPlayers
-            }
-            keyExtractor={(item: any) => {
-              if (activeTab === 'Tournaments') return `l-${item.leagueid}`;
-              if (activeTab === 'Teams') return `t-${item.team_id}`;
-              return `p-${item.account_id}`;
-            }}
-            ListHeaderComponent={memoizedHeader}
-            contentContainerStyle={{ paddingBottom: 40 }}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefreshing}
-                onRefresh={onRefresh}
-                tintColor="#8b5cf6"
-              />
-            }
-            renderItem={({ item, index }) => {
-              if (activeTab === 'Tournaments') {
-                return (
-                  <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
-                    <LeagueCard league={item as League} onPress={handleLeaguePress} />
-                  </Animated.View>
-                );
-              } else if (activeTab === 'Teams') {
-                const team = item as ProTeam;
-                const rank = teams.indexOf(team) + 1;
-                return (
-                  <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
-                    <TeamListItem team={team} rank={rank} onPress={handleTeamPress} />
-                  </Animated.View>
-                );
-              } else {
-                return (
-                  <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
-                    <ProPlayerItem
-                      player={item as ProPlayer}
-                      onPress={handlePlayerPress}
-                    />
-                  </Animated.View>
-                );
+      <ErrorBoundary>
+        <View style={{ flex: 1 }}>
+          {loading ? (
+            <View className="mt-5">
+              <ProSkeleton />
+            </View>
+          ) : (
+            <FlatList
+              data={
+                activeTab === 'Tournaments'
+                  ? filteredLeagues
+                  : activeTab === 'Teams'
+                    ? filteredTeams
+                    : filteredPlayers
               }
-            }}
-            ListEmptyComponent={
-              <View className="p-10 items-center">
-                <Ionicons name="search-outline" size={48} color="#1e1e2e" />
-                <Text className="text-zinc-600 mt-4 text-center">
-                  No {activeTab.toLowerCase()} found matching "{searchQuery}"
-                </Text>
-              </View>
-            }
-          />
-        )}
-      </View>
+              keyExtractor={(item: any) => {
+                if (activeTab === 'Tournaments') return `l-${item.leagueid}`;
+                if (activeTab === 'Teams') return `t-${item.team_id}`;
+                return `p-${item.account_id}`;
+              }}
+              ListHeaderComponent={memoizedHeader}
+              contentContainerStyle={{ paddingBottom: 40 }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={isRefreshing}
+                  onRefresh={onRefresh}
+                  tintColor="#8b5cf6"
+                />
+              }
+              renderItem={({ item, index }) => {
+                if (activeTab === 'Tournaments') {
+                  return (
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
+                      <LeagueCard league={item as League} onPress={handleLeaguePress} />
+                    </Animated.View>
+                  );
+                } else if (activeTab === 'Teams') {
+                  const team = item as ProTeam;
+                  const rank = teams.indexOf(team) + 1;
+                  return (
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
+                      <TeamListItem team={team} rank={rank} onPress={handleTeamPress} />
+                    </Animated.View>
+                  );
+                } else {
+                  return (
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
+                      <ProPlayerItem
+                        player={item as ProPlayer}
+                        onPress={handlePlayerPress}
+                      />
+                    </Animated.View>
+                  );
+                }
+              }}
+              ListEmptyComponent={
+                <View className="p-10 items-center">
+                  <Ionicons name="search-outline" size={48} color="#1e1e2e" />
+                  <Text className="text-zinc-600 mt-4 text-center">
+                    No {activeTab.toLowerCase()} found matching "{searchQuery}"
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </View>
+      </ErrorBoundary>
     </LinearGradient>
   );
 }

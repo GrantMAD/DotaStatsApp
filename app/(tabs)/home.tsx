@@ -28,6 +28,7 @@ import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { useModals } from '../../src/context/ModalContext';
 import { calculateTierList, getBracketFromRankTier, BRACKET_NAMES, TierHero } from '../../src/services/tierList';
+import ErrorBoundary from '../../src/components/ErrorBoundary';
 
 // Minimum picks threshold to avoid heroes with tiny sample sizes
 const MIN_PICKS = 5000;
@@ -345,449 +346,450 @@ export default function HomeScreen() {
         rightComponent={<NotificationBell />}
       />
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
-        }
-      >
-        {/* Header Content Area */}
-        <View style={{ paddingTop: 20, paddingHorizontal: 24 }}>
-          <Text style={{ fontSize: 28, color: '#fff', fontWeight: '800', marginBottom: 6 }}>
-            Dota Stuff
-          </Text>
-          <Text style={{ color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 20 }}>
-            Hero stats, pro matches, and performance insights
-          </Text>
+      <ErrorBoundary>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
+          }
+        >
+          {/* Header Content Area */}
+          <View style={{ paddingTop: 20, paddingHorizontal: 24 }}>
+            <Text style={{ fontSize: 28, color: '#fff', fontWeight: '800', marginBottom: 6 }}>
+              Dota Stuff
+            </Text>
+            <Text style={{ color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 20 }}>
+              Hero stats, pro matches, and performance insights
+            </Text>
 
-          {/* Login / Signed-in indicator */}
-          {!session ? (
-            <PressableScale onPress={() => router.push('/sign-in')} style={{ width: '100%', marginBottom: 16 }}>
+            {/* Login / Signed-in indicator */}
+            {!session ? (
+              <PressableScale onPress={() => router.push('/sign-in')} style={{ width: '100%', marginBottom: 16 }}>
+                <View style={{
+                  backgroundColor: '#8b5cf6',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                }}>
+                  <Ionicons name="log-in" size={20} color="#fff" style={{ marginRight: 10 }} />
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign In</Text>
+                </View>
+              </PressableScale>
+            ) : !steamAccountId ? (
+              <PressableScale 
+                onPress={() => router.push('/profile')}
+                style={{ width: '100%', marginBottom: 16 }}
+              >
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#1E1E2E',
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#eab308',
+                  borderStyle: 'dashed',
+                }}>
+                  <Ionicons name="link" size={20} color="#eab308" style={{ marginRight: 10 }} />
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Link Steam Account</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#eab308" style={{ marginLeft: 8 }} />
+                </View>
+              </PressableScale>
+            ) : (
+              <PressableScale 
+                onPress={() => router.push('/profile')}
+                style={{ width: '100%', marginBottom: 16 }}
+              >
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#1E1E2E',
+                  paddingVertical: 14,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: '#22c55e',
+                  borderStyle: 'dashed',
+                }}>
+                  <Ionicons name="person-circle" size={20} color="#22c55e" style={{ marginRight: 10 }} />
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>View My Profile</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#22c55e" style={{ marginLeft: 8 }} />
+                </View>
+              </PressableScale>
+            )}
+
+            {/* Search bar */}
+            <View style={{ width: '100%' }}>
               <View style={{
-                backgroundColor: '#8b5cf6',
                 flexDirection: 'row',
                 alignItems: 'center',
-                justifyContent: 'center',
-                paddingVertical: 14,
-                borderRadius: 12,
-              }}>
-                <Ionicons name="log-in" size={20} color="#fff" style={{ marginRight: 10 }} />
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign In</Text>
-              </View>
-            </PressableScale>
-          ) : !steamAccountId ? (
-            <PressableScale 
-              onPress={() => router.push('/profile')}
-              style={{ width: '100%', marginBottom: 16 }}
-            >
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#1E1E2E',
-                paddingVertical: 14,
-                borderRadius: 12,
+                backgroundColor: '#1e1e2e',
+                padding: 12,
+                borderRadius: 10,
                 borderWidth: 1,
-                borderColor: '#eab308',
-                borderStyle: 'dashed',
+                borderColor: '#2a2a3e',
               }}>
-                <Ionicons name="link" size={20} color="#eab308" style={{ marginRight: 10 }} />
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Link Steam Account</Text>
-                <Ionicons name="chevron-forward" size={16} color="#eab308" style={{ marginLeft: 8 }} />
-              </View>
-            </PressableScale>
-          ) : (
-            <PressableScale 
-              onPress={() => router.push('/profile')}
-              style={{ width: '100%', marginBottom: 16 }}
-            >
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#1E1E2E',
-                paddingVertical: 14,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: '#22c55e',
-                borderStyle: 'dashed',
-              }}>
-                <Ionicons name="person-circle" size={20} color="#22c55e" style={{ marginRight: 10 }} />
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>View My Profile</Text>
-                <Ionicons name="chevron-forward" size={16} color="#22c55e" style={{ marginLeft: 8 }} />
-              </View>
-            </PressableScale>
-          )}
-
-          {/* Search bar */}
-          <View style={{ width: '100%' }}>
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: '#1e1e2e',
-              padding: 12,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#2a2a3e',
-            }}>
-              <Ionicons name="search" size={18} color="#555" style={{ marginRight: 10 }} />
-              <TextInput
-                placeholder="Search for players, heroes..."
-                placeholderTextColor="#555"
-                style={{ flex: 1, color: '#fff', fontSize: 14 }}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-                autoCorrect={false}
-              />
-              {searchQuery.trim().length > 0 && (
-                <PressableScale 
-                  onPress={handleSearch}
-                  style={{
-                    backgroundColor: '#8b5cf6',
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginLeft: 10
-                  }}
-                >
-                  <Ionicons name="arrow-forward" size={18} color="#fff" />
-                </PressableScale>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {hasError ? (
-          <ErrorCard 
-            message="We couldn't load the latest Dota data. Check your connection and try again."
-            onRetry={onRefresh}
-          />
-        ) : (
-          <>
-            {/* ─── Section Activity Feed ─── */}
-            {session && (
-              <>
-                <SectionHeader 
-                  icon="people" 
-                  title="Friends Activity" 
-                  description="Recent achievements and matches from your friends."
-                  color="#22c55e" 
+                <Ionicons name="search" size={18} color="#555" style={{ marginRight: 10 }} />
+                <TextInput
+                  placeholder="Search for players, heroes..."
+                  placeholderTextColor="#555"
+                  style={{ flex: 1, color: '#fff', fontSize: 14 }}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                  autoCorrect={false}
                 />
-                {loadingActivity ? (
-                  <ActivityFeedSkeleton />
-                ) : (
-                  <FlatList
-                    data={activities}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingHorizontal: 20 }}
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item, index }) => (
-                      <Animated.View entering={FadeInDown.delay(Math.min(index, 5) * 80).springify()}>
-                        <ActivityFeedItem 
-                          item={item} 
-                          onPressPlayer={openPlayerDetails} 
-                          onPressMatch={openMatchById} 
-                        />
-                      </Animated.View>
-                    )}
-                    ListEmptyComponent={
-                      <View style={{
-                        width: 260,
-                        height: 74,
-                        backgroundColor: '#1e1e2e',
-                        borderRadius: 16,
-                        padding: 12,
-                        borderWidth: 1,
-                        borderColor: '#2a2a3e',
-                        borderStyle: 'dashed',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Ionicons name="people-outline" size={20} color="#4b5563" style={{ marginRight: 10 }} />
-                        <Text style={{ color: '#4b5563', fontSize: 13, fontFamily: 'Outfit_600SemiBold' }}>
-                          No recent activity from friends
-                        </Text>
-                      </View>
-                    }
-                  />
-                )}
-              </>
-            )}
-
-            {/* ─── Section 0: Hero Meta Tier List ─── */}
-            <SectionHeader 
-              icon="analytics" 
-              title="Hero Meta Tier List" 
-              description="Calculated based on win rates and pick frequency in your rank."
-              color="#8b5cf6" 
-            />
-            
-            {/* Bracket Selector */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={{ paddingHorizontal: 20, marginBottom: 16 }}
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((b) => (
-                <TouchableOpacity
-                  key={`bracket-${b}`}
-                  onPress={() => setSelectedBracket(b)}
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 20,
-                    marginRight: 8,
-                    backgroundColor: activeBracket === b ? '#8b5cf6' : '#1e1e2e',
-                    borderWidth: 1,
-                    borderColor: activeBracket === b ? '#a78bfa' : '#2a2a3e',
-                  }}
-                >
-                  <Text style={{ 
-                    color: activeBracket === b ? '#fff' : '#888', 
-                    fontSize: 12, 
-                    fontWeight: '700' 
-                  }}>
-                    {BRACKET_NAMES[b]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {isLoading ? <HeroCardSkeleton /> : (
-              <FlatList
-                data={[...sTier, ...aTier]}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20 }}
-                keyExtractor={(item) => `tier-${item.id}`}
-                renderItem={({ item, index }) => (
-                  <PressableScale onPress={() => openHeroModal(item.id)}>
-                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                      <HeroStatsCard
-                        heroName={item.name}
-                        heroImg={item.img}
-                        winRate={item.winRate}
-                        pickCount={item.picks}
-                        tier={item.tier}
-                        mode="winrate"
-                      />
-                    </Animated.View>
-                  </PressableScale>
-                )}
-              />
-            )}
-
-            {/* ─── Section 1: Top Win Rate Heroes ─── */}
-            <SectionHeader 
-              icon="trophy" 
-              title="Highest Win Rate" 
-              description="Heroes with the highest win probability in public matches today."
-              color="#f59e0b" 
-            />
-            {isLoading ? <HeroCardSkeleton /> : (
-              <FlatList
-                data={topWinRate}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20 }}
-                keyExtractor={(item) => `wr-${item.id}`}
-                renderItem={({ item, index }) => (
-                  <PressableScale onPress={() => openHeroModal(item.id)}>
-                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                      <HeroStatsCard
-                        heroName={item.name}
-                        heroImg={item.img}
-                        winRate={item.winRate}
-                        pickCount={item.picks}
-                        rank={index + 1}
-                        mode="winrate"
-                      />
-                    </Animated.View>
-                  </PressableScale>
-                )}
-              />
-            )}
-
-            {/* ─── Section 2: Most Picked Heroes ─── */}
-            <SectionHeader 
-              icon="flame" 
-              title="Most Picked" 
-              description="The most popular heroes being played in public matches right now."
-              color="#ef4444" 
-            />
-            {isLoading ? <HeroCardSkeleton /> : (
-              <FlatList
-                data={mostPicked}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20 }}
-                keyExtractor={(item) => `pk-${item.id}`}
-                renderItem={({ item, index }) => (
-                  <PressableScale onPress={() => openHeroModal(item.id)}>
-                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                      <HeroStatsCard
-                        heroName={item.name}
-                        heroImg={item.img}
-                        winRate={item.winRate}
-                        pickCount={item.picks}
-                        rank={index + 1}
-                        mode="picks"
-                      />
-                    </Animated.View>
-                  </PressableScale>
-                )}
-              />
-            )}
-
-            {/* ─── Section 3: Pro Scene ─── */}
-            <SectionHeader 
-              icon="star" 
-              title="Pro Scene — Top Picks" 
-              description="Most picked heroes in professional tournament matches."
-              color="#8b5cf6" 
-            />
-            {isLoading ? <HeroCardSkeleton /> : (
-              <FlatList
-                data={proPicks}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20 }}
-                keyExtractor={(item) => `pp-${item.id}`}
-                renderItem={({ item, index }) => (
-                  <PressableScale onPress={() => openHeroModal(item.id)}>
-                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                      <HeroStatsCard
-                        heroName={item.name}
-                        heroImg={item.img}
-                        winRate={item.winRate}
-                        pickCount={item.picks}
-                        rank={index + 1}
-                        mode="picks"
-                      />
-                    </Animated.View>
-                  </PressableScale>
-                )}
-              />
-            )}
-
-            {/* Pro Bans */}
-            <SectionHeader 
-              icon="ban" 
-              title="Pro Scene — Most Banned" 
-              description="The most feared heroes that pro teams consistently ban."
-              color="#ef4444" 
-            />
-            {isLoading ? <ProBanSkeleton /> : (
-              <>
-                {(isBansExpanded ? proBans : proBans.slice(0, 5)).map((hero, index) => (
-                  <ProBanItem key={`ban-${hero.id}`} hero={hero} index={index} onPress={() => openHeroModal(hero.id)} />
-                ))}
-                
-                {proBans.length > 5 && (
-                  <TouchableOpacity 
-                    onPress={() => setIsBansExpanded(!isBansExpanded)}
+                {searchQuery.trim().length > 0 && (
+                  <PressableScale 
+                    onPress={handleSearch}
                     style={{
-                      flexDirection: 'row',
+                      backgroundColor: '#8b5cf6',
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      marginTop: 12,
-                      paddingVertical: 12,
-                      backgroundColor: '#1e1e2e',
-                      marginHorizontal: 20,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: '#2a2a3e',
-                      marginBottom: 10
+                      marginLeft: 10
                     }}
                   >
-                    <Text style={{ color: '#8b5cf6', fontWeight: '800', marginRight: 6, textTransform: 'uppercase', fontSize: 12 }}>
-                      {isBansExpanded ? 'Show Less' : `Show All (${proBans.length})`}
-                    </Text>
-                    <Ionicons 
-                      name={isBansExpanded ? "chevron-up" : "chevron-down"} 
-                      size={16} 
-                      color="#8b5cf6" 
-                    />
-                  </TouchableOpacity>
-                )}
-              </>
-            )}
-
-            {/* Recent Pro Matches */}
-            <SectionHeader 
-              icon="game-controller" 
-              title="Recent Pro Matches" 
-              description="Latest results from professional tournaments and leagues."
-              color="#3b82f6" 
-            />
-            {isLoading ? <ProMatchSkeleton /> : (
-              <FlatList
-                data={proMatchesData}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20 }}
-                keyExtractor={(item) => `pm-${item.match_id}`}
-                renderItem={({ item, index }) => (
-                  <PressableScale onPress={() => openMatchModal(item)}>
-                    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                      <ProMatchCard
-                        radiantName={item.radiant_name}
-                        direName={item.dire_name}
-                        radiantScore={item.radiant_score}
-                        direScore={item.dire_score}
-                        radiantWin={item.radiant_win}
-                        duration={item.duration}
-                        leagueName={item.league_name}
-                        startTime={item.start_time}
-                      />
-                    </Animated.View>
+                    <Ionicons name="arrow-forward" size={18} color="#fff" />
                   </PressableScale>
                 )}
-              />
-            )}
+              </View>
+            </View>
+          </View>
 
-            {/* ─── Section 4: Live High-MMR Games ─── */}
-            {liveGames.length > 0 && (
-              <>
-                <SectionHeader 
-                  icon="radio" 
-                  title="Live High-MMR Games" 
-                  description="Ongoing high-level public matches from top players."
-                  color="#ef4444" 
-                />
+          {hasError ? (
+            <ErrorCard 
+              message="We couldn't load the latest Dota data. Check your connection and try again."
+              onRetry={onRefresh}
+            />
+          ) : (
+            <>
+              {/* ─── Section Activity Feed ─── */}
+              {session && (
+                <>
+                  <SectionHeader 
+                    icon="people" 
+                    title="Friends Activity" 
+                    description="Recent achievements and matches from your friends."
+                    color="#22c55e" 
+                  />
+                  {loadingActivity ? (
+                    <ActivityFeedSkeleton />
+                  ) : (
+                    <FlatList
+                      data={activities}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ paddingHorizontal: 20 }}
+                      keyExtractor={(item) => item.id}
+                      renderItem={({ item, index }) => (
+                        <Animated.View entering={FadeInDown.delay(Math.min(index, 5) * 80).springify()}>
+                          <ActivityFeedItem 
+                            item={item} 
+                            onPressPlayer={openPlayerDetails} 
+                            onPressMatch={openMatchById} 
+                          />
+                        </Animated.View>
+                      )}
+                      ListEmptyComponent={
+                        <View style={{
+                          width: 260,
+                          height: 74,
+                          backgroundColor: '#1e1e2e',
+                          borderRadius: 16,
+                          padding: 12,
+                          borderWidth: 1,
+                          borderColor: '#2a2a3e',
+                          borderStyle: 'dashed',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Ionicons name="people-outline" size={20} color="#4b5563" style={{ marginRight: 10 }} />
+                          <Text style={{ color: '#4b5563', fontSize: 13, fontFamily: 'Outfit_600SemiBold' }}>
+                            No recent activity from friends
+                          </Text>
+                        </View>
+                      }
+                    />
+                  )}
+                </>
+              )}
+
+              {/* ─── Section 0: Hero Meta Tier List ─── */}
+              <SectionHeader 
+                icon="analytics" 
+                title="Hero Meta Tier List" 
+                description="Calculated based on win rates and pick frequency in your rank."
+                color="#8b5cf6" 
+              />
+              
+              {/* Bracket Selector */}
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={{ paddingHorizontal: 20, marginBottom: 16 }}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((b) => (
+                  <TouchableOpacity
+                    key={`bracket-${b}`}
+                    onPress={() => setSelectedBracket(b)}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 20,
+                      marginRight: 8,
+                      backgroundColor: activeBracket === b ? '#8b5cf6' : '#1e1e2e',
+                      borderWidth: 1,
+                      borderColor: activeBracket === b ? '#a78bfa' : '#2a2a3e',
+                    }}
+                  >
+                    <Text style={{ 
+                      color: activeBracket === b ? '#fff' : '#888', 
+                      fontSize: 12, 
+                      fontWeight: '700' 
+                    }}>
+                      {BRACKET_NAMES[b]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {isLoading ? <HeroCardSkeleton /> : (
                 <FlatList
-                  data={liveGames}
+                  data={[...sTier, ...aTier]}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={{ paddingHorizontal: 20 }}
-                  keyExtractor={(item) => `live-${item.match_id}`}
+                  keyExtractor={(item) => `tier-${item.id}`}
                   renderItem={({ item, index }) => (
-                    <PressableScale onPress={() => openMatchById(item.match_id)}>
+                    <PressableScale onPress={() => openHeroModal(item.id)}>
                       <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                        <LiveGameCard game={item} onPress={openMatchById} />
+                        <HeroStatsCard
+                          heroName={item.name}
+                          heroImg={item.img}
+                          winRate={item.winRate}
+                          pickCount={item.picks}
+                          tier={item.tier}
+                          mode="winrate"
+                        />
                       </Animated.View>
                     </PressableScale>
                   )}
-
                 />
-              </>
-            )}
+              )}
 
-            {/* ─── Section 6: Global Records ─── */}
-            {(records.gpm || records.kills || records.healing) && (
-              <>
-                <SectionHeader 
-                  icon="medal" 
-                  title="Global All-Time Records" 
-                  description="Statistical milestones achieved in individual matches."
-                  color="#f59e0b" 
+              {/* ─── Section 1: Top Win Rate Heroes ─── */}
+              <SectionHeader 
+                icon="trophy" 
+                title="Highest Win Rate" 
+                description="Heroes with the highest win probability in public matches today."
+                color="#f59e0b" 
+              />
+              {isLoading ? <HeroCardSkeleton /> : (
+                <FlatList
+                  data={topWinRate}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20 }}
+                  keyExtractor={(item) => `wr-${item.id}`}
+                  renderItem={({ item, index }) => (
+                    <PressableScale onPress={() => openHeroModal(item.id)}>
+                      <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                        <HeroStatsCard
+                          heroName={item.name}
+                          heroImg={item.img}
+                          winRate={item.winRate}
+                          pickCount={item.picks}
+                          rank={index + 1}
+                          mode="winrate"
+                        />
+                      </Animated.View>
+                    </PressableScale>
+                  )}
+                />
+              )}
+
+              {/* ─── Section 2: Most Picked Heroes ─── */}
+              <SectionHeader 
+                icon="flame" 
+                title="Most Picked" 
+                description="The most popular heroes being played in public matches right now."
+                color="#ef4444" 
+              />
+              {isLoading ? <HeroCardSkeleton /> : (
+                <FlatList
+                  data={mostPicked}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20 }}
+                  keyExtractor={(item) => `pk-${item.id}`}
+                  renderItem={({ item, index }) => (
+                    <PressableScale onPress={() => openHeroModal(item.id)}>
+                      <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                        <HeroStatsCard
+                          heroName={item.name}
+                          heroImg={item.img}
+                          winRate={item.winRate}
+                          pickCount={item.picks}
+                          rank={index + 1}
+                          mode="picks"
+                        />
+                      </Animated.View>
+                    </PressableScale>
+                  )}
+                />
+              )}
+
+              {/* ─── Section 3: Pro Scene ─── */}
+              <SectionHeader 
+                icon="star" 
+                title="Pro Scene — Top Picks" 
+                description="Most picked heroes in professional tournament matches."
+                color="#8b5cf6" 
+              />
+              {isLoading ? <HeroCardSkeleton /> : (
+                <FlatList
+                  data={proPicks}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20 }}
+                  keyExtractor={(item) => `pp-${item.id}`}
+                  renderItem={({ item, index }) => (
+                    <PressableScale onPress={() => openHeroModal(item.id)}>
+                      <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                        <HeroStatsCard
+                          heroName={item.name}
+                          heroImg={item.img}
+                          winRate={item.winRate}
+                          pickCount={item.picks}
+                          rank={index + 1}
+                          mode="picks"
+                        />
+                      </Animated.View>
+                    </PressableScale>
+                  )}
+                />
+              )}
+
+              {/* Pro Bans */}
+              <SectionHeader 
+                icon="ban" 
+                title="Pro Scene — Most Banned" 
+                description="The most feared heroes that pro teams consistently ban."
+                color="#ef4444" 
+              />
+              {isLoading ? <ProBanSkeleton /> : (
+                <>
+                  {(isBansExpanded ? proBans : proBans.slice(0, 5)).map((hero, index) => (
+                    <ProBanItem key={`ban-${hero.id}`} hero={hero} index={index} onPress={() => openHeroModal(hero.id)} />
+                  ))}
+                  
+                  {proBans.length > 5 && (
+                    <TouchableOpacity 
+                      onPress={() => setIsBansExpanded(!isBansExpanded)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginTop: 12,
+                        paddingVertical: 12,
+                        backgroundColor: '#1e1e2e',
+                        marginHorizontal: 20,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: '#2a2a3e',
+                        marginBottom: 10
+                      }}
+                    >
+                      <Text style={{ color: '#8b5cf6', fontWeight: '800', marginRight: 6, textTransform: 'uppercase', fontSize: 12 }}>
+                        {isBansExpanded ? 'Show Less' : `Show All (${proBans.length})`}
+                      </Text>
+                      <Ionicons 
+                        name={isBansExpanded ? "chevron-up" : "chevron-down"} 
+                        size={16} 
+                        color="#8b5cf6" 
+                      />
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+
+              {/* Recent Pro Matches */}
+              <SectionHeader 
+                icon="game-controller" 
+                title="Recent Pro Matches" 
+                description="Latest results from professional tournaments and leagues."
+                color="#3b82f6" 
+              />
+              {isLoading ? <ProMatchSkeleton /> : (
+                <FlatList
+                  data={proMatchesData}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20 }}
+                  keyExtractor={(item) => `pm-${item.match_id}`}
+                  renderItem={({ item, index }) => (
+                    <PressableScale onPress={() => openMatchModal(item)}>
+                      <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                        <ProMatchCard
+                          radiantName={item.radiant_name}
+                          direName={item.dire_name}
+                          radiantScore={item.radiant_score}
+                          direScore={item.dire_score}
+                          radiantWin={item.radiant_win}
+                          duration={item.duration}
+                          leagueName={item.league_name}
+                          startTime={item.start_time}
+                        />
+                      </Animated.View>
+                    </PressableScale>
+                  )}
+                />
+              )}
+
+              {/* ─── Section 4: Live High-MMR Games ─── */}
+              {liveGames.length > 0 && (
+                <>
+                  <SectionHeader 
+                    icon="radio" 
+                    title="Live High-MMR Games" 
+                    description="Ongoing high-level public matches from top players."
+                    color="#ef4444" 
+                  />
+                  <FlatList
+                    data={liveGames}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: 20 }}
+                    keyExtractor={(item) => `live-${item.match_id}`}
+                    renderItem={({ item, index }) => (
+                      <PressableScale onPress={() => openMatchById(item.match_id)}>
+                        <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
+                          <LiveGameCard game={item} onPress={openMatchById} />
+                        </Animated.View>
+                      </PressableScale>
+                    )}
+
+                  />
+                </>
+              )}
+
+              {/* ─── Section 6: Global Records ─── */}
+              {(records.gpm || records.kills || records.healing) && (
+                <>
+                  <SectionHeader 
+                    icon="medal" 
+                    title="Global All-Time Records" 
+                    description="Statistical milestones achieved in individual matches."
+                    color="#f59e0b" 
                 />
                 <Animated.View entering={FadeInDown.delay(100).springify()}>
                   <RecordCard 
@@ -824,6 +826,7 @@ export default function HomeScreen() {
           </>
         )}
       </ScrollView>
+    </ErrorBoundary>
     </LinearGradient>
   );
 }

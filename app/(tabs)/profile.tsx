@@ -23,6 +23,7 @@ import MeshGradient from '../../src/components/MeshGradient';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { useModals } from '../../src/context/ModalContext';
+import ErrorBoundary from '../../src/components/ErrorBoundary';
 
 
 export default function ProfileScreen() {
@@ -115,19 +116,21 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <PlayerOverviewContent
-          accountId={accountId!}
-          profile={profile || null}
-          wl={wl || null}
-          onMatchPress={handleMatchPress}
-          onRefresh={onRefresh}
-          refreshing={isRefreshing}
-          isCurrentUser={true}
-          friendsCount={friends.length}
-          followingCount={following.length}
-          onStatsPress={() => router.push('/friends')}
-          onComparePress={() => router.push('/compare?p1=' + accountId)}
-        />
+        <ErrorBoundary>
+          <PlayerOverviewContent
+            accountId={accountId!}
+            profile={profile || null}
+            wl={wl || null}
+            onMatchPress={handleMatchPress}
+            onRefresh={onRefresh}
+            refreshing={isRefreshing}
+            isCurrentUser={true}
+            friendsCount={friends.length}
+            followingCount={following.length}
+            onStatsPress={() => router.push('/friends')}
+            onComparePress={() => router.push('/compare?p1=' + accountId)}
+          />
+        </ErrorBoundary>
       )}
     </LinearGradient>
   );

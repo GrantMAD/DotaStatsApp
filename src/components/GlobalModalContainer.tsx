@@ -6,6 +6,7 @@ import HeroDetailModal from './HeroDetailModal';
 import TeamDetailModal from './TeamDetailModal';
 import LeagueDetailModal from './LeagueDetailModal';
 import { useHeroStats, useLeagues, useProTeams } from '../hooks/useOpenDota';
+import ErrorBoundary from './ErrorBoundary';
 
 export default function GlobalModalContainer() {
   const { modalStack, popModal, pushModal } = useModals();
@@ -26,51 +27,56 @@ export default function GlobalModalContainer() {
         switch (item.type) {
           case 'player':
             return (
-              <PlayerDetailModal
-                key={`${item.type}-${item.id}-${index}`}
-                visible={true}
-                accountId={item.id}
-                onClose={popModal}
-                onMatchPress={(matchId) => pushModal('match', matchId)}
-              />
+              <ErrorBoundary key={`${item.type}-${item.id}-${index}`}>
+                <PlayerDetailModal
+                  visible={true}
+                  accountId={item.id}
+                  onClose={popModal}
+                  onMatchPress={(matchId) => pushModal('match', matchId)}
+                />
+              </ErrorBoundary>
             );
           case 'match':
             return (
-              <MatchOverviewModal
-                key={`${item.type}-${item.id}-${index}`}
-                visible={true}
-                matchId={item.id as number}
-                onClose={popModal}
-                onPushPlayer={(playerId) => pushModal('player', playerId)}
-              />
+              <ErrorBoundary key={`${item.type}-${item.id}-${index}`}>
+                <MatchOverviewModal
+                  visible={true}
+                  matchId={item.id as number}
+                  onClose={popModal}
+                  onPushPlayer={(playerId) => pushModal('player', playerId)}
+                />
+              </ErrorBoundary>
             );
           case 'hero':
             return (
-              <HeroDetailModal
-                key={`${item.type}-${item.id}-${index}`}
-                visible={true}
-                hero={heroesData.find(h => h.id === Number(item.id)) || null}
-                onClose={popModal}
-                playerStats={item.props?.playerStats}
-              />
+              <ErrorBoundary key={`${item.type}-${item.id}-${index}`}>
+                <HeroDetailModal
+                  visible={true}
+                  hero={heroesData.find(h => h.id === Number(item.id)) || null}
+                  onClose={popModal}
+                  playerStats={item.props?.playerStats}
+                />
+              </ErrorBoundary>
             );
           case 'team':
             return (
-              <TeamDetailModal
-                key={`${item.type}-${item.id}-${index}`}
-                visible={true}
-                team={teams.find(t => t.team_id === Number(item.id)) || null}
-                onClose={popModal}
-              />
+              <ErrorBoundary key={`${item.type}-${item.id}-${index}`}>
+                <TeamDetailModal
+                  visible={true}
+                  team={teams.find(t => t.team_id === Number(item.id)) || null}
+                  onClose={popModal}
+                />
+              </ErrorBoundary>
             );
           case 'league':
             return (
-              <LeagueDetailModal
-                key={`${item.type}-${item.id}-${index}`}
-                visible={true}
-                league={leagues.find(l => l.leagueid === Number(item.id)) || null}
-                onClose={popModal}
-              />
+              <ErrorBoundary key={`${item.type}-${item.id}-${index}`}>
+                <LeagueDetailModal
+                  visible={true}
+                  league={leagues.find(l => l.leagueid === Number(item.id)) || null}
+                  onClose={popModal}
+                />
+              </ErrorBoundary>
             );
           default:
             return null;

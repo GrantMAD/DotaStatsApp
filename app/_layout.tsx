@@ -13,6 +13,7 @@ import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { addNotificationListeners } from '../src/services/notifications';
+import ErrorBoundary from '../src/components/ErrorBoundary';
 
 const toastConfig = {
   success: (props: any) => (
@@ -104,16 +105,18 @@ export default function RootLayout() {
           <SteamAuthProvider>
             <StatusBar style="light" />
             <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-              <Stack 
-                screenOptions={{ headerShown: false }}
-              >
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="welcome" />
-                <Stack.Screen name="sign-in" />
-                <Stack.Screen name="sign-up" />
-                <Stack.Screen name="notifications" />
-              </Stack>
+              <ErrorBoundary>
+                <Stack 
+                  screenOptions={{ headerShown: false }}
+                >
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="welcome" />
+                  <Stack.Screen name="sign-in" />
+                  <Stack.Screen name="sign-up" />
+                  <Stack.Screen name="notifications" />
+                </Stack>
+              </ErrorBoundary>
             </View>
             <Toast config={toastConfig} />
           </SteamAuthProvider>
