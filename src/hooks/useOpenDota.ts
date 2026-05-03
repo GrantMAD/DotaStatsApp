@@ -22,15 +22,27 @@ export function usePlayerProfile(accountId: string | number | null) {
  */
 export function usePlayerHeroes(accountId: string | number | null) {
   return useQuery({
-    queryKey: ['playerHeroes', accountId],
+    queryKey: ['playerHeroesV2', accountId],
     staleTime: 1000 * 60 * 30, // 30 minutes
     queryFn: async () => {
       if (!accountId) return [];
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       const [heroes, matches] = await Promise.all([
         openDotaApi.getPlayerHeroes(accountId),
-        // Fetch matches with projected fields and limit to 500 for KDA calculation
-        fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/matches?project=hero_id&project=kills&project=deaths&project=assists&limit=500`).then(res => res.json())
+        // Fetch matches with projected fields and limit to 100 for KDA calculation
+        fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/matches?project=hero_id&project=kills&project=deaths&project=assists&limit=100`, {
+          signal: controller.signal
+        }).then(res => {
+          clearTimeout(timeoutId);
+          if (!res.ok) return [];
+          return res.json();
+        }).catch(() => {
+          clearTimeout(timeoutId);
+          return [];
+        })
       ]);
       // Aggregate KDA per hero
       const matchStats: Record<number, { kills: number; deaths: number; assists: number; count: number }> = {};
@@ -88,7 +100,7 @@ export function useRecentMatches(accountId: string | number | null, limit: numbe
  */
 export function usePlayerPeers(accountId: string | number | null) {
   return useQuery({
-    queryKey: ['playerPeers', accountId],
+    queryKey: ['playerPeersV2', accountId],
     queryFn: () => (accountId ? openDotaApi.getPlayerPeers(accountId) : []),
     enabled: !!accountId,
     staleTime: 1000 * 60 * 60, // Peers don't change that fast, cache for 1 hour

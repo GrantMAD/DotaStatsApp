@@ -39,6 +39,7 @@ export interface PlayerCounts {
   lane_role: Record<string, { games: number; win: number }>;
   region: Record<string, { games: number; win: number }>;
   patch: Record<string, { games: number; win: number }>;
+  is_radiant?: Record<string, { games: number; win: number }>;
 }
 
 export interface RecentMatch {
@@ -382,10 +383,11 @@ export async function getRecentMatches(accountId: string | number, limit: number
 
 /**
  * Fetches players who have played in the same matches.
+ * Limited to last 500 matches to prevent 30+ second timeouts and connection starvation.
  */
 export async function getPlayerPeers(accountId: string | number): Promise<Peer[]> {
   try {
-    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/peers`);
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/peers?limit=500`);
     if (!response.ok) throw new Error('Failed to fetch peers');
     return await response.json();
   } catch (error) {

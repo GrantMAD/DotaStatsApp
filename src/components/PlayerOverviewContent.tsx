@@ -39,7 +39,9 @@ import {
   usePlayerWinLoss,
   useRecentMatches,
   useHeroStats,
-  usePlayerMatches
+  usePlayerMatches,
+  usePlayerTotals,
+  usePlayerCounts
 } from '../hooks/useOpenDota';
 import { useModals } from '../context/ModalContext';
 import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
@@ -189,85 +191,48 @@ export function PlayerOverviewContent({
   const [selectedPlayerHeroStats, setSelectedPlayerHeroStats] = useState<PlayerHeroStats | null>(null);
   const [heroModalVisible, setHeroModalVisible] = useState(false);
 
-  // Lifetime Stats State
-  const [totals, setTotals] = useState<PlayerTotal[]>([]);
-  const [lobbyStats, setLobbyStats] = useState<CategoryStats[]>([]);
-  const [modeStats, setModeStats] = useState<CategoryStats[]>([]);
-  const [regionStats, setRegionStats] = useState<CategoryStats[]>([]);
-  const [sideStats, setSideStats] = useState<CategoryStats[]>([]);
-  const [statsLoading, setStatsLoading] = useState(false);
+  // Lifetime Stats Query (Fetches in background on mount)
+  const { data: totals = [], isLoading: totalsLoading } = usePlayerTotals(accountId);
+  const { data: countsData, isLoading: countsLoading } = usePlayerCounts(accountId);
+  const statsLoading = totalsLoading || countsLoading;
 
   const isTrendsLoading = (filters.win !== undefined || filters.date !== undefined || filters.game_mode !== undefined)
     ? matchesLoading || statsLoading
     : richLoading || statsLoading;
   const [recentView, setRecentView] = useState<'matches' | 'trends'>('matches');
 
-  useEffect(() => {
-    if ((activeTab === 'Lifetime' || recentView === 'trends') && totals.length === 0) {
-      loadLifetimeData();
-    }
-  }, [activeTab, recentView, accountId]);
+  // Compute lifetime stats on the fly
+  const createStatFromCount = (label: string, countObj?: { games: number; win: number }) => ({
+    label,
+    win: countObj?.win || 0,
+    lose: (countObj?.games || 0) - (countObj?.win || 0),
+    total: countObj?.games || 0
+  });
 
-  const loadLifetimeData = async () => {
-    try {
-      setStatsLoading(true);
-      const [totalsData, countsData] = await Promise.all([
-        getPlayerTotals(accountId),
-        getPlayerCounts(accountId)
-      ]);
-      setTotals(totalsData);
+  const lobbyStats = [
+    createStatFromCount('Normal MM', countsData?.lobby_type?.['0']),
+    createStatFromCount('Ranked MM', countsData?.lobby_type?.['7'])
+  ];
 
-      // Parallel fetch for Lifetime categories
-      const [normalWL, rankedWL, allPickWL, turboWL, radiantWL, direWL] = await Promise.all([
-        getPlayerWinLoss(accountId, { lobby_type: '0' }),
-        getPlayerWinLoss(accountId, { lobby_type: '7' }),
-        getPlayerWinLoss(accountId, { game_mode: '1' }),
-        getPlayerWinLoss(accountId, { game_mode: '23' }),
-        getPlayerWinLoss(accountId, { is_radiant: '1' }),
-        getPlayerWinLoss(accountId, { is_radiant: '0' }),
-      ]);
+  const modeStats = [
+    createStatFromCount('All Pick', countsData?.game_mode?.['1']),
+    createStatFromCount('Turbo', countsData?.game_mode?.['23'])
+  ];
 
-      const createStat = (label: string, data: WinLossStats | null) => ({
-        label,
-        win: data?.win || 0,
-        lose: data?.lose || 0,
-        total: (data?.win || 0) + (data?.lose || 0)
-      });
+  const sideStats = [
+    createStatFromCount('Radiant', countsData?.is_radiant?.['1']),
+    createStatFromCount('Dire', countsData?.is_radiant?.['0'])
+  ];
 
-      setLobbyStats([
-        createStat('Normal MM', normalWL),
-        createStat('Ranked MM', rankedWL)
-      ]);
-
-      setModeStats([
-        createStat('All Pick', allPickWL),
-        createStat('Turbo', turboWL)
-      ]);
-
-      setSideStats([
-        createStat('Radiant', radiantWL),
-        createStat('Dire', direWL)
-      ]);
-
-      if (countsData?.region) {
-        const sortedRegions = Object.entries(countsData.region)
-          .map(([id, data]) => ({
-            label: REGIONS[Number(id)] || `Region ${id}`,
-            win: data.win,
-            lose: data.games - data.win,
-            total: data.games
-          }))
-          .sort((a, b) => b.total - a.total)
-          .slice(0, 5);
-        setRegionStats(sortedRegions);
-      }
-
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setStatsLoading(false);
-    }
-  };
+  const regionStats = countsData?.region ? Object.entries(countsData.region)
+    .map(([id, data]) => ({
+      label: REGIONS[Number(id)] || `Region ${id}`,
+      win: data.win,
+      lose: data.games - data.win,
+      total: data.games
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5) : [];
 
   const memoizedHeader = useMemo(() => (
     <View className="mb-4">
