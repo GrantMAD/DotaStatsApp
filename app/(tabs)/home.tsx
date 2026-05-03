@@ -18,6 +18,8 @@ import LiveGameCard from '../../src/components/LiveGameCard';
 import RecordCard from '../../src/components/RecordCard';
 import ErrorCard from '../../src/components/ErrorCard';
 import { useHeroStats, useProMatches, useLiveGames, useGlobalRecordsMulti, usePlayerProfile } from '../../src/hooks/useOpenDota';
+import { useActivityFeed } from '../../src/hooks/useActivityFeed';
+import ActivityFeedItem from '../../src/components/ActivityFeedItem';
 import { queryClient } from '../../src/services/queryClient';
 import Skeleton from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
@@ -88,11 +90,18 @@ function processHeroStats(heroes: HeroStats[]): { topWinRate: ProcessedHero[]; m
   return { topWinRate, mostPicked, proPicks, proBans };
 }
 
-function SectionHeader({ icon, title, color }: { icon: string; title: string; color: string }) {
+function SectionHeader({ icon, title, description, color }: { icon: string; title: string; description?: string; color: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginTop: 28, marginBottom: 14 }}>
-      <Ionicons name={icon as any} size={20} color={color} style={{ marginRight: 8 }} />
-      <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 }}>{title}</Text>
+    <View style={{ paddingHorizontal: 20, marginTop: 28, marginBottom: 14 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Ionicons name={icon as any} size={20} color={color} style={{ marginRight: 8 }} />
+        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 }}>{title}</Text>
+      </View>
+      {description && (
+        <Text style={{ color: '#9ca3af', fontSize: 13, fontFamily: 'Outfit_400Regular', marginTop: 4 }}>
+          {description}
+        </Text>
+      )}
     </View>
   );
 }
@@ -168,6 +177,27 @@ function ProBanSkeleton() {
   );
 }
 
+function ActivityFeedSkeleton() {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+      {[1, 2, 3].map(i => (
+        <View key={i} style={{
+          width: 260, height: 74, backgroundColor: '#1e1e2e',
+          borderRadius: 16, marginRight: 12, padding: 12,
+          borderWidth: 1, borderColor: '#2a2a3e',
+          flexDirection: 'row', alignItems: 'center'
+        }}>
+          <Skeleton width={48} height={48} borderRadius={24} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Skeleton width="60%" height={14} borderRadius={4} />
+            <Skeleton width="80%" height={12} borderRadius={4} style={{ marginTop: 6 }} />
+          </View>
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
 function ProBanItem({ hero, index, onPress }: { hero: ProcessedHero; index: number; onPress: () => void }) {
   const imgUrl = `https://cdn.cloudflare.steamstatic.com${hero.img}`;
   return (
@@ -224,6 +254,7 @@ export default function HomeScreen() {
   const { data: proMatchesData = [], isLoading: loadingMatches, isError: errorMatches, refetch: refetchMatches } = useProMatches(10);
   const { data: liveGames = [], refetch: refetchLive } = useLiveGames();
   const { data: multiRecords = {}, refetch: refetchRecords } = useGlobalRecordsMulti(['gold_per_min', 'kills', 'hero_healing']);
+  const { activities, isLoading: loadingActivity, refetch: refetchActivity } = useActivityFeed();
 
   // Get user rank for default bracket
   const { data: userProfile } = usePlayerProfile(steamAccountId || null);
@@ -284,9 +315,10 @@ export default function HomeScreen() {
       refetchMatches(),
       refetchLive(),
       refetchRecords(),
+      refetchActivity(),
     ]);
     setIsRefreshing(false);
-  }, [refetchHeroes, refetchMatches, refetchLive, refetchRecords]);
+  }, [refetchHeroes, refetchMatches, refetchLive, refetchRecords, refetchActivity]);
 
   const records = {
     gpm: multiRecords.gold_per_min?.[0] || null,
@@ -437,8 +469,65 @@ export default function HomeScreen() {
           />
         ) : (
           <>
+            {/* ─── Section Activity Feed ─── */}
+            {session && (
+              <>
+                <SectionHeader 
+                  icon="people" 
+                  title="Friends Activity" 
+                  description="Recent achievements and matches from your friends."
+                  color="#22c55e" 
+                />
+                {loadingActivity ? (
+                  <ActivityFeedSkeleton />
+                ) : (
+                  <FlatList
+                    data={activities}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingHorizontal: 20 }}
+                    keyExtractor={(item) => item.id}
+                    renderItem={({ item, index }) => (
+                      <Animated.View entering={FadeInDown.delay(Math.min(index, 5) * 80).springify()}>
+                        <ActivityFeedItem 
+                          item={item} 
+                          onPressPlayer={openPlayerDetails} 
+                          onPressMatch={openMatchById} 
+                        />
+                      </Animated.View>
+                    )}
+                    ListEmptyComponent={
+                      <View style={{
+                        width: 260,
+                        height: 74,
+                        backgroundColor: '#1e1e2e',
+                        borderRadius: 16,
+                        padding: 12,
+                        borderWidth: 1,
+                        borderColor: '#2a2a3e',
+                        borderStyle: 'dashed',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Ionicons name="people-outline" size={20} color="#4b5563" style={{ marginRight: 10 }} />
+                        <Text style={{ color: '#4b5563', fontSize: 13, fontFamily: 'Outfit_600SemiBold' }}>
+                          No recent activity from friends
+                        </Text>
+                      </View>
+                    }
+                  />
+                )}
+              </>
+            )}
+
             {/* ─── Section 0: Hero Meta Tier List ─── */}
-            <SectionHeader icon="analytics" title="Hero Meta Tier List" color="#8b5cf6" />
+            <SectionHeader 
+              icon="analytics" 
+              title="Hero Meta Tier List" 
+              description="Calculated based on win rates and pick frequency in your rank."
+              color="#8b5cf6" 
+            />
             
             {/* Bracket Selector */}
             <ScrollView 
@@ -496,7 +585,12 @@ export default function HomeScreen() {
             )}
 
             {/* ─── Section 1: Top Win Rate Heroes ─── */}
-            <SectionHeader icon="trophy" title="Highest Win Rate" color="#f59e0b" />
+            <SectionHeader 
+              icon="trophy" 
+              title="Highest Win Rate" 
+              description="Heroes with the highest win probability in public matches today."
+              color="#f59e0b" 
+            />
             {isLoading ? <HeroCardSkeleton /> : (
               <FlatList
                 data={topWinRate}
@@ -522,7 +616,12 @@ export default function HomeScreen() {
             )}
 
             {/* ─── Section 2: Most Picked Heroes ─── */}
-            <SectionHeader icon="flame" title="Most Picked" color="#ef4444" />
+            <SectionHeader 
+              icon="flame" 
+              title="Most Picked" 
+              description="The most popular heroes being played in public matches right now."
+              color="#ef4444" 
+            />
             {isLoading ? <HeroCardSkeleton /> : (
               <FlatList
                 data={mostPicked}
@@ -548,7 +647,12 @@ export default function HomeScreen() {
             )}
 
             {/* ─── Section 3: Pro Scene ─── */}
-            <SectionHeader icon="star" title="Pro Scene — Top Picks" color="#8b5cf6" />
+            <SectionHeader 
+              icon="star" 
+              title="Pro Scene — Top Picks" 
+              description="Most picked heroes in professional tournament matches."
+              color="#8b5cf6" 
+            />
             {isLoading ? <HeroCardSkeleton /> : (
               <FlatList
                 data={proPicks}
@@ -574,7 +678,12 @@ export default function HomeScreen() {
             )}
 
             {/* Pro Bans */}
-            <SectionHeader icon="ban" title="Pro Scene — Most Banned" color="#ef4444" />
+            <SectionHeader 
+              icon="ban" 
+              title="Pro Scene — Most Banned" 
+              description="The most feared heroes that pro teams consistently ban."
+              color="#ef4444" 
+            />
             {isLoading ? <ProBanSkeleton /> : (
               <>
                 {(isBansExpanded ? proBans : proBans.slice(0, 5)).map((hero, index) => (
@@ -612,7 +721,12 @@ export default function HomeScreen() {
             )}
 
             {/* Recent Pro Matches */}
-            <SectionHeader icon="game-controller" title="Recent Pro Matches" color="#3b82f6" />
+            <SectionHeader 
+              icon="game-controller" 
+              title="Recent Pro Matches" 
+              description="Latest results from professional tournaments and leagues."
+              color="#3b82f6" 
+            />
             {isLoading ? <ProMatchSkeleton /> : (
               <FlatList
                 data={proMatchesData}
@@ -642,7 +756,12 @@ export default function HomeScreen() {
             {/* ─── Section 4: Live High-MMR Games ─── */}
             {liveGames.length > 0 && (
               <>
-                <SectionHeader icon="radio" title="Live High-MMR Games" color="#ef4444" />
+                <SectionHeader 
+                  icon="radio" 
+                  title="Live High-MMR Games" 
+                  description="Ongoing high-level public matches from top players."
+                  color="#ef4444" 
+                />
                 <FlatList
                   data={liveGames}
                   horizontal
@@ -664,7 +783,12 @@ export default function HomeScreen() {
             {/* ─── Section 6: Global Records ─── */}
             {(records.gpm || records.kills || records.healing) && (
               <>
-                <SectionHeader icon="medal" title="Global All-Time Records" color="#f59e0b" />
+                <SectionHeader 
+                  icon="medal" 
+                  title="Global All-Time Records" 
+                  description="Statistical milestones achieved in individual matches."
+                  color="#f59e0b" 
+                />
                 <Animated.View entering={FadeInDown.delay(100).springify()}>
                   <RecordCard 
                     title="Highest GPM Ever" 
