@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import Toast from 'react-native-toast-message';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export type FriendshipStatus = 'pending' | 'accepted' | 'declined';
 
@@ -154,6 +154,7 @@ export const useFriends = () => {
 export const useNotifications = () => {
   const { user } = useSupabaseAuth();
   const queryClient = useQueryClient();
+  const { current: instanceId } = useRef(Math.random().toString(36).substring(7));
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications', user?.id],
@@ -176,8 +177,9 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Use a unique name to avoid conflicts between multiple components using this hook
-    const channelName = `notifications_${user.id}_${Math.random().toString(36).substring(7)}`;
+    // Use a unique name per hook instance to allow multiple components to listen
+    // without colliding or leaking on re-renders.
+    const channelName = `notifications_${user.id}_${instanceId}`;
     const channel = supabase.channel(channelName);
     
     channel
@@ -198,7 +200,7 @@ export const useNotifications = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, queryClient]);
+  }, [user?.id, queryClient, instanceId]);
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {

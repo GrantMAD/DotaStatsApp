@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { 
   openDotaApi, 
@@ -113,12 +114,14 @@ export function usePlayerPeers(accountId: string | number | null) {
 export function useEncounterHistory(currentUserId: string | null, targetId: string | number | null) {
   const { data: peers = [] } = usePlayerPeers(currentUserId);
   
-  if (!currentUserId || !targetId) return null;
-  
-  const targetIdNum = typeof targetId === 'string' ? parseInt(targetId) : targetId;
-  const peer = peers.find(p => p.account_id === targetIdNum);
-  
-  return peer || null;
+  return useMemo(() => {
+    if (!currentUserId || !targetId) return null;
+    
+    const targetIdNum = typeof targetId === 'string' ? parseInt(targetId) : targetId;
+    const peer = peers.find(p => p.account_id === targetIdNum);
+    
+    return peer || null;
+  }, [currentUserId, targetId, peers]);
 }
 
 /**
