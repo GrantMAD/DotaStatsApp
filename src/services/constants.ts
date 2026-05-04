@@ -1,8 +1,9 @@
 export const STEAM_CDN_BASE = 'https://cdn.cloudflare.steamstatic.com';
+export const OPENDOTA_BASE_URL = 'https://api.opendota.com/api';
 
 /**
  * Helper to map Hero IDs to localized names.
- * Data source: https://api.opendota.com/api/heroes
+ * Data source: ${OPENDOTA_BASE_URL}/heroes
  */
 export const HEROES: Record<number, { name: string; localized_name: string; roles: string[] }> = {
   1: { name: "npc_dota_hero_antimage", localized_name: "Anti-Mage", roles: ["Carry", "Escape", "Nuker"] },
@@ -283,18 +284,18 @@ export function getHeroImageUrl(heroId: number): string {
  */
 export function getItemImageUrl(itemId: number): string {
   const itemName = ITEM_IDS[itemId];
-  if (!itemName || itemId === 0) return "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/emptyitembg.png";
-  return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/${itemName}.png`;
+  if (!itemName || itemId === 0) return `${STEAM_CDN_BASE}/apps/dota2/images/dota_react/items/emptyitembg.png`;
+  return `${STEAM_CDN_BASE}/apps/dota2/images/dota_react/items/${itemName}.png`;
 }
 
 /**
  * Returns the CDN URL for an item's icon by its internal name.
  */
 export function getItemImageUrlByName(itemName: string): string {
-  if (!itemName) return "https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/emptyitembg.png";
+  if (!itemName) return `${STEAM_CDN_BASE}/apps/dota2/images/dota_react/items/emptyitembg.png`;
   // OpenDota often prefixes item names with 'item_'
   const cleanName = itemName.startsWith("item_") ? itemName.slice(5) : itemName;
-  return `https://cdn.cloudflare.steamstatic.com/apps/dota2/images/dota_react/items/${cleanName}.png`;
+  return `${STEAM_CDN_BASE}/apps/dota2/images/dota_react/items/${cleanName}.png`;
 }
 
 /**

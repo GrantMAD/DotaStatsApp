@@ -199,8 +199,10 @@ function ActivityFeedSkeleton() {
   );
 }
 
+import { STEAM_CDN_BASE } from '../../src/services/constants';
+
 function ProBanItem({ hero, index, onPress }: { hero: ProcessedHero; index: number; onPress: () => void }) {
-  const imgUrl = `https://cdn.cloudflare.steamstatic.com${hero.img}`;
+  const imgUrl = `${STEAM_CDN_BASE}${hero.img}`;
   return (
     <PressableScale onPress={onPress}>
       <Animated.View 

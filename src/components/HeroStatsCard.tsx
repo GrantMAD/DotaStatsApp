@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
-
-const STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com';
+import { STEAM_CDN_BASE } from '../services/constants';
 
 interface HeroStatsCardProps {
   heroName: string;
@@ -14,7 +13,7 @@ interface HeroStatsCardProps {
 }
 
 export default function HeroStatsCard({ heroName, heroImg, winRate, pickCount, rank, tier, mode = 'winrate' }: HeroStatsCardProps) {
-  const imgUrl = `${STEAM_CDN}${heroImg}`;
+  const imgUrl = `${STEAM_CDN_BASE}${heroImg}`;
   const winColor = winRate >= 52 ? '#22c55e' : winRate >= 48 ? '#eab308' : '#ef4444';
 
   const tierColors: Record<string, string> = {

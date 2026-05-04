@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ActivityItem } from '../hooks/useActivityFeed';
 import { useHeroStats } from '../hooks/useOpenDota';
 import PressableScale from './PressableScale';
+import { STEAM_CDN_BASE } from '../services/constants';
 
 interface Props {
   item: ActivityItem;
@@ -15,7 +16,7 @@ interface Props {
 const ActivityFeedItem: React.FC<Props> = ({ item, onPressPlayer, onPressMatch }) => {
   const { data: heroes = [] } = useHeroStats();
   const hero = heroes.find(h => h.id === item.details.heroId);
-  const heroImg = hero ? `https://cdn.cloudflare.steamstatic.com${hero.img}` : null;
+  const heroImg = hero ? `${STEAM_CDN_BASE}${hero.img}` : null;
 
   const getIcon = () => {
     switch (item.type) {

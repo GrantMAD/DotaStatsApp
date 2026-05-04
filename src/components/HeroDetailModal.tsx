@@ -4,8 +4,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { HeroStats } from '../services/opendota';
+import { STEAM_CDN_BASE } from '../services/constants';
 
-const STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const RANK_LABELS: Record<string, { name: string; color: string }> = {
@@ -73,7 +73,7 @@ function WinRateBar({ picks, wins, label, color }: { picks: number; wins: number
 export default function HeroDetailModal({ hero, visible, onClose, playerStats }: Props) {
   if (!hero) return null;
 
-  const imgUrl = `${STEAM_CDN}${hero.img}`;
+  const imgUrl = `${STEAM_CDN_BASE}${hero.img}`;
   const pubWinRate = hero.pub_pick > 0 ? (hero.pub_win / hero.pub_pick) * 100 : 0;
   const proWinRate = hero.pro_pick > 0 ? (hero.pro_win / hero.pro_pick) * 100 : 0;
   const turboWinRate = hero.turbo_picks > 0 ? (hero.turbo_wins / hero.turbo_picks) * 100 : 0;

@@ -1,4 +1,4 @@
-export const OPENDOTA_BASE_URL = 'https://api.opendota.com/api';
+import { OPENDOTA_BASE_URL } from './constants';
 
 export interface PlayerProfile {
   profile: {

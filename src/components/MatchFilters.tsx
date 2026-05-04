@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { PlayerMatchFilters } from '../services/opendota';
@@ -28,45 +28,25 @@ const MODE_OPTIONS = [
   { label: 'All Pick', value: 1 },
 ];
 
+type FilterTab = 'win' | 'date' | 'game_mode';
+
 export default function MatchFilters({ filters, onFilterChange }: MatchFiltersProps) {
-  const renderFilterGroup = (
-    title: string, 
-    options: { label: string, value: any }[], 
-    currentValue: any, 
-    field: keyof PlayerMatchFilters
-  ) => (
-    <View className="mb-4">
-      <Text className="text-gray-500 text-[10px] uppercase font-outfit-black tracking-widest mb-2 ml-4">
-        {title}
-      </Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4">
-        {options.map((opt, i) => {
-          const isActive = currentValue === opt.value;
-          return (
-            <TouchableOpacity
-              key={i}
-              onPress={() => onFilterChange({ ...filters, [field]: opt.value })}
-              className={`mr-2 px-4 py-2 rounded-full border ${
-                isActive 
-                  ? 'bg-purple-500 border-purple-400 shadow-lg shadow-purple-500/50' 
-                  : 'bg-zinc-800/50 border-zinc-700'
-              }`}
-            >
-              <Text className={`text-xs font-outfit-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
+  const [activeTab, setActiveTab] = useState<FilterTab>('win');
 
   const hasFilters = filters.win !== undefined || filters.date !== undefined || filters.game_mode !== undefined;
 
+  const tabs: { label: string, key: FilterTab, options: { label: string, value: any }[] }[] = [
+    { label: 'Result', key: 'win', options: WIN_OPTIONS },
+    { label: 'Timeframe', key: 'date', options: DATE_OPTIONS },
+    { label: 'Game Mode', key: 'game_mode', options: MODE_OPTIONS },
+  ];
+
+  const currentTab = tabs.find(t => t.key === activeTab)!;
+
   return (
     <View className="py-2">
-      <View className="flex-row items-center justify-between px-4 mb-4">
+      {/* Header & Clear */}
+      <View className="flex-row items-center justify-between px-4 mb-3">
         <View className="flex-row items-center">
           <Ionicons name="filter" size={16} color="#8b5cf6" />
           <Text className="text-white font-outfit-bold ml-2 uppercase tracking-tighter">Filters</Text>
@@ -81,9 +61,50 @@ export default function MatchFilters({ filters, onFilterChange }: MatchFiltersPr
         )}
       </View>
 
-      {renderFilterGroup('Result', WIN_OPTIONS, filters.win, 'win')}
-      {renderFilterGroup('Timeframe', DATE_OPTIONS, filters.date, 'date')}
-      {renderFilterGroup('Game Mode', MODE_OPTIONS, filters.game_mode, 'game_mode')}
+      {/* Tabs */}
+      <View className="flex-row px-4 mb-4 border-b border-white/5">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const isFiltered = filters[tab.key] !== undefined;
+          
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key)}
+              className={`mr-6 pb-2 border-b-2 relative ${isActive ? 'border-purple-500' : 'border-transparent'}`}
+            >
+              <Text className={`font-outfit-bold text-[11px] uppercase ${isActive ? 'text-white' : 'text-gray-500'}`}>
+                {tab.label}
+              </Text>
+              {isFiltered && !isActive && (
+                <View className="absolute -top-1 -right-2 w-1.5 h-1.5 bg-purple-500 rounded-full" />
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Options Scroll */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="px-4 pb-2">
+        {currentTab.options.map((opt, i) => {
+          const isActive = filters[activeTab] === opt.value;
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => onFilterChange({ ...filters, [activeTab]: opt.value })}
+              className={`mr-2 px-4 py-2 rounded-full border ${
+                isActive 
+                  ? 'bg-purple-500 border-purple-400 shadow-lg shadow-purple-500/50' 
+                  : 'bg-zinc-800/50 border-zinc-700'
+              }`}
+            >
+              <Text className={`text-xs font-outfit-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 }
