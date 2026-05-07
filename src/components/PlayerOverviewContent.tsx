@@ -30,7 +30,7 @@ import PressableScale from './PressableScale';
 import Skeleton, { PlayerProfileSkeleton } from './Skeleton';
 import MeshGradient from './MeshGradient';
 import GlassModal from './GlassModal';
-import { useSteamAuth } from '../hooks/useSteamAuth';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { 
   useEncounterHistory, 
   usePlayerHeroes, 
@@ -38,10 +38,10 @@ import {
   usePlayerProfile,
   usePlayerWinLoss,
   useRecentMatches,
-  useHeroStats,
-  usePlayerMatches,
   usePlayerTotals,
-  usePlayerCounts
+  usePlayerCounts,
+  useHeroStats,
+  usePlayerMatches
 } from '../hooks/useOpenDota';
 import { useModals } from '../context/ModalContext';
 import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
@@ -165,7 +165,8 @@ export function PlayerOverviewContent({
   onComparePress,
   isPrivate = false,
 }: PlayerOverviewContentProps) {
-  const { accountId: currentUserId } = useSteamAuth();
+  const { steamAccountId } = useSupabaseAuth();
+  const currentUserId = steamAccountId ? steamAccountId.toString() : null;
   const [limit, setLimit] = useState(20);
   const [filters, setFilters] = useState<PlayerMatchFilters>({ limit });
   const { data: filteredMatches = [], isLoading: matchesLoading } = usePlayerMatches(accountId, filters);

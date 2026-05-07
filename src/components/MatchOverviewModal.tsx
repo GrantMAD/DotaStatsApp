@@ -28,8 +28,8 @@ import {
 } from '../services/constants';
 import { getChatWheelPhrase } from '../services/chatwheel';
 import * as Linking from 'expo-linking';
-import { useMatchDetails, usePlayerPeers } from '../hooks/useOpenDota';
-import { useSteamAuth } from '../hooks/useSteamAuth';
+import { useMatchDetails, useEncounterHistory, usePlayerPeers } from '../hooks/useOpenDota';
+import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import Skeleton, { MatchOverviewSkeleton } from './Skeleton';
 import GlassModal from './GlassModal';
 import MeshGradient from './MeshGradient';
@@ -46,7 +46,7 @@ interface MatchOverviewModalProps {
 const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode: number }) => {
   const radiantPicks = picksBans.filter(pb => pb.team === 0 && pb.is_pick).sort((a, b) => a.order - b.order);
   const direPicks = picksBans.filter(pb => pb.team === 1 && pb.is_pick).sort((a, b) => a.order - b.order);
-  
+
   const allBans = picksBans.filter(pb => !pb.is_pick).sort((a, b) => a.order - b.order);
   const radiantBans = allBans.filter(pb => pb.team === 0);
   const direBans = allBans.filter(pb => pb.team === 1);
@@ -57,7 +57,7 @@ const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode:
   return (
     <View className="bg-[#2a2a2a] p-4 rounded-xl mb-6 border border-zinc-800">
       <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-4 text-center">Draft Phase</Text>
-      
+
       <View className="flex-row justify-between">
         {/* Radiant Side */}
         <View className="flex-1 mr-2">
@@ -118,7 +118,8 @@ const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode:
 };
 
 export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: MatchOverviewModalProps) {
-  const { accountId: currentUserId } = useSteamAuth();
+  const { steamAccountId } = useSupabaseAuth();
+  const currentUserId = steamAccountId ? steamAccountId.toString() : null;
   const { data: matchData, isLoading: loading } = useMatchDetails(visible ? matchId : null);
   const { data: userPeers = [] } = usePlayerPeers(visible ? currentUserId : null);
   const [activeTab, setActiveTab] = useState<MatchTab>('Scoreboard');
@@ -204,7 +205,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
   const renderPlayerRow = (p: MatchDetails['players'][0], index: number) => {
     const isAnonymous = !p.account_id;
     const mainItems = [p.item_0, p.item_1, p.item_2, p.item_3, p.item_4, p.item_5];
-    const peer = !isAnonymous ? userPeers.find(up => up.account_id === p.account_id) : null;
+    const peer = p.account_id ? userPeers.find(up => up.account_id === p.account_id) : null;
 
     return (
       <TouchableOpacity

@@ -109,19 +109,17 @@ export function usePlayerPeers(accountId: string | number | null) {
 }
 
 /**
- * Hook to check if a target player has been encountered by the current user.
+ * Hook to fetch pinpoint accurate encounter history between two players.
  */
-export function useEncounterHistory(currentUserId: string | null, targetId: string | number | null) {
-  const { data: peers = [] } = usePlayerPeers(currentUserId);
-  
-  return useMemo(() => {
-    if (!currentUserId || !targetId) return null;
-    
-    const targetIdNum = typeof targetId === 'string' ? parseInt(targetId) : targetId;
-    const peer = peers.find(p => p.account_id === targetIdNum);
-    
-    return peer || null;
-  }, [currentUserId, targetId, peers]);
+export function useEncounterHistory(accountId: string | number | null, targetId: string | number | null) {
+  const { data } = useQuery({
+    queryKey: ['encounterHistory', accountId, targetId],
+    queryFn: () => (accountId && targetId) ? openDotaApi.getSharedStats(accountId, targetId) : null,
+    enabled: !!accountId && !!targetId && accountId !== targetId,
+    staleTime: 1000 * 60 * 5, // Pinpoint stats can be cached for 5 mins
+  });
+
+  return data;
 }
 
 /**

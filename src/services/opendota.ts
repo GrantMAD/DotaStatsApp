@@ -1,4 +1,5 @@
 import { OPENDOTA_BASE_URL } from './constants';
+export { OPENDOTA_BASE_URL };
 
 export interface PlayerProfile {
   profile: {
@@ -387,12 +388,28 @@ export async function getRecentMatches(accountId: string | number, limit: number
  */
 export async function getPlayerPeers(accountId: string | number): Promise<Peer[]> {
   try {
-    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/peers?limit=500`);
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/peers`);
     if (!response.ok) throw new Error('Failed to fetch peers');
     return await response.json();
   } catch (error) {
     console.error('Error fetching peers:', error);
     return [];
+  }
+}
+
+/**
+ * Fetches pinpoint accurate win/loss data between two specific players 
+ * across their entire match history using the included_account_id filter.
+ */
+export async function getSharedStats(accountId: string | number, targetId: string | number): Promise<Peer | null> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/peers?included_account_id=${targetId}`);
+    if (!response.ok) throw new Error('Failed to fetch shared stats');
+    const data = await response.json();
+    return data.length > 0 ? data[0] : null;
+  } catch (error) {
+    console.error('Error fetching shared stats:', error);
+    return null;
   }
 }
 
@@ -692,6 +709,7 @@ export const openDotaApi = {
   getPlayerMatches,
   getRecentMatches,
   getPlayerPeers,
+  getSharedStats,
   getMatchDetails,
   requestMatchParse,
   getLiveGames,
