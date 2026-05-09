@@ -15,9 +15,8 @@ import HeroDetailModal from '../../src/components/HeroDetailModal';
 import { MatchOverviewModal } from '../../src/components/MatchOverviewModal';
 import PlayerDetailModal from '../../src/components/PlayerDetailModal';
 import LiveGameCard from '../../src/components/LiveGameCard';
-import RecordCard from '../../src/components/RecordCard';
 import ErrorCard from '../../src/components/ErrorCard';
-import { useHeroStats, useProMatches, useLiveGames, useGlobalRecordsMulti, usePlayerProfile } from '../../src/hooks/useOpenDota';
+import { useHeroStats, useProMatches, useLiveGames, usePlayerProfile } from '../../src/hooks/useOpenDota';
 import { useActivityFeed } from '../../src/hooks/useActivityFeed';
 import ActivityFeedItem from '../../src/components/ActivityFeedItem';
 import { queryClient } from '../../src/services/queryClient';
@@ -256,7 +255,6 @@ export default function HomeScreen() {
   const { data: heroesData = [], isLoading: loadingHeroes, isError: errorHeroes, refetch: refetchHeroes } = useHeroStats();
   const { data: proMatchesData = [], isLoading: loadingMatches, isError: errorMatches, refetch: refetchMatches } = useProMatches(10);
   const { data: liveGames = [], refetch: refetchLive } = useLiveGames();
-  const { data: multiRecords = {}, refetch: refetchRecords } = useGlobalRecordsMulti(['gold_per_min', 'kills', 'hero_healing']);
   const { activities, isLoading: loadingActivity, refetch: refetchActivity } = useActivityFeed();
 
   // Get user rank for default bracket
@@ -317,17 +315,11 @@ export default function HomeScreen() {
       refetchHeroes(),
       refetchMatches(),
       refetchLive(),
-      refetchRecords(),
       refetchActivity(),
     ]);
     setIsRefreshing(false);
-  }, [refetchHeroes, refetchMatches, refetchLive, refetchRecords, refetchActivity]);
+  }, [refetchHeroes, refetchMatches, refetchLive, refetchActivity]);
 
-  const records = {
-    gpm: multiRecords.gold_per_min?.[0] || null,
-    kills: multiRecords.kills?.[0] || null,
-    healing: multiRecords.hero_healing?.[0] || null
-  };
 
   return (
     <LinearGradient 
@@ -784,47 +776,6 @@ export default function HomeScreen() {
                 </>
               )}
 
-              {/* ─── Section 6: Global Records ─── */}
-              {(records.gpm || records.kills || records.healing) && (
-                <>
-                  <SectionHeader 
-                    icon="medal" 
-                    title="Global All-Time Records" 
-                    description="Statistical milestones achieved in individual matches."
-                    color="#f59e0b" 
-                />
-                <Animated.View entering={FadeInDown.delay(100).springify()}>
-                  <RecordCard 
-                    title="Highest GPM Ever" 
-                    field="gold_per_min" 
-                    record={records.gpm} 
-                    icon="cash" 
-                    color="#eab308" 
-                    onPress={openMatchById} 
-                  />
-                </Animated.View>
-                <Animated.View entering={FadeInDown.delay(200).springify()}>
-                  <RecordCard 
-                    title="Most Kills in a Match" 
-                    field="kills" 
-                    record={records.kills} 
-                    icon="skull" 
-                    color="#ef4444" 
-                    onPress={openMatchById} 
-                  />
-                </Animated.View>
-                <Animated.View entering={FadeInDown.delay(300).springify()}>
-                  <RecordCard 
-                    title="Legendary Support Impact" 
-                    field="hero_healing" 
-                    record={records.healing} 
-                    icon="heart" 
-                    color="#3b82f6" 
-                    onPress={openMatchById} 
-                  />
-                </Animated.View>
-              </>
-            )}
           </>
         )}
       </ScrollView>
