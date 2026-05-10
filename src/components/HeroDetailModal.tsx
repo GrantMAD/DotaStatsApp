@@ -5,6 +5,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { HeroStats } from '../services/opendota';
 import { STEAM_CDN_BASE } from '../services/constants';
+import HeroMatchups from './HeroMatchups';
+import HeroPowerSpikes from './HeroPowerSpikes';
+import HeroItemBuilds from './HeroItemBuilds';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -258,6 +261,29 @@ export default function HeroDetailModal({ hero, visible, onClose, playerStats }:
                 color={b.color}
               />
             ))}
+          </View>
+
+          {/* Deep Analytics Header */}
+          <View style={{ marginVertical: 10, paddingHorizontal: 4 }}>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', fontStyle: 'italic' }}>
+              DEEP ANALYTICS
+            </Text>
+            <View style={{ height: 2, backgroundColor: '#8b5cf6', width: 40, marginTop: 4, borderRadius: 1 }} />
+          </View>
+
+          {/* Power Spikes */}
+          <View style={{ marginBottom: 24 }}>
+            <HeroPowerSpikes heroId={hero.id} />
+          </View>
+
+          {/* Matchups */}
+          <View style={{ marginBottom: 24 }}>
+            <HeroMatchups heroId={hero.id} />
+          </View>
+
+          {/* Item Builds */}
+          <View style={{ marginBottom: 24 }}>
+            <HeroItemBuilds heroId={hero.id} />
           </View>
         </ScrollView>
       </View>

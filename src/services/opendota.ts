@@ -699,6 +699,58 @@ export async function getPlayerWordCloud(accountId: string | number): Promise<Wo
   }
 }
 
+export interface HeroMatchup {
+  hero_id: number;
+  games_played: number;
+  wins: number;
+}
+
+export interface HeroDuration {
+  duration_bin: number;
+  games_played: number;
+  wins: number;
+}
+
+export interface HeroItemPopularity {
+  start_game_items: Record<string, number>;
+  early_game_items: Record<string, number>;
+  mid_game_items: Record<string, number>;
+  late_game_items: Record<string, number>;
+}
+
+export async function getHeroMatchups(heroId: number): Promise<HeroMatchup[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/heroes/${heroId}/matchups`);
+    if (!response.ok) throw new Error('Failed to fetch hero matchups');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching hero matchups:', error);
+    return [];
+  }
+}
+
+export async function getHeroDurations(heroId: number): Promise<HeroDuration[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/heroes/${heroId}/durations`);
+    if (!response.ok) throw new Error('Failed to fetch hero durations');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching hero durations:', error);
+    return [];
+  }
+}
+
+export async function getHeroItemPopularity(heroId: number): Promise<HeroItemPopularity | null> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/heroes/${heroId}/itemPopularity`);
+    if (!response.ok) throw new Error('Failed to fetch hero item popularity');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching hero item popularity:', error);
+    return null;
+  }
+}
+
 export const openDotaApi = {
   searchPlayers,
   getPlayerHeroes,
@@ -723,4 +775,7 @@ export const openDotaApi = {
   getHeroStats,
   getProMatches,
   getPlayerWordCloud,
+  getHeroMatchups,
+  getHeroDurations,
+  getHeroItemPopularity,
 };

@@ -112,14 +112,48 @@ export function usePlayerPeers(accountId: string | number | null) {
  * Hook to fetch pinpoint accurate encounter history between two players.
  */
 export function useEncounterHistory(accountId: string | number | null, targetId: string | number | null) {
-  const { data } = useQuery({
+  return useQuery({
     queryKey: ['encounterHistory', accountId, targetId],
     queryFn: () => (accountId && targetId) ? openDotaApi.getSharedStats(accountId, targetId) : null,
     enabled: !!accountId && !!targetId && accountId !== targetId,
-    staleTime: 1000 * 60 * 5, // Pinpoint stats can be cached for 5 mins
+    staleTime: 1000 * 60 * 5,
   });
+}
 
-  return data;
+/**
+ * Hook to fetch hero matchups.
+ */
+export function useHeroMatchups(heroId: number | null) {
+  return useQuery({
+    queryKey: ['heroMatchups', heroId],
+    queryFn: () => (heroId ? openDotaApi.getHeroMatchups(heroId) : []),
+    enabled: !!heroId,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+}
+
+/**
+ * Hook to fetch hero durations (win rate over game length).
+ */
+export function useHeroDurations(heroId: number | null) {
+  return useQuery({
+    queryKey: ['heroDurations', heroId],
+    queryFn: () => (heroId ? openDotaApi.getHeroDurations(heroId) : []),
+    enabled: !!heroId,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+}
+
+/**
+ * Hook to fetch hero item popularity.
+ */
+export function useHeroItemPopularity(heroId: number | null) {
+  return useQuery({
+    queryKey: ['heroItemPopularity', heroId],
+    queryFn: () => (heroId ? openDotaApi.getHeroItemPopularity(heroId) : null),
+    enabled: !!heroId,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
 }
 
 /**
