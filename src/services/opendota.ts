@@ -751,6 +751,52 @@ export async function getHeroItemPopularity(heroId: number): Promise<HeroItemPop
   }
 }
 
+export interface ItemTimingScenario {
+  hero_id: number;
+  item: string;
+  time: number;
+  games: number;
+  wins: number;
+}
+
+export interface LaneRoleScenario {
+  hero_id: number;
+  lane_role: number;
+  time: number;
+  games: number;
+  wins: number;
+}
+
+export async function getScenariosItemTimings(params: { item?: string; hero_id?: number }): Promise<ItemTimingScenario[]> {
+  try {
+    const query = new URLSearchParams();
+    if (params.item) query.append('item', params.item);
+    if (params.hero_id) query.append('hero_id', params.hero_id.toString());
+    const response = await fetch(`${OPENDOTA_BASE_URL}/scenarios/itemTimings?${query.toString()}`);
+    if (!response.ok) throw new Error('Failed to fetch item timing scenarios');
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.value || []);
+  } catch (error) {
+    console.error('Error fetching item timing scenarios:', error);
+    return [];
+  }
+}
+
+export async function getScenariosLaneRoles(params: { lane_role?: number; hero_id?: number }): Promise<LaneRoleScenario[]> {
+  try {
+    const query = new URLSearchParams();
+    if (params.lane_role) query.append('lane_role', params.lane_role.toString());
+    if (params.hero_id) query.append('hero_id', params.hero_id.toString());
+    const response = await fetch(`${OPENDOTA_BASE_URL}/scenarios/laneRoles?${query.toString()}`);
+    if (!response.ok) throw new Error('Failed to fetch lane role scenarios');
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.value || []);
+  } catch (error) {
+    console.error('Error fetching lane role scenarios:', error);
+    return [];
+  }
+}
+
 export const openDotaApi = {
   searchPlayers,
   getPlayerHeroes,
@@ -778,4 +824,6 @@ export const openDotaApi = {
   getHeroMatchups,
   getHeroDurations,
   getHeroItemPopularity,
+  getScenariosItemTimings,
+  getScenariosLaneRoles,
 };

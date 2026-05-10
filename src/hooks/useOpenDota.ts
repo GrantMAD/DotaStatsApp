@@ -352,3 +352,25 @@ export function usePlayerWordCloud(accountId: string | number | null) {
     staleTime: 1000 * 60 * 60 * 24, // Chat stats change slowly
   });
 }
+
+/**
+ * Hook to fetch item timing scenarios.
+ */
+export function useScenariosItemTimings(item?: string, hero_id?: number) {
+  return useQuery({
+    queryKey: ['scenariosItemTimings', item, hero_id],
+    queryFn: () => openDotaApi.getScenariosItemTimings({ item, hero_id }),
+    staleTime: 1000 * 60 * 60 * 24, // Scenarios don't change fast
+  });
+}
+
+/**
+ * Hook to fetch lane role scenarios.
+ */
+export function useScenariosLaneRoles(lane_role?: number, hero_id?: number) {
+  return useQuery({
+    queryKey: ['scenariosLaneRoles', lane_role, hero_id],
+    queryFn: () => openDotaApi.getScenariosLaneRoles({ lane_role, hero_id }),
+    staleTime: 1000 * 60 * 60 * 24, // Scenarios don't change fast
+  });
+}

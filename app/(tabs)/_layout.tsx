@@ -80,6 +80,13 @@ export default function TabsLayout() {
             }}
           />
           <Tabs.Screen
+            name="meta"
+            options={{
+              tabBarIcon: ({ color }) => <Ionicons name="trending-up" size={24} color={color} />,
+              tabBarLabel: 'Meta'
+            }}
+          />
+          <Tabs.Screen
             name="friends"
             options={{
               href: null,

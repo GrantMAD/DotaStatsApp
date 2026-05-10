@@ -126,10 +126,13 @@ export const HEROES: Record<number, { name: string; localized_name: string; role
   126: { name: "npc_dota_hero_void_spirit", localized_name: "Void Spirit", roles: ["Carry", "Escape", "Nuker", "Disabler"] },
   128: { name: "npc_dota_hero_snapfire", localized_name: "Snapfire", roles: ["Support", "Nuker", "Disabler", "Escape"] },
   129: { name: "npc_dota_hero_mars", localized_name: "Mars", roles: ["Carry", "Initiator", "Durable", "Disabler"] },
+  131: { name: "npc_dota_hero_ringmaster", localized_name: "Ringmaster", roles: ["Support", "Nuker", "Escape", "Disabler"] },
   135: { name: "npc_dota_hero_dawnbreaker", localized_name: "Dawnbreaker", roles: ["Carry", "Durable", "Initiator"] },
   136: { name: "npc_dota_hero_marci", localized_name: "Marci", roles: ["Carry", "Support", "Initiator", "Disabler", "Escape"] },
   137: { name: "npc_dota_hero_primal_beast", localized_name: "Primal Beast", roles: ["Initiator", "Durable", "Disabler"] },
   138: { name: "npc_dota_hero_muerta", localized_name: "Muerta", roles: ["Carry", "Nuker", "Disabler"] },
+  145: { name: "npc_dota_hero_kez", localized_name: "Kez", roles: ["Carry", "Escape", "Disabler"] },
+  155: { name: "npc_dota_hero_largo", localized_name: "Largo", roles: ["Durable", "Disabler", "Support"] },
 };
 
 /**
