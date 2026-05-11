@@ -797,6 +797,31 @@ export async function getScenariosLaneRoles(params: { lane_role?: number; hero_i
   }
 }
 
+export interface DistributionData {
+  ranks: {
+    rows: {
+      bin: number;
+      bin_name: number;
+      count: number;
+      cumulative_sum: number;
+    }[];
+    sum: {
+      count: number;
+    };
+  };
+}
+
+export async function getDistributions(): Promise<DistributionData | null> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/distributions`);
+    if (!response.ok) throw new Error('Failed to fetch distributions');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching distributions:', error);
+    return null;
+  }
+}
+
 export const openDotaApi = {
   searchPlayers,
   getPlayerHeroes,
@@ -826,4 +851,5 @@ export const openDotaApi = {
   getHeroItemPopularity,
   getScenariosItemTimings,
   getScenariosLaneRoles,
+  getDistributions,
 };

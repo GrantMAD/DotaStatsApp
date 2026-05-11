@@ -12,7 +12,7 @@ const screenWidth = Dimensions.get("window").width;
 export function ItemTimingAnalyzer() {
   const [selectedHero, setSelectedHero] = useState<number>(1); // Anti-Mage
   const [selectedItem, setSelectedItem] = useState<string>('bfury');
-  
+
   const [isHeroModalOpen, setIsHeroModalOpen] = useState(false);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,11 +44,11 @@ export function ItemTimingAnalyzer() {
         games: games
       };
     })
-    .filter(d => d.time > 0)
-    .sort((a, b) => a.time - b.time);
+      .filter(d => d.time > 0)
+      .sort((a, b) => a.time - b.time);
   }, [data]);
 
-  const criticalPoint = chartData.find((d, i) => i > 0 && d.winRate < 50 && chartData[i-1].winRate >= 50);
+  const criticalPoint = chartData.find((d, i) => i > 0 && d.winRate < 50 && chartData[i - 1].winRate >= 50);
 
   const chartLabels = chartData.map(d => d.time.toString());
   const chartWinRates = chartData.map(d => d.winRate);
@@ -60,7 +60,7 @@ export function ItemTimingAnalyzer() {
     <View className="space-y-6">
       {/* Selectors */}
       <View className="flex-row gap-4 px-4">
-        <TouchableOpacity 
+        <TouchableOpacity
           className="flex-1 bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800"
           onPress={() => { setSearchQuery(''); setIsHeroModalOpen(true); }}
         >
@@ -74,7 +74,7 @@ export function ItemTimingAnalyzer() {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           className="flex-1 bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800"
           onPress={() => { setSearchQuery(''); setIsItemModalOpen(true); }}
         >
@@ -98,7 +98,7 @@ export function ItemTimingAnalyzer() {
               <Text className="text-zinc-400 text-xs">{heroName} with {itemName}</Text>
             </View>
           </View>
-          
+
           {criticalPoint && (
             <View className="flex-row items-center gap-1 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">
               <Ionicons name="warning" size={12} color="#ef4444" />
@@ -112,13 +112,13 @@ export function ItemTimingAnalyzer() {
             <ActivityIndicator size="large" color="#c084fc" />
           </View>
         ) : chartData.length > 0 ? (
-          <View className="items-center">
+          <View className="-ml-10">
             <LineChart
               data={{
                 labels: chartLabels.length > 10 ? chartLabels.filter((_, i) => i % Math.ceil(chartLabels.length / 8) === 0) : chartLabels,
                 datasets: [{ data: chartWinRates }]
               }}
-              width={screenWidth - 72}
+              width={screenWidth - 25}
               height={220}
               yAxisSuffix="%"
               withInnerLines={false}
@@ -137,7 +137,7 @@ export function ItemTimingAnalyzer() {
                 },
               }}
               bezier
-              style={{ paddingRight: 20, paddingLeft: 0, marginVertical: 8, borderRadius: 16 }}
+              style={{ paddingRight: 70, paddingLeft: 10, marginVertical: 8, borderRadius: 16 }}
             />
           </View>
         ) : (

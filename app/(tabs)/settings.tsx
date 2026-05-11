@@ -242,6 +242,7 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           ) : undefined
         }
+        rightComponent={<NotificationBell />}
       />
       
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
