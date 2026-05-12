@@ -5,7 +5,6 @@ import { HEROES, ITEM_IDS, getHeroImageUrl } from '../../services/constants';
 import { LineChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 import GlassModal from '../GlassModal';
-import { BlurView } from 'expo-blur';
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -48,7 +47,23 @@ export function ItemTimingAnalyzer() {
       .sort((a, b) => a.time - b.time);
   }, [data]);
 
-  const criticalPoint = chartData.find((d, i) => i > 0 && d.winRate < 50 && chartData[i - 1].winRate >= 50);
+  const insights = useMemo(() => {
+    if (chartData.length === 0) return null;
+
+    const peakPoint = [...chartData].sort((a, b) => b.winRate - a.winRate)[0];
+    const criticalPoint = chartData.find((d, i) => i > 0 && d.winRate < 50 && chartData[i - 1].winRate >= 50);
+    const latestPoint = chartData[chartData.length - 1];
+    
+    const peakToLateDrop = peakPoint.winRate - latestPoint.winRate;
+    
+    return {
+      peakPoint,
+      criticalPoint,
+      latestPoint,
+      peakToLateDrop,
+      isHighImpact: peakToLateDrop > 10
+    };
+  }, [chartData]);
 
   const chartLabels = chartData.map(d => d.time.toString());
   const chartWinRates = chartData.map(d => d.winRate);
@@ -64,7 +79,7 @@ export function ItemTimingAnalyzer() {
           className="flex-1 bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800"
           onPress={() => { setSearchQuery(''); setIsHeroModalOpen(true); }}
         >
-          <Text className="text-zinc-500 text-xs font-bold uppercase mb-2">Hero</Text>
+          <Text className="text-zinc-500 text-[10px] font-black uppercase mb-2">Hero</Text>
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center gap-2">
               <Image source={{ uri: getHeroImageUrl(selectedHero) }} className="w-8 h-8 rounded-lg" />
@@ -78,13 +93,40 @@ export function ItemTimingAnalyzer() {
           className="flex-1 bg-zinc-900/50 p-4 rounded-2xl border border-zinc-800"
           onPress={() => { setSearchQuery(''); setIsItemModalOpen(true); }}
         >
-          <Text className="text-zinc-500 text-xs font-bold uppercase mb-2">Item</Text>
+          <Text className="text-zinc-500 text-[10px] font-black uppercase mb-2">Item</Text>
           <View className="flex-row items-center justify-between">
             <Text className="text-white font-bold capitalize max-w-[80%]" numberOfLines={1}>{itemName}</Text>
             <Ionicons name="chevron-down" size={20} color="#666" />
           </View>
         </TouchableOpacity>
       </View>
+
+      {/* Dashboard Summary Cards */}
+      {insights && !isLoading && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          className="px-4"
+          contentContainerStyle={{ gap: 12, paddingRight: 32 }}
+        >
+          <View className="bg-zinc-900/50 p-4 rounded-2xl border-l-4 border-emerald-500/50 min-w-[140px]">
+            <Text className="text-zinc-500 text-[9px] font-black uppercase mb-1">Optimal</Text>
+            <Text className="text-white font-black text-lg">Before {insights.peakPoint.time}m</Text>
+          </View>
+          <View className="bg-zinc-900/50 p-4 rounded-2xl border-l-4 border-amber-500/50 min-w-[140px]">
+            <Text className="text-zinc-500 text-[9px] font-black uppercase mb-1">Target</Text>
+            <Text className="text-white font-black text-lg">{insights.peakPoint.time}-{insights.criticalPoint?.time || insights.latestPoint.time}m</Text>
+          </View>
+          <View className="bg-zinc-900/50 p-4 rounded-2xl border-l-4 border-red-500/50 min-w-[140px]">
+            <Text className="text-zinc-500 text-[9px] font-black uppercase mb-1">Danger Zone</Text>
+            <Text className="text-white font-black text-lg">{insights.criticalPoint?.time || 'N/A'}+ min</Text>
+          </View>
+          <View className="bg-zinc-900/50 p-4 rounded-2xl border-l-4 border-purple-500/50 min-w-[140px]">
+            <Text className="text-zinc-500 text-[9px] font-black uppercase mb-1">Win Swing</Text>
+            <Text className="text-white font-black text-lg">-{insights.peakToLateDrop.toFixed(0)}%</Text>
+          </View>
+        </ScrollView>
+      )}
 
       {/* Chart Section */}
       <View className="bg-zinc-900/40 mx-4 p-4 rounded-3xl border border-white/5">
@@ -99,10 +141,10 @@ export function ItemTimingAnalyzer() {
             </View>
           </View>
 
-          {criticalPoint && (
+          {insights?.criticalPoint && (
             <View className="flex-row items-center gap-1 bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">
               <Ionicons name="warning" size={12} color="#ef4444" />
-              <Text className="text-red-500 text-xs font-bold">{criticalPoint.time}m drop-off</Text>
+              <Text className="text-red-500 text-xs font-bold">{insights.criticalPoint.time}m drop-off</Text>
             </View>
           )}
         </View>
@@ -128,17 +170,28 @@ export function ItemTimingAnalyzer() {
                 backgroundGradientFromOpacity: 0,
                 backgroundGradientToOpacity: 0,
                 decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`, // Purple 500
-                labelColor: (opacity = 1) => `rgba(161, 161, 170, ${opacity})`, // Zinc 400
+                color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`, 
+                labelColor: (opacity = 1) => `rgba(161, 161, 170, ${opacity})`, 
                 propsForDots: {
                   r: "4",
                   strokeWidth: "2",
-                  stroke: "#18181b", // bg-zinc-900 equivalent
+                  stroke: "#18181b", 
                 },
               }}
               bezier
               style={{ paddingRight: 70, paddingLeft: 10, marginVertical: 8, borderRadius: 16 }}
             />
+            {/* Visual Zone Labels */}
+            <View className="flex-row justify-between px-10 mt-2">
+              <View className="flex-row items-center gap-1">
+                <View className="w-2 h-2 rounded-full bg-emerald-500" />
+                <Text className="text-emerald-500 text-[10px] font-bold uppercase">Optimal</Text>
+              </View>
+              <View className="flex-row items-center gap-1">
+                <View className="w-2 h-2 rounded-full bg-red-500" />
+                <Text className="text-red-500 text-[10px] font-bold uppercase">Danger</Text>
+              </View>
+            </View>
           </View>
         ) : (
           <View className="h-56 items-center justify-center">
@@ -149,19 +202,25 @@ export function ItemTimingAnalyzer() {
       </View>
 
       {/* Strategic Insights */}
-      <View className="px-4 flex-row gap-4">
-        <View className="flex-1 bg-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20">
-          <View className="flex-row items-center gap-2 mb-2">
-            <Ionicons name="book" size={14} color="#818cf8" />
-            <Text className="text-indigo-400 text-[10px] font-black uppercase tracking-widest">How to Read</Text>
+      {insights && !isLoading && (
+        <View className="px-4">
+          <View className="bg-purple-500/10 p-4 rounded-2xl border border-purple-500/20">
+            <View className="flex-row items-center gap-2 mb-2">
+              <Ionicons name="flash" size={14} color="#c084fc" />
+              <Text className="text-purple-400 text-[10px] font-black uppercase tracking-widest">Strategic Meta Tip</Text>
+            </View>
+            <Text className="text-zinc-300 text-xs leading-relaxed">
+              For {heroName}, {itemName} is most effective when completed by <Text className="text-emerald-400 font-bold">{insights.peakPoint.time} minutes</Text>. 
+              {insights.criticalPoint 
+                ? ` Delaying it beyond ${insights.criticalPoint.time} minutes pushes your win rate into the "Danger Zone" (below 50%).` 
+                : ` Even late purchases maintain a decent win rate, but earlier is always better for snowballing.`}
+              {insights.isHighImpact && ` This item is high-impact; missing your window results in a significant ${insights.peakToLateDrop.toFixed(0)}% win rate penalty.`}
+            </Text>
           </View>
-          <Text className="text-indigo-300/80 text-xs leading-relaxed">
-            A downward slope indicates that delaying this item significantly reduces win chances. Try to build it before the win rate drops below 50%.
-          </Text>
         </View>
-      </View>
+      )}
 
-      {/* Hero Picker Modal */}
+      {/* Picker Modals remain the same... */}
       <GlassModal visible={isHeroModalOpen} onClose={() => setIsHeroModalOpen(false)}>
         <View className="flex-1 px-4 pt-2">
           <Text className="text-white font-black text-xl mb-4">Select Hero</Text>
