@@ -10,9 +10,10 @@ import { ItemTimingAnalyzer } from '../../src/components/meta/ItemTimingAnalyzer
 import { LaneRoleInsights } from '../../src/components/meta/LaneRoleInsights';
 import { BracketLeaderboards } from '../../src/components/meta/BracketLeaderboards';
 import { CommunityDistribution } from '../../src/components/meta/CommunityDistribution';
+import { ScenarioFunFacts } from '../../src/components/meta/ScenarioFunFacts';
 
 export default function MetaScreen() {
-  const [activeTab, setActiveTab] = useState<'items' | 'lanes' | 'ranks' | 'community'>('items');
+  const [activeTab, setActiveTab] = useState<'items' | 'lanes' | 'ranks' | 'community' | 'insights'>('items');
   const { setMenuVisible } = useMenu();
   const { session } = useSupabaseAuth();
 
@@ -92,6 +93,16 @@ export default function MetaScreen() {
                   Community
                 </Text>
               </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setActiveTab('insights')}
+                className={`flex-row items-center justify-center gap-2 py-3 px-4 rounded-xl ${activeTab === 'insights' ? 'bg-zinc-800 border border-zinc-700' : ''}`}
+              >
+                <Ionicons name="bulb" size={16} color={activeTab === 'insights' ? '#fff' : '#6b7280'} />
+                <Text className={`font-bold text-xs ${activeTab === 'insights' ? 'text-white' : 'text-zinc-500'}`}>
+                  Insights
+                </Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
@@ -102,6 +113,7 @@ export default function MetaScreen() {
           {activeTab === 'lanes' && <LaneRoleInsights />}
           {activeTab === 'ranks' && <BracketLeaderboards />}
           {activeTab === 'community' && <CommunityDistribution />}
+          {activeTab === 'insights' && <ScenarioFunFacts />}
         </View>
 
         <View className="h-24" />

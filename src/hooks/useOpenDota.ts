@@ -374,3 +374,40 @@ export function useScenariosLaneRoles(lane_role?: number, hero_id?: number) {
     staleTime: 1000 * 60 * 60 * 24, // Scenarios don't change fast
   });
 }
+
+/**
+ * Hook to fetch miscellaneous scenarios for "Fun Facts".
+ */
+export function useScenarioFunFacts(scenarios: string[]) {
+  return useQuery({
+    queryKey: ['scenarioFunFacts', scenarios],
+    queryFn: async () => {
+      const results = await Promise.all(
+        scenarios.map(scenario => openDotaApi.getScenariosMisc({ scenario }))
+      );
+      
+      const processedData: Record<string, { winRate: number; games: number }> = {};
+      
+      results.forEach((data, index) => {
+        const scenarioName = scenarios[index];
+        let totalWins = 0;
+        let totalGames = 0;
+        
+        data.forEach(s => {
+          totalWins += Number(s.wins || 0);
+          totalGames += Number(s.games || 0);
+        });
+        
+        if (totalGames > 0) {
+          processedData[scenarioName] = {
+            winRate: (totalWins / totalGames) * 100,
+            games: totalGames
+          };
+        }
+      });
+      
+      return processedData;
+    },
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+}

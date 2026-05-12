@@ -822,6 +822,29 @@ export async function getDistributions(): Promise<DistributionData | null> {
   }
 }
 
+export interface MiscScenario {
+  scenario: string;
+  is_radiant: boolean;
+  region: number;
+  rank: number;
+  wins: number;
+  games: number;
+}
+
+export async function getScenariosMisc(params: { scenario?: string }): Promise<MiscScenario[]> {
+  try {
+    const query = new URLSearchParams();
+    if (params.scenario) query.append('scenario', params.scenario);
+    const response = await fetch(`${OPENDOTA_BASE_URL}/scenarios/misc?${query.toString()}`);
+    if (!response.ok) throw new Error('Failed to fetch misc scenarios');
+    const data = await response.json();
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('Error fetching misc scenarios:', error);
+    return [];
+  }
+}
+
 export const openDotaApi = {
   searchPlayers,
   getPlayerHeroes,
@@ -852,4 +875,5 @@ export const openDotaApi = {
   getScenariosItemTimings,
   getScenariosLaneRoles,
   getDistributions,
+  getScenariosMisc,
 };
