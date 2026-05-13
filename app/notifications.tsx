@@ -23,10 +23,7 @@ export default function NotificationsScreen() {
           borderRadius: 14,
           borderWidth: 1,
           borderColor: item.is_read ? '#2a2a3e' : '#8b5cf6',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.2,
-          shadowRadius: 4,
+          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
           elevation: 3,
         }}
       >

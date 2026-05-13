@@ -329,7 +329,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
           <View className="relative bg-[#1e1e1e] border-b border-zinc-800">
             {/* Left Indicator */}
             {scrollX > 10 && (
-              <View pointerEvents="none" className="absolute left-0 top-0 bottom-0 w-8 z-10 justify-center items-start pl-1">
+              <View style={{ pointerEvents: 'none' }} className="absolute left-0 top-0 bottom-0 w-8 z-10 justify-center items-start pl-1">
                 <View className="bg-black/60 rounded-full p-1 shadow-sm"><Ionicons name="chevron-back" size={14} color="white" /></View>
               </View>
             )}
@@ -356,7 +356,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
 
             {/* Right Indicator */}
             {scrollX + viewWidth < contentWidth - 10 && (
-              <View pointerEvents="none" className="absolute right-0 top-0 bottom-0 w-8 z-10 justify-center items-end pr-1">
+              <View style={{ pointerEvents: 'none' }} className="absolute right-0 top-0 bottom-0 w-8 z-10 justify-center items-end pr-1">
                 <View className="bg-black/60 rounded-full p-1 shadow-sm"><Ionicons name="chevron-forward" size={14} color="white" /></View>
               </View>
             )}

@@ -11,9 +11,10 @@ import { LaneRoleInsights } from '../../src/components/meta/LaneRoleInsights';
 import { BracketLeaderboards } from '../../src/components/meta/BracketLeaderboards';
 import { CommunityDistribution } from '../../src/components/meta/CommunityDistribution';
 import { ScenarioFunFacts } from '../../src/components/meta/ScenarioFunFacts';
+import { ProVsPubMeta } from '../../src/components/meta/ProVsPubMeta';
 
 export default function MetaScreen() {
-  const [activeTab, setActiveTab] = useState<'items' | 'lanes' | 'ranks' | 'community' | 'insights'>('items');
+  const [activeTab, setActiveTab] = useState<'items' | 'lanes' | 'ranks' | 'pro' | 'community' | 'insights'>('items');
   const { setMenuVisible } = useMenu();
   const { session } = useSupabaseAuth();
 
@@ -85,6 +86,16 @@ export default function MetaScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
+                onPress={() => setActiveTab('pro')}
+                className={`flex-row items-center justify-center gap-2 py-3 px-4 rounded-xl ${activeTab === 'pro' ? 'bg-zinc-800 border border-zinc-700' : ''}`}
+              >
+                <Ionicons name="git-compare" size={16} color={activeTab === 'pro' ? '#fff' : '#6b7280'} />
+                <Text className={`font-bold text-xs ${activeTab === 'pro' ? 'text-white' : 'text-zinc-500'}`}>
+                  Pro
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 onPress={() => setActiveTab('community')}
                 className={`flex-row items-center justify-center gap-2 py-3 px-4 rounded-xl ${activeTab === 'community' ? 'bg-zinc-800 border border-zinc-700' : ''}`}
               >
@@ -112,6 +123,7 @@ export default function MetaScreen() {
           {activeTab === 'items' && <ItemTimingAnalyzer />}
           {activeTab === 'lanes' && <LaneRoleInsights />}
           {activeTab === 'ranks' && <BracketLeaderboards />}
+          {activeTab === 'pro' && <ProVsPubMeta />}
           {activeTab === 'community' && <CommunityDistribution />}
           {activeTab === 'insights' && <ScenarioFunFacts />}
         </View>
