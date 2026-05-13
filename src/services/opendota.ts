@@ -685,6 +685,19 @@ export interface WordCloudData {
   all_word_counts: Record<string, number>;
 }
 
+export interface WardMapData {
+  obs: Record<string, Record<string, number>>;
+  sen: Record<string, Record<string, number>>;
+}
+
+export interface PlayerRating {
+  account_id: number;
+  match_id: number | null;
+  solo_competitive_rank: number | null;
+  competitive_rank: number | null;
+  time: number;
+}
+
 /**
  * Fetches the word cloud data for a specific player.
  */
@@ -696,6 +709,34 @@ export async function getPlayerWordCloud(accountId: string | number): Promise<Wo
   } catch (error) {
     console.error('Error fetching word cloud:', error);
     return null;
+  }
+}
+
+/**
+ * Fetches the ward map data for a specific player.
+ */
+export async function getPlayerWardMap(accountId: string | number): Promise<WardMapData | null> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/wardmap`);
+    if (!response.ok) throw new Error('Failed to fetch ward map');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching ward map:', error);
+    return null;
+  }
+}
+
+/**
+ * Fetches the rating history for a specific player.
+ */
+export async function getPlayerRatings(accountId: string | number): Promise<PlayerRating[]> {
+  try {
+    const response = await fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/ratings`);
+    if (!response.ok) throw new Error('Failed to fetch ratings');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching ratings:', error);
+    return [];
   }
 }
 
@@ -869,6 +910,8 @@ export const openDotaApi = {
   getHeroStats,
   getProMatches,
   getPlayerWordCloud,
+  getPlayerWardMap,
+  getPlayerRatings,
   getHeroMatchups,
   getHeroDurations,
   getHeroItemPopularity,

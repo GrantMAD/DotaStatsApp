@@ -41,12 +41,16 @@ import {
   usePlayerTotals,
   usePlayerCounts,
   useHeroStats,
-  usePlayerMatches
+  usePlayerMatches,
+  usePlayerWardMap,
+  usePlayerRatings
 } from '../hooks/useOpenDota';
 import { useModals } from '../context/ModalContext';
 import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
 import PerformanceTrends from './PerformanceTrends';
 import { WordCloud } from './WordCloud';
+import MMRHistoryChart from './MMRHistoryChart';
+import WardMapHeatmap from './WardMapHeatmap';
 
 function LifetimeStatsSkeleton() {
   return (
@@ -195,12 +199,15 @@ export function PlayerOverviewContent({
   // Lifetime Stats Query (Fetches in background on mount)
   const { data: totals = [], isLoading: totalsLoading } = usePlayerTotals(accountId);
   const { data: countsData, isLoading: countsLoading } = usePlayerCounts(accountId);
+  const { data: wardMap, isLoading: wardMapLoading } = usePlayerWardMap(accountId);
+  const { data: ratings, isLoading: ratingsLoading } = usePlayerRatings(accountId);
   const statsLoading = totalsLoading || countsLoading;
 
   const isTrendsLoading = (filters.win !== undefined || filters.date !== undefined || filters.game_mode !== undefined)
     ? matchesLoading || statsLoading
     : richLoading || statsLoading;
   const [recentView, setRecentView] = useState<'matches' | 'trends'>('matches');
+  const [lifetimeSubTab, setLifetimeSubTab] = useState<'Stats' | 'Rank' | 'Vision'>('Stats');
 
   // Compute lifetime stats on the fly
   const createStatFromCount = (label: string, countObj?: { games: number; win: number }) => ({
@@ -562,17 +569,46 @@ export function PlayerOverviewContent({
       className="flex-1"
     >
       {memoizedHeader}
-      {statsLoading ? (
-        <LifetimeStatsSkeleton />
-      ) : (
-        <>
-          {renderStatSection('Lobby Type', 'globe-outline', lobbyStats)}
-          {renderStatSection('Game Mode', 'game-controller-outline', modeStats)}
-          {renderStatSection('Region', 'navigate-outline', regionStats)}
-          {renderStatSection('Side of Map', 'map-outline', sideStats)}
-          <View className="h-10" />
-        </>
+
+      {/* Lifetime Sub Tabs */}
+      {!isPrivate && (
+        <View className="flex-row px-4 mb-6">
+          {(['Stats', 'Rank', 'Vision'] as const).map((sub) => (
+            <TouchableOpacity
+              key={sub}
+              onPress={() => setLifetimeSubTab(sub)}
+              className={`flex-1 py-2 mx-1 items-center rounded-xl border ${lifetimeSubTab === sub ? 'bg-zinc-700 border-zinc-600' : 'bg-zinc-800/40 border-white/5'}`}
+            >
+              <Text className={`text-[10px] font-outfit-black uppercase ${lifetimeSubTab === sub ? 'text-white' : 'text-gray-500'}`}>
+                {sub === 'Stats' ? 'General' : sub === 'Rank' ? 'Rank' : 'Vision'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
+
+      {lifetimeSubTab === 'Stats' && (
+        statsLoading ? (
+          <LifetimeStatsSkeleton />
+        ) : (
+          <View>
+            {renderStatSection('Lobby Type', 'globe-outline', lobbyStats)}
+            {renderStatSection('Game Mode', 'game-controller-outline', modeStats)}
+            {renderStatSection('Region', 'navigate-outline', regionStats)}
+            {renderStatSection('Side of Map', 'map-outline', sideStats)}
+          </View>
+        )
+      )}
+
+      {lifetimeSubTab === 'Rank' && (
+        <MMRHistoryChart ratings={ratings || []} loading={ratingsLoading} />
+      )}
+
+      {lifetimeSubTab === 'Vision' && (
+        <WardMapHeatmap data={wardMap || null} loading={wardMapLoading} />
+      )}
+
+      <View className="h-10" />
     </ScrollView>
   );
 

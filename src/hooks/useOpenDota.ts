@@ -354,7 +354,32 @@ export function usePlayerWordCloud(accountId: string | number | null) {
 }
 
 /**
- * Hook to fetch item timing scenarios.
+ * Hook to fetch player ward map data.
+ */
+export function usePlayerWardMap(accountId: string | number | null) {
+  return useQuery({
+    queryKey: ['playerWardMap', accountId],
+    queryFn: () => (accountId ? openDotaApi.getPlayerWardMap(accountId) : null),
+    enabled: !!accountId,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+}
+
+/**
+ * Hook to fetch player MMR history.
+ */
+export function usePlayerRatings(accountId: string | number | null) {
+  return useQuery({
+    queryKey: ['playerRatings', accountId],
+    queryFn: () => (accountId ? openDotaApi.getPlayerRatings(accountId) : []),
+    enabled: !!accountId,
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+}
+
+/**
+ * Hook to fetch hero matchups.
+
  */
 export function useScenariosItemTimings(item?: string, hero_id?: number) {
   return useQuery({
