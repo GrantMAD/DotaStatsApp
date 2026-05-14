@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   View, 
   Text, 
@@ -22,11 +22,20 @@ import {
 import CompareStatRow from '../src/components/CompareStatRow';
 import { RankBadge } from '../src/components/RankBadge';
 import { STEAM_CDN_BASE, getHeroImageUrl } from '../src/services/constants';
+import { SteamAuthContext } from '../src/context/SteamAuthContext';
+
+import { useSupabaseAuth } from '../src/context/SupabaseAuthContext';
 
 export default function CompareScreen() {
   const { p1, p2 } = useLocalSearchParams<{ p1?: string, p2?: string }>();
   const router = useRouter();
 
+  const steamAuth = useContext(SteamAuthContext);
+  const { steamAccountId: supabaseSteamId } = useSupabaseAuth();
+  
+  // Use either the Steam OpenID accountId or the Supabase-linked steamAccountId
+  const myAccountId = steamAuth?.accountId || supabaseSteamId;
+  
   // Player 1 Data
   const { data: profile1, isLoading: loadingP1 } = usePlayerProfile(p1 || null);
   const { data: wl1 } = usePlayerWinLoss(p1 || null);
@@ -43,38 +52,75 @@ export default function CompareScreen() {
   const { data: recent2, isLoading: loadingRecent2 } = useRecentMatches(p2 || null, 20);
   const { data: peers2, isLoading: loadingPeers2 } = usePlayerPeers(p2 || null);
 
+  // Hardened check: Check parameters AND fetched profile data
+  const isMeInComparison = !!(myAccountId && (
+    p1 === myAccountId || 
+    p2 === myAccountId || 
+    profile1?.profile?.account_id?.toString() === myAccountId || 
+    profile2?.profile?.account_id?.toString() === myAccountId
+  ));
+
    const isLoading = loadingP1 || loadingP2 || loadingTotals1 || loadingTotals2 || 
                     loadingRecent1 || loadingRecent2 || loadingPeers1 || loadingPeers2;
+
+  const handleAddMe = (side: 'left' | 'right') => {
+    if (!myAccountId) return;
+    router.setParams({ [side === 'left' ? 'p1' : 'p2']: myAccountId });
+  };
 
   const renderPlayerHeader = (profile: any, side: 'left' | 'right') => {
     if (!profile) {
       return (
-        <TouchableOpacity 
-          className="flex-1 items-center justify-center p-4"
-          onPress={() => router.push('/friends')}
-        >
-          <View className="w-16 h-16 rounded-full bg-zinc-800 items-center justify-center border-2 border-dashed border-zinc-600">
-            <Ionicons name="add" size={32} color="#666" />
-          </View>
-          <Text className="text-zinc-500 mt-2 text-xs font-bold uppercase">Select Player</Text>
-        </TouchableOpacity>
+        <View className="flex-1 items-center justify-center p-4">
+          <TouchableOpacity 
+            className="items-center justify-center"
+            onPress={() => router.push('/friends')}
+          >
+            <View className="w-14 h-14 rounded-full bg-zinc-800 items-center justify-center border-2 border-dashed border-zinc-600">
+              <Ionicons name="add" size={28} color="#666" />
+            </View>
+            <Text className="text-zinc-500 mt-2 text-[10px] font-bold uppercase">Select Player</Text>
+          </TouchableOpacity>
+
+          {myAccountId && !isMeInComparison && (
+            <TouchableOpacity 
+              className="mt-4 bg-purple-600 px-4 py-2 rounded-xl border border-purple-500 shadow-lg shadow-purple-500/20 flex-row items-center"
+              onPress={() => handleAddMe(side)}
+            >
+              <Ionicons name="person-add" size={14} color="white" />
+              <Text className="text-white text-[11px] font-black uppercase ml-2 tracking-tighter">Add My Stats</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       );
     }
 
     return (
       <View className="flex-1 items-center p-4">
-        <View className="relative">
-          <Image 
-            source={{ uri: profile.profile.avatarfull }} 
-            className="w-16 h-16 rounded-2xl border-2 border-purple-500/50"
-          />
-          <View className="absolute -bottom-2 -right-2 scale-75">
-            <RankBadge rankTier={profile.rank_tier} size={40} />
+        <TouchableOpacity onPress={() => router.push('/friends')} className="items-center">
+          <View className="relative">
+            <Image 
+              source={{ uri: profile.profile.avatarfull }} 
+              className="w-14 h-14 rounded-2xl border-2 border-purple-500/50"
+            />
+            <View className="absolute -bottom-2 -right-2 scale-75">
+              <RankBadge rankTier={profile.rank_tier} size={36} />
+            </View>
           </View>
-        </View>
-        <Text className="text-white font-black mt-3 text-center text-sm" numberOfLines={1}>
-          {profile.profile.personaname}
-        </Text>
+          <Text className="text-white font-black mt-3 text-center text-[10px]" numberOfLines={1}>
+            {profile.profile.personaname}
+          </Text>
+        </TouchableOpacity>
+
+        {myAccountId && !isMeInComparison && myAccountId !== profile.profile.account_id?.toString() && (
+          <TouchableOpacity 
+            className="mt-4 bg-zinc-800 px-3 py-1.5 rounded-xl border border-zinc-700 flex-row items-center"
+            onPress={() => handleAddMe(side)}
+          >
+            <Ionicons name="swap-horizontal" size={12} color="#8b5cf6" />
+            <Text className="text-purple-400 text-[9px] font-black uppercase ml-1.5">Switch to Me</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -173,6 +219,12 @@ export default function CompareScreen() {
               label="Avg GPM" 
               val1={getAvg(totals1 || [], 'gold_per_min')} 
               val2={getAvg(totals2 || [], 'gold_per_min')} 
+            />
+            <CompareStatRow 
+              label="Avg Deaths" 
+              val1={getAvg(totals1 || [], 'deaths')} 
+              val2={getAvg(totals2 || [], 'deaths')} 
+              isHigherBetter={false}
             />
             <CompareStatRow 
               label="Avg XPM" 

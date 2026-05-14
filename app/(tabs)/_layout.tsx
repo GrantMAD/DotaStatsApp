@@ -140,6 +140,17 @@ export default function TabsLayout() {
                   <Text className="text-white ml-3 font-medium">Friends</Text>
                 </TouchableOpacity>
 
+                <TouchableOpacity
+                  onPress={() => {
+                    setMenuVisible(false);
+                    router.push('/compare');
+                  }}
+                  className="px-4 py-3 flex-row items-center active:bg-zinc-800"
+                >
+                  <Ionicons name="stats-chart-outline" size={20} color="white" />
+                  <Text className="text-white ml-3 font-medium">Compare</Text>
+                </TouchableOpacity>
+
                 <View className="px-4 py-2 mt-2 mb-1 border-b border-zinc-800/50">
                   <Text className="text-gray-500 text-[10px] uppercase font-bold tracking-widest">System</Text>
                 </View>
