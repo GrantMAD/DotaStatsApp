@@ -133,6 +133,7 @@ export interface MatchDetails {
       hero_healing_per_min: { raw: number; pct: number };
       tower_damage: { raw: number; pct: number };
       last_hits_per_min: { raw: number; pct: number };
+      lhten: { raw: number; pct: number };
     };
     stuns?: number;
     multi_kills?: Record<string, number>;
