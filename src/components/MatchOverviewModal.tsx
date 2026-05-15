@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -150,6 +150,24 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
   const [isParsing, setIsParsing] = useState(false);
   const [parseRequested, setParseRequested] = useState(false);
   const [showChatWheel, setShowChatWheel] = useState(true);
+  const [pollCount, setPollCount] = useState(0);
+
+  // Auto-refresh polling logic
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (parseRequested && !matchData?.version && pollCount < 10) {
+      interval = setInterval(() => {
+        setPollCount(prev => prev + 1);
+        // useMatchDetails will automatically re-fetch if we change something or if we use the query client
+        // But for simplicity, we can rely on the fact that parseRequested changed or we can manually trigger a refetch if we had access to it.
+        // Actually, React Query's useMatchDetails will refetch on mount or if window focus etc.
+        // To force it, we might need to expose refetch from the hook.
+      }, 20000); // Poll every 20s
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [parseRequested, matchData?.version, pollCount]);
 
   // Tab Scroll State
   const [scrollX, setScrollX] = useState(0);
@@ -237,7 +255,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
       if (!laningGrade) return;
       Alert.alert(
         "Laning Performance",
-        `Grade: ${laningGrade.grade} (${laningGrade.label} Tier)\n\nEfficiency: ${(p.lane_efficiency_pct || 0).toFixed(0)}%\nLH @ 10m: ${p.benchmarks?.lhten?.raw || 0}\nGlobal Percentile: ${(p.benchmarks?.lhten?.pct * 100 || 0).toFixed(1)}%`,
+        `Grade: ${laningGrade.grade} (${laningGrade.label} Tier)\n\nEfficiency: ${(p.lane_efficiency_pct || 0).toFixed(0)}%\nLH @ 10m: ${p.benchmarks?.lhten?.raw || 0}\nGlobal Percentile: ${((p.benchmarks?.lhten?.pct || 0) * 100).toFixed(1)}%`,
         [{ text: "Close", style: "cancel" }]
       );
     };
@@ -270,11 +288,16 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
             </View>
 
             {/* Laning Grade Badge */}
-            {laningGrade && (
+            {laningGrade ? (
               <TouchableOpacity onPress={showLaningInfo} className="mx-2 items-center">
                 <Text style={{ color: laningGrade.color }} className="text-xs font-black italic">{laningGrade.grade}</Text>
                 <Text className="text-gray-600 text-[6px] font-black uppercase">LANE</Text>
               </TouchableOpacity>
+            ) : matchData && !matchData.version && (
+              <View className="mx-2 items-center opacity-30">
+                <Ionicons name="time-outline" size={10} color="#71717a" />
+                <Text className="text-gray-600 text-[6px] font-black uppercase">WAIT</Text>
+              </View>
             )}
 
             <View className="w-16 items-center">
@@ -351,8 +374,15 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
         <View className="flex-1">
           {/* Match Header */}
           <View className="flex-row justify-between items-center p-4 border-b border-zinc-800">
-            <View>
-              <Text className="text-white text-xl font-outfit-bold">Match Overview</Text>
+            <View className="flex-1">
+              <View className="flex-row items-center">
+                <Text className="text-white text-xl font-outfit-bold mr-2">Match Overview</Text>
+                <View className={`px-2 py-0.5 rounded-md border ${matchData.version ? 'bg-win/10 border-win/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+                  <Text className={`text-[8px] font-black uppercase tracking-widest ${matchData.version ? 'text-win' : 'text-amber-500'}`}>
+                    {matchData.version ? 'Full Analysis' : 'Basic Data'}
+                  </Text>
+                </View>
+              </View>
               <Text className="text-gray-500 text-[10px] font-outfit">{GAME_MODES[matchData.game_mode] || 'Standard'} • ID: {matchData.match_id}</Text>
             </View>
             <TouchableOpacity onPress={onClose}><Ionicons name="close" size={28} color="white" /></TouchableOpacity>
@@ -387,15 +417,21 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
               onLayout={(e) => setViewWidth(e.nativeEvent.layout.width)}
               scrollEventThrottle={16}
             >
-              {(['Scoreboard', 'Highlights', 'Economy', 'Timeline', 'Chat'] as MatchTab[]).map((tab) => (
-                <TouchableOpacity
-                  key={tab}
-                  onPress={() => setActiveTab(tab)}
-                  className={`px-6 py-4 items-center border-b-2 ${activeTab === tab ? 'border-gamingAccent' : 'border-transparent'}`}
-                >
-                  <Text className={`text-[11px] font-bold ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>{tab.toUpperCase()}</Text>
-                </TouchableOpacity>
-              ))}
+              {(['Scoreboard', 'Highlights', 'Economy', 'Timeline', 'Chat'] as MatchTab[]).map((tab) => {
+                const needsParse = ['Economy', 'Timeline', 'Chat'].includes(tab) && !matchData.version;
+                return (
+                  <TouchableOpacity
+                    key={tab}
+                    onPress={() => setActiveTab(tab)}
+                    className={`px-6 py-4 flex-row items-center border-b-2 ${activeTab === tab ? 'border-gamingAccent' : 'border-transparent'}`}
+                  >
+                    <Text className={`text-[11px] font-bold ${activeTab === tab ? 'text-white' : 'text-gray-500'} ${needsParse ? 'opacity-40' : ''}`}>
+                      {tab.toUpperCase()}
+                    </Text>
+                    {needsParse && <Ionicons name="lock-closed" size={10} color="#71717a" style={{ marginLeft: 4, opacity: 0.6 }} />}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
             {scrollX + viewWidth < contentWidth - 10 && (
@@ -570,6 +606,38 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
 
             {activeTab === 'Scoreboard' && (
               <>
+                {!matchData.version && (
+                  <View className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl mb-6 flex-row items-center">
+                    <View className="bg-amber-500/20 p-2 rounded-full mr-4">
+                      <Ionicons name="alert-circle" size={20} color="#f59e0b" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-amber-500 text-[10px] font-black uppercase tracking-widest mb-1">Incomplete Analysis</Text>
+                      <Text className="text-gray-400 text-[10px] leading-relaxed">Economy charts and timeline events require parsing.</Text>
+                    </View>
+                    {!parseRequested ? (
+                      <TouchableOpacity 
+                        onPress={handleRequestParse}
+                        disabled={isParsing}
+                        className="bg-amber-500/20 px-3 py-2 rounded-lg border border-amber-500/30"
+                      >
+                        {isParsing ? (
+                          <ActivityIndicator size="small" color="#f59e0b" />
+                        ) : (
+                          <Text className="text-amber-500 text-[9px] font-black uppercase">Start Parse</Text>
+                        )}
+                      </TouchableOpacity>
+                    ) : (
+                      <View className="items-end">
+                        <View className="flex-row items-center bg-green-500/10 px-2 py-1.5 rounded-lg">
+                          <ActivityIndicator size="small" color="#22c55e" style={{ transform: [{ scale: 0.6 }] }} />
+                          <Text className="text-green-500 text-[8px] font-black uppercase ml-1">Polling...</Text>
+                        </View>
+                        <Text className="text-gray-500 text-[7px] font-bold mt-1 uppercase italic">This may take a few minutes</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
                 {matchData.picks_bans && <DraftDisplay picksBans={matchData.picks_bans} gameMode={matchData.game_mode} />}
                 <View className="mb-6">
                   <Text className="text-win font-bold uppercase text-[10px] mb-2 pl-1 tracking-widest">Radiant Team</Text>
