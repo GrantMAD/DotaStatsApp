@@ -8,6 +8,7 @@ export interface PlayerProfile {
     avatarfull: string;
     profileurl: string;
     loccountrycode: string | null;
+    communityvisibilitystate?: number;
   };
   rank_tier: number | null;
   leaderboard_rank: number | null;
@@ -184,6 +185,25 @@ function convertSteam64To32(steam64: string): string {
   } catch {
     return steam64;
   }
+}
+
+/**
+ * Checks if a Steam profile is private based on its visibility state.
+ * 3 = Public, 1 = Private/Friends Only.
+ */
+export function isProfilePrivate(profile: PlayerProfile | null): boolean {
+  if (!profile || !profile.profile) return true;
+  return profile.profile.communityvisibilitystate !== 3;
+}
+
+/**
+ * Checks if match data is restricted (likely "Expose Public Match Data" is off).
+ * Even if a profile is public, match data might be empty.
+ */
+export function isDataRestricted(profile: PlayerProfile | null, matchCount: number = 0): boolean {
+  if (isProfilePrivate(profile)) return true;
+  // If profile is public but has no recent matches and it's not a new account
+  return matchCount === 0 && !!profile?.last_match_time;
 }
 
 export interface Peer {

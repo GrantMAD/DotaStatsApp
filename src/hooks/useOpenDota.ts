@@ -4,8 +4,12 @@ import {
   openDotaApi, 
   PlayerHero, 
   HeroStats, 
-  OPENDOTA_BASE_URL 
+  OPENDOTA_BASE_URL,
+  isProfilePrivate,
+  isDataRestricted 
 } from '../services/opendota';
+
+export { isProfilePrivate, isDataRestricted };
 
 /**
  * Hook to fetch a player's profile data.

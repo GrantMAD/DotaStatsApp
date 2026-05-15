@@ -275,6 +275,9 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
             <View className="flex-1 ml-2">
               <View className="flex-row items-center">
                 <Text className="text-xs font-bold text-white mr-2" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
+                {isAnonymous && (
+                  <Ionicons name="eye-off-outline" size={10} color="#4b5563" className="mr-2" />
+                )}
                 {peer && (
                   <View className="bg-gamingAccent/20 px-1.5 py-0.5 rounded border border-gamingAccent/30 flex-row items-center">
                     <Ionicons name="people" size={8} color="#8b5cf6" />

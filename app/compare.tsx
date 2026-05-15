@@ -17,7 +17,9 @@ import {
   usePlayerHeroes,
   usePlayerTotals,
   useRecentMatches,
-  usePlayerPeers
+  usePlayerPeers,
+  isProfilePrivate,
+  isDataRestricted
 } from '../src/hooks/useOpenDota';
 import CompareStatRow from '../src/components/CompareStatRow';
 import { RankBadge } from '../src/components/RankBadge';
@@ -103,6 +105,16 @@ export default function CompareScreen() {
               source={{ uri: profile.profile.avatarfull }} 
               className="w-14 h-14 rounded-2xl border-2 border-purple-500/50"
             />
+            {isProfilePrivate(profile) && (
+              <View className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 border border-[#1a1a2e]">
+                <Ionicons name="eye-off" size={10} color="white" />
+              </View>
+            )}
+            {!isProfilePrivate(profile) && isDataRestricted(profile) && (
+              <View className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border border-[#1a1a2e]">
+                <Ionicons name="alert" size={10} color="black" />
+              </View>
+            )}
             <View className="absolute -bottom-2 -right-2 scale-75">
               <RankBadge rankTier={profile.rank_tier} size={36} />
             </View>
@@ -199,6 +211,15 @@ export default function CompareScreen() {
           </View>
         ) : profile1 && profile2 ? (
           <View className="px-4 mt-8">
+            {(isProfilePrivate(profile1) || isProfilePrivate(profile2) || isDataRestricted(profile1) || isDataRestricted(profile2)) && (
+              <View className="mb-6 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex-row items-center">
+                <Ionicons name="information-circle" size={20} color="#f59e0b" className="mr-3" />
+                <Text className="text-amber-500 text-[10px] font-outfit-bold flex-1 uppercase tracking-tight">
+                  One or both players have restricted privacy settings. Some comparison data may be missing or inaccurate.
+                </Text>
+              </View>
+            )}
+
             <CompareStatRow 
               label="Win Rate" 
               val1={getWR(wl1)} 
@@ -283,7 +304,7 @@ export default function CompareScreen() {
                             source={{ uri: getHeroImageUrl(Number(h1.hero_id)) }} 
                             className="w-12 h-12 rounded-lg mb-2"
                           />
-                          <Text className="text-white font-bold text-xs">{(h1.win / h1.games * 100).toFixed(0)}% WR</Text>
+                          <Text className="text-white font-bold text-xs">{h1.games > 0 ? (h1.win / h1.games * 100).toFixed(0) : 0}% WR</Text>
                           <Text className="text-zinc-500 text-[10px]">{h1.games} games</Text>
                         </>
                       ) : (
@@ -303,7 +324,7 @@ export default function CompareScreen() {
                             source={{ uri: getHeroImageUrl(Number(h2.hero_id)) }} 
                             className="w-12 h-12 rounded-lg mb-2"
                           />
-                          <Text className="text-white font-bold text-xs">{(h2.win / h2.games * 100).toFixed(0)}% WR</Text>
+                          <Text className="text-white font-bold text-xs">{h2.games > 0 ? (h2.win / h2.games * 100).toFixed(0) : 0}% WR</Text>
                           <Text className="text-zinc-500 text-[10px]">{h2.games} games</Text>
                         </>
                       ) : (

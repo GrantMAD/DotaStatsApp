@@ -22,8 +22,11 @@ import {
   getPlayerTotals,
   getPlayerCounts,
   HeroStats,
-  PlayerMatchFilters
+  PlayerMatchFilters,
+  isProfilePrivate,
+  isDataRestricted
 } from '../services/opendota';
+import DataPrivacyIndicator from './DataPrivacyIndicator';
 import MatchFilters from './MatchFilters';
 import { getHeroImageUrl, HEROES, REGIONS } from '../services/constants';
 import { RankBadge } from './RankBadge';
@@ -295,33 +298,32 @@ export function PlayerOverviewContent({
       </MeshGradient>
 
       <View className="mt-6 px-4">
-        {isPrivate && (
-          <View className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-xl mb-6 flex-row items-center">
-            <View className="bg-orange-500/20 p-2 rounded-full mr-3">
-              <Ionicons name="eye-off-outline" size={20} color="#f97316" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-orange-500 font-outfit-bold text-sm">Private Profile</Text>
-              <Text className="text-gray-400 text-[10px] font-outfit">
-                This user has not enabled "Expose Public Match Data" in their Dota 2 settings. Statistics may be incomplete or missing.
-              </Text>
-            </View>
-          </View>
+        {isProfilePrivate(profile) && (
+          <DataPrivacyIndicator type="private" />
+        )}
+        {!isProfilePrivate(profile) && isDataRestricted(profile, wl?.win ? wl.win + wl.lose : 0) && (
+          <DataPrivacyIndicator type="restricted" />
         )}
 
         {/* Profile Tabs */}
         <View className="flex-row bg-[#2a2a2a] rounded-xl p-1 mb-4">
-          {(['Recent', 'Heroes', 'Network', 'Social', 'Lifetime'] as ProfileTab[]).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 rounded-lg items-center ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
-            >
-              <Text className={`font-outfit-bold text-[9px] ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
-                {tab.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {(['Recent', 'Heroes', 'Network', 'Social', 'Lifetime'] as ProfileTab[]).map((tab) => {
+            const isRestricted = tab !== 'Recent' && isDataRestricted(profile, wl?.win ? wl.win + wl.lose : 0);
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setActiveTab(tab)}
+                className={`flex-1 py-2.5 rounded-lg items-center relative ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
+              >
+                <Text className={`font-outfit-bold text-[9px] ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
+                  {tab.toUpperCase()}
+                </Text>
+                {isRestricted && (
+                  <View className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-amber-500 rounded-full border border-[#2a2a2a]" />
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {encounterHistory && !isCurrentUser && (
@@ -643,7 +645,7 @@ export function PlayerOverviewContent({
 
   const renderHeroRow = ({ item, index }: { item: any, index: number }) => {
     const heroInfo = HEROES[Number(item.hero_id)];
-    const winRate = (item.win / item.games) * 100;
+    const winRate = item.games > 0 ? (item.win / item.games) * 100 : 0;
 
     return (
       <TouchableOpacity

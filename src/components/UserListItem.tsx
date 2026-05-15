@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { usePlayerProfile } from '../hooks/useOpenDota';
+import { usePlayerProfile, isProfilePrivate, isDataRestricted } from '../hooks/useOpenDota';
 import PressableScale from './PressableScale';
 
 interface UserListItemProps {
@@ -48,6 +48,22 @@ export default function UserListItem({ user: appUser, index, onPress, rightCompo
             <Text className="text-gray-500 text-xs font-outfit">
               ID: {appUser.steam_account_id}
             </Text>
+            {profile && isProfilePrivate(profile) && (
+              <View className="flex-row items-center mt-1">
+                <View className="bg-red-500/10 px-1.5 py-0.5 rounded border border-red-500/20 flex-row items-center">
+                  <Ionicons name="eye-off" size={8} color="#ef4444" />
+                  <Text className="text-red-500 text-[8px] font-black ml-1 uppercase">Private</Text>
+                </View>
+              </View>
+            )}
+            {profile && !isProfilePrivate(profile) && isDataRestricted(profile) && (
+              <View className="flex-row items-center mt-1">
+                <View className="bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 flex-row items-center">
+                  <Ionicons name="alert-circle" size={8} color="#f59e0b" />
+                  <Text className="text-amber-500 text-[8px] font-black ml-1 uppercase">Restricted</Text>
+                </View>
+              </View>
+            )}
           </View>
           
           {rightComponent ? rightComponent : (
