@@ -1,19 +1,25 @@
-import React, { useMemo } from 'react';
-import { View, Text, Dimensions, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, Dimensions, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { RecentMatch, PlayerTotal } from '../services/opendota';
+import { RANK_PERFORMANCE_BENCHMARKS } from '../services/constants';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 interface PerformanceTrendsProps {
   matches: RecentMatch[];
   totals: PlayerTotal[];
+  rankTier: number | null;
   loading?: boolean;
 }
 
 const screenWidth = Dimensions.get('window').width;
 
-export default function PerformanceTrends({ matches, totals, loading }: PerformanceTrendsProps) {
+type MetricType = 'kda' | 'gpm' | 'xpm';
+
+export default function PerformanceTrends({ matches, totals, rankTier, loading }: PerformanceTrendsProps) {
+  const [activeMetric, setActiveMetric] = useState<MetricType>('kda');
+
   const trends = useMemo(() => {
     const recent = matches?.slice(0, 20) || [];
     if (recent.length === 0 || loading) return null;
@@ -38,7 +44,6 @@ export default function PerformanceTrends({ matches, totals, loading }: Performa
 
     const uniqueHeroes = new Set(recent.map(m => m.hero_id)).size;
 
-    // Use a default totals array if it's not yet loaded to allow the trends object to be created
     const safeTotals = totals || [];
     const lifetimeKills = safeTotals.find(t => t.field === 'kills')?.sum || 0;
     const lifetimeDeaths = safeTotals.find(t => t.field === 'deaths')?.sum || 0;
@@ -54,7 +59,11 @@ export default function PerformanceTrends({ matches, totals, loading }: Performa
     const lifetimeHealing = (safeTotals.find(t => t.field === 'hero_healing')?.sum || 0) / lifetimeMatches;
     const lifetimeDuration = (safeTotals.find(t => t.field === 'duration')?.sum || 0) / lifetimeMatches;
 
-    const kdaHistory = [...recent].reverse().map(m => (m.kills + m.assists) / Math.max(1, m.deaths));
+    const history = [...recent].reverse().map(m => ({
+      kda: (m.kills + m.assists) / Math.max(1, m.deaths),
+      gpm: m.gold_per_min || 0,
+      xpm: m.xp_per_min || 0,
+    }));
 
     const winRateRecent = (recent.filter(m => {
       const isRadiant = m.player_slot < 128;
@@ -62,6 +71,10 @@ export default function PerformanceTrends({ matches, totals, loading }: Performa
     }).length / recentCount) * 100;
 
     const isOnFire = winRateRecent >= 65 || (lifetimeKDA > 0 && avgKDA > lifetimeKDA * 1.25);
+
+    // Get rank benchmark
+    const rankDigit = rankTier ? Math.floor(rankTier / 10) : 0;
+    const benchmark = RANK_PERFORMANCE_BENCHMARKS[rankDigit] || null;
 
     return {
       avgKDA, lifetimeKDA,
@@ -74,11 +87,12 @@ export default function PerformanceTrends({ matches, totals, loading }: Performa
       avgDuration, lifetimeDuration,
       topLane,
       uniqueHeroes,
-      kdaHistory,
+      history,
       winRateRecent,
-      isOnFire
+      isOnFire,
+      benchmark
     };
-  }, [matches, totals, loading]);
+  }, [matches, totals, loading, rankTier]);
 
   if (loading) {
     return (
@@ -139,6 +153,9 @@ export default function PerformanceTrends({ matches, totals, loading }: Performa
       </View>
     );
   };
+
+  const activeMetricData = trends.history.map(h => h[activeMetric]);
+  const activeBenchmarkValue = trends.benchmark ? trends.benchmark[activeMetric] : null;
 
   return (
     <Animated.View 
@@ -232,49 +249,85 @@ export default function PerformanceTrends({ matches, totals, loading }: Performa
 
       {/* Momentum Chart */}
       <View className="bg-[#1e1e2e] rounded-3xl p-4 border border-white/5">
-        <View className="flex-row justify-between items-center mb-4 px-2">
-          <View>
-            <Text className="text-white font-outfit-black text-xs uppercase tracking-widest">KDA Momentum</Text>
-            <Text className="text-gray-500 text-[10px]">Performance trend over last 20 matches</Text>
+        <View className="px-2 mb-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <View>
+              <Text className="text-white font-outfit-black text-xs uppercase tracking-widest">Momentum Visualizer</Text>
+              <Text className="text-gray-500 text-[10px]">Trajectory vs. Rank Average</Text>
+            </View>
+            <View className="bg-purple-500/10 px-2 py-1 rounded-lg">
+              <Text className="text-purple-400 text-[8px] font-outfit-black">TRENDS</Text>
+            </View>
           </View>
-          <View className="bg-purple-500/10 px-2 py-1 rounded-lg">
-            <Text className="text-purple-400 text-[10px] font-outfit-black">LAST 20</Text>
+          
+          <View className="flex-row bg-white/5 p-1 rounded-xl self-start">
+            {(['kda', 'gpm', 'xpm'] as const).map((m) => (
+              <TouchableOpacity
+                key={m}
+                onPress={() => setActiveMetric(m)}
+                className={`px-4 py-2 rounded-lg ${activeMetric === m ? 'bg-purple-500' : ''}`}
+              >
+                <Text className={`text-[10px] font-outfit-black uppercase ${activeMetric === m ? 'text-white' : 'text-gray-500'}`}>
+                  {m}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
-        <LineChart
-          data={{
-            labels: [], 
-            datasets: [{ data: trends.kdaHistory }]
-          }}
-          width={screenWidth - 100} 
-          height={140}
-          chartConfig={{
-            backgroundColor: "#1e1e2e",
-            backgroundGradientFrom: "#1e1e2e",
-            backgroundGradientTo: "#1e1e2e",
-            decimalPlaces: 1,
-            color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`,
-            labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-            style: { borderRadius: 16 },
-            propsForDots: {
-              r: "3",
-              strokeWidth: "2",
-              stroke: "#8b5cf6"
-            }
-          }}
-          bezier
-          style={{
-            marginVertical: 12,
-            borderRadius: 16,
-            marginLeft: -20, // Pulls the numbers further to the left
-          }}
-          withVerticalLabels={false}
-          withHorizontalLabels={true}
-          withInnerLines={false}
-          withOuterLines={false}
-          withShadow={true}
-        />
+        <View className="items-center overflow-hidden">
+          <LineChart
+            data={{
+              labels: [], 
+              datasets: [
+                { 
+                  data: activeMetricData,
+                  color: (opacity = 1) => activeMetric === 'kda' ? `rgba(139, 92, 246, ${opacity})` : activeMetric === 'gpm' ? `rgba(234, 179, 8, ${opacity})` : `rgba(59, 130, 246, ${opacity})`,
+                  strokeWidth: 3
+                },
+                ...(activeBenchmarkValue ? [{
+                  data: new Array(activeMetricData.length).fill(activeBenchmarkValue),
+                  color: (opacity = 0.5) => `rgba(99, 102, 241, ${opacity})`,
+                  strokeWidth: 2,
+                  withDots: false,
+                }] : [])
+              ]
+            }}
+            width={screenWidth - 96} 
+            height={160}
+            chartConfig={{
+              backgroundColor: "#1e1e2e",
+              backgroundGradientFrom: "#1e1e2e",
+              backgroundGradientTo: "#1e1e2e",
+              decimalPlaces: activeMetric === 'kda' ? 1 : 0,
+              color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+              labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+              style: { borderRadius: 16 },
+              propsForDots: {
+                r: "3",
+                strokeWidth: "2",
+                stroke: activeMetric === 'kda' ? '#8b5cf6' : activeMetric === 'gpm' ? '#eab308' : '#3b82f6'
+              }
+            }}
+            bezier
+            style={{
+              marginVertical: 12,
+              borderRadius: 16,
+            }}
+            withVerticalLabels={false}
+            withHorizontalLabels={true}
+            withInnerLines={false}
+            withOuterLines={false}
+            withShadow={true}
+          />
+          {activeBenchmarkValue && (
+            <View className="absolute right-0 top-1/2">
+               <Text className="text-purple-400 text-[7px] font-outfit-black uppercase tracking-tighter" style={{ transform: [{ rotate: '90deg' }] }}>
+                 {activeMetric.toUpperCase()} RANK AVG
+               </Text>
+            </View>
+          )}
+        </View>
       </View>
     </Animated.View>
   );

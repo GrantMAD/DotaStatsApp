@@ -711,6 +711,7 @@ export function PlayerOverviewContent({
                       <PerformanceTrends 
                         matches={trendMatches} 
                         totals={totals} 
+                        rankTier={profile?.rank_tier || null}
                         loading={isTrendsLoading}
                       />
                     </View>

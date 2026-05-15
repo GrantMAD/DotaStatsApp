@@ -272,6 +272,17 @@ export const RANK_NAMES: Record<number, string> = {
   8: "Immortal",
 };
 
+export const RANK_PERFORMANCE_BENCHMARKS: Record<number, { gpm: number; xpm: number; kda: number }> = {
+  1: { gpm: 300, xpm: 350, kda: 2.0 }, // Herald
+  2: { gpm: 340, xpm: 390, kda: 2.2 }, // Guardian
+  3: { gpm: 380, xpm: 430, kda: 2.4 }, // Crusader
+  4: { gpm: 420, xpm: 470, kda: 2.6 }, // Archon
+  5: { gpm: 460, xpm: 510, kda: 2.8 }, // Legend
+  6: { gpm: 500, xpm: 550, kda: 3.0 }, // Ancient
+  7: { gpm: 550, xpm: 600, kda: 3.2 }, // Divine
+  8: { gpm: 600, xpm: 650, kda: 3.5 }, // Immortal
+};
+
 /**
  * Returns the CDN URL for a hero's avatar.
  */
