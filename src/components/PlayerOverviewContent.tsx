@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import {
   PlayerProfile,
   WinLossStats,
@@ -169,6 +170,7 @@ export function PlayerOverviewContent({
   onComparePress,
   isPrivate = false,
 }: PlayerOverviewContentProps) {
+  const router = useRouter();
   const { steamAccountId } = useSupabaseAuth();
   const currentUserId = steamAccountId ? steamAccountId.toString() : null;
   const [limit, setLimit] = useState(20);
@@ -182,8 +184,7 @@ export function PlayerOverviewContent({
   const trendMatches = (filters.win !== undefined || filters.date !== undefined || filters.game_mode !== undefined)
     ? filteredMatches 
     : richRecentMatches;
-
-  const peer = useEncounterHistory(currentUserId, accountId);
+  const { data: encounterHistory } = useEncounterHistory(currentUserId, accountId);
   const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
   const { data: peers = [], isLoading: peersLoading } = usePlayerPeers(accountId);
   const { data: allHeroStats = [] } = useHeroStats();
@@ -323,7 +324,7 @@ export function PlayerOverviewContent({
           ))}
         </View>
 
-        {peer && !isCurrentUser && (
+        {encounterHistory && !isCurrentUser && (
           <View className="bg-gamingAccent/10 border border-gamingAccent/20 p-4 rounded-xl mb-6">
             <View className="flex-row items-center mb-3">
               <View className="bg-gamingAccent/20 p-2 rounded-full mr-3">
@@ -331,25 +332,25 @@ export function PlayerOverviewContent({
               </View>
               <View>
                 <Text className="text-white font-outfit-bold text-sm">Your History</Text>
-                <Text className="text-gray-400 text-[10px] uppercase font-outfit-bold">Shared Matches: {peer.games}</Text>
+                <Text className="text-gray-400 text-[10px] uppercase font-outfit-bold">Shared Matches: {encounterHistory.games}</Text>
               </View>
             </View>
 
             <View className="flex-row justify-between">
               <View className="flex-1">
                 <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-1">As Ally</Text>
-                <Text className="text-white font-outfit-bold">{peer.with_games} Games</Text>
-                <Text className="text-win text-[10px] font-outfit-bold">{peer.with_win} Wins</Text>
+                <Text className="text-white font-outfit-bold">{encounterHistory.with_games} Games</Text>
+                <Text className="text-win text-[10px] font-outfit-bold">{encounterHistory.with_win} Wins</Text>
               </View>
               <View className="flex-1 border-l border-white/5 pl-4">
                 <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-1">As Opponent</Text>
-                <Text className="text-white font-outfit-bold">{peer.against_games} Games</Text>
-                <Text className="text-loss text-[10px] font-outfit-bold">{peer.against_games - peer.against_win} Losses</Text>
+                <Text className="text-white font-outfit-bold">{encounterHistory.against_games} Games</Text>
+                <Text className="text-loss text-[10px] font-outfit-bold">{encounterHistory.against_games - encounterHistory.against_win} Losses</Text>
               </View>
               <View className="flex-1 border-l border-white/5 pl-4">
                 <Text className="text-gray-400 text-[10px] uppercase font-outfit-black mb-1">Last Played</Text>
                 <Text className="text-white font-outfit-bold text-[11px] mt-1">
-                  {new Date(peer.last_played * 1000).toLocaleDateString()}
+                  {encounterHistory.last_played ? new Date(encounterHistory.last_played * 1000).toLocaleDateString() : 'N/A'}
                 </Text>
               </View>
             </View>
@@ -423,7 +424,7 @@ export function PlayerOverviewContent({
         )}
       </View>
     </View>
-  ), [profile, accountId, isCurrentUser, onStatsPress, friendsCount, followingCount, isPrivate, activeTab, peer, wl, totals]);
+  ), [profile, accountId, isCurrentUser, onStatsPress, friendsCount, followingCount, isPrivate, activeTab, encounterHistory, wl, totals]);
 
   const renderStatSection = (title: string, icon: string, stats: CategoryStats[]) => (
     <Animated.View
@@ -479,28 +480,48 @@ export function PlayerOverviewContent({
             {/* Highlights */}
             <View className="flex-row px-4 mb-6">
               {duo && duo.with_games > 1 && (
-                <View className="flex-1 bg-win/10 border border-win/20 p-3 rounded-xl mr-2">
-                  <Text className="text-win text-[10px] font-outfit-black uppercase mb-2">Dynamic Duo</Text>
+                <TouchableOpacity 
+                  onPress={() => router.push(`/compare?p1=${accountId}&p2=${duo.account_id}`)}
+                  activeOpacity={0.7}
+                  className="flex-1 bg-win/10 border border-win/20 p-3 rounded-xl mr-2"
+                >
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-win text-[10px] font-outfit-black uppercase">Dynamic Duo</Text>
+                    <Ionicons name="heart" size={12} color="#22c55e" />
+                  </View>
                   <View className="flex-row items-center">
-                    <Image source={{ uri: duo.avatar }} className="w-8 h-8 rounded-full mr-2" />
+                    <Image source={{ uri: duo.avatar }} className="w-8 h-8 rounded-full mr-2 border border-win/30" />
                     <View className="flex-1">
                       <Text className="text-white font-outfit-bold text-xs" numberOfLines={1}>{duo.personaname}</Text>
-                      <Text className="text-gray-400 text-[10px]">{duo.with_games} Games</Text>
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-gray-400 text-[9px] uppercase font-outfit-bold">{duo.with_games} Games</Text>
+                        <Ionicons name="chevron-forward" size={10} color="rgba(255,255,255,0.3)" />
+                      </View>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               )}
               {nemesis && nemesis.against_games >= 3 && (
-                <View className="flex-1 bg-loss/10 border border-loss/20 p-3 rounded-xl ml-2">
-                  <Text className="text-loss text-[10px] font-outfit-black uppercase mb-2">Nemesis</Text>
+                <TouchableOpacity 
+                  onPress={() => router.push(`/compare?p1=${accountId}&p2=${nemesis.account_id}`)}
+                  activeOpacity={0.7}
+                  className="flex-1 bg-loss/10 border border-loss/20 p-3 rounded-xl ml-2"
+                >
+                  <View className="flex-row items-center justify-between mb-2">
+                    <Text className="text-loss text-[10px] font-outfit-black uppercase">Nemesis</Text>
+                    <Ionicons name="flash" size={12} color="#ef4444" />
+                  </View>
                   <View className="flex-row items-center">
-                    <Image source={{ uri: nemesis.avatar }} className="w-8 h-8 rounded-full mr-2" />
+                    <Image source={{ uri: nemesis.avatar }} className="w-8 h-8 rounded-full mr-2 border border-loss/30" />
                     <View className="flex-1">
                       <Text className="text-white font-outfit-bold text-xs" numberOfLines={1}>{nemesis.personaname}</Text>
-                      <Text className="text-gray-400 text-[10px]">{nemesis.against_games} Games</Text>
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-gray-400 text-[9px] uppercase font-outfit-bold">{nemesis.against_games} Games</Text>
+                        <Ionicons name="chevron-forward" size={10} color="rgba(255,255,255,0.3)" />
+                      </View>
                     </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               )}
             </View>
 
