@@ -9,13 +9,14 @@ import {
   Dimensions,
   Alert
 } from 'react-native';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LineChart } from "react-native-chart-kit";
 import {
   requestMatchParse,
   MatchDetails,
   GAME_MODES,
-  PickBan
+  PickBan,
+  MatchObjective
 } from '../services/opendota';
 import {
   getHeroImageUrl,
@@ -23,6 +24,7 @@ import {
   getItemImageUrlByName,
   LOBBY_TYPES,
   REGIONS,
+  HEROES
 } from '../services/constants';
 import { getChatWheelPhrase } from '../services/chatwheel';
 import * as Linking from 'expo-linking';
@@ -32,6 +34,7 @@ import { MatchOverviewSkeleton } from './Skeleton';
 import GlassModal from './GlassModal';
 import MeshGradient from './MeshGradient';
 import { calculateLaningGrade } from '../utils/matchAnalytics';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Economy' | 'Timeline' | 'Chat';
 
@@ -40,6 +43,218 @@ interface MatchOverviewModalProps {
   matchId: number | null;
   onClose: () => void;
   onPushPlayer?: (id: number) => void;
+}
+
+// --- Enhanced Timeline Component ---
+function MatchTimeline({ match }: { match: MatchDetails }) {
+  const durationMins = Math.ceil(match.duration / 60);
+  const screenWidth = Dimensions.get('window').width - 64;
+
+  // Filter and group objectives
+  const objectives = useMemo(() => {
+    if (!match.objectives) return [];
+    
+    return match.objectives.filter(obj => 
+      ['building_kill', 'chat_roshan_kill', 'chat_aegis_pickup', 'chat_aegis_snatch', 'courier_kill'].includes(obj.type)
+    ).map(obj => {
+      let icon = 'castle';
+      let imageUrl = null;
+      let color = '#9ca3af';
+      let label = 'Objective';
+      let teamColor = obj.team === 2 ? 'text-win' : obj.team === 3 ? 'text-loss' : 'text-gray-400';
+
+      if (obj.type.includes('roshan')) {
+        icon = 'skull';
+        color = '#f59e0b';
+        label = 'Roshan Slain';
+      } else if (obj.type.includes('aegis')) {
+        imageUrl = getItemImageUrlByName('aegis');
+        color = '#8b5cf6';
+        label = obj.type.includes('snatch') ? 'Aegis Snatched!' : 'Aegis Picked Up';
+      } else if (obj.type === 'courier_kill') {
+        icon = 'package-variant';
+        color = '#f59e0b';
+        label = 'Courier Sniped!';
+      } else if (obj.type === 'building_kill') {
+        label = obj.key?.replace('npc_dota_', '').replace(/_/g, ' ') || 'Building Destroyed';
+        if (obj.team === 2) {
+          color = '#22c55e';
+        } else {
+          color = '#ef4444';
+        }
+      }
+
+      return { ...obj, icon, imageUrl, color, label, teamColor };
+    });
+  }, [match.objectives]);
+
+  return (
+    <View className="bg-[#2a2a2a] rounded-xl p-4 border border-zinc-800">
+      <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} className="mb-2">
+        <View style={{ width: Math.max(screenWidth * 2, (match.duration / 60) * 60 + 400) }}>
+          {/* Time scale */}
+          <View className="flex-row mb-6 border-b border-zinc-800 pb-2">
+            <View style={{ width: 180 }} /> 
+            {Array.from({ length: Math.ceil(match.duration / 60 / 5) + 1 }).map((_, i) => (
+              <View key={i} style={{ position: 'absolute', left: 180 + 140 + (i * 5 * 60) }}>
+                <Text className="text-[10px] text-gray-500 font-bold">{i * 5}'</Text>
+                <View className="w-[1px] h-3 bg-zinc-800 mt-1" />
+              </View>
+            ))}
+          </View>
+
+          {/* Advantage Ribbon (Simplified for Mobile) */}
+          <View className="flex-row items-center h-8 mb-4">
+             <View style={{ width: 180 }} className="flex-row items-center pr-4">
+                <Ionicons name="trending-up" size={12} color="#6b7280" />
+                <Text className="text-gray-500 text-[9px] font-black uppercase ml-2">Momentum</Text>
+             </View>
+             <View className="flex-1 h-full bg-black/40 rounded border border-white/5 overflow-hidden">
+                <View className="absolute top-1/2 left-0 right-0 h-px bg-white/10" />
+                <View className="flex-row h-full">
+                   {match.radiant_gold_adv?.filter((_, i) => i % 5 === 0).map((gold, i) => {
+                      const h = Math.min(Math.abs(gold) / 2000, 15);
+                      return (
+                         <View key={i} style={{ flex: 1, backgroundColor: gold >= 0 ? '#10b981' : '#ef4444', height: h, marginTop: gold >= 0 ? -h : h, alignSelf: 'center', opacity: 0.2 }} />
+                      );
+                   })}
+                </View>
+             </View>
+          </View>
+
+          {/* Objectives Row */}
+          <View className="flex-row items-center h-10 mb-4">
+             <View style={{ width: 180 }} className="flex-row items-center pr-4">
+                <MaterialCommunityIcons name="castle" size={12} color="#6b7280" />
+                <Text className="text-gray-500 text-[9px] font-black uppercase ml-2">Objectives</Text>
+             </View>
+             <View className="flex-1 h-full bg-white/5 rounded border border-white/5 relative">
+                {objectives.map((obj, oIdx) => {
+                  const leftPos = 140 + (obj.time / 60) * 60;
+                  return (
+                    <View key={oIdx} style={{ position: 'absolute', left: leftPos, top: '50%', transform: [{ translateY: -10 }, { translateX: -10 }] }} className="z-20">
+                      <View className="p-1 rounded border bg-black/80 shadow-md" style={{ borderColor: obj.color + '40' }}>
+                         {obj.imageUrl ? (
+                           <Image source={{ uri: obj.imageUrl }} className="w-5 h-4" resizeMode="contain" />
+                         ) : (
+                           <MaterialCommunityIcons name={obj.icon as any} size={10} color={obj.color} />
+                         )}
+                      </View>
+                    </View>
+                  );
+                })}
+             </View>
+          </View>
+
+          {match.players.map((p, pIdx) => {
+            const laningGrade = calculateLaningGrade(p.lane_efficiency_pct || null, p.benchmarks?.lhten?.pct || null);
+            const events: { time: number; type: 'purchase' | 'buyback' | 'milestone'; key?: string; icon?: any; label?: string; color?: string }[] = [];
+            
+            if (p.purchase_log) {
+              p.purchase_log.forEach(item => {
+                const minorItems = ['recipe', 'ward_observer', 'ward_sentry', 'smoke_of_deceit', 'dust', 'clarity', 'flask', 'tango', 'enchanted_mango', 'bottle', 'tpscroll', 'ward_dispenser', 'faerie_fire'];
+                if (!minorItems.some(minor => item.key.includes(minor))) {
+                  events.push({ time: item.time, type: 'purchase', key: item.key });
+                }
+              });
+            }
+            if (p.buyback_log) {
+              p.buyback_log.forEach(bb => events.push({ time: bb.time, type: 'buyback', key: 'buyback' }));
+            }
+
+            // Triple Kills Detection
+            if (p.kill_log) {
+              let comboCount = 0;
+              let lastKillTime = -100;
+              p.kill_log.forEach((k) => {
+                if (k.time <= lastKillTime + 18) {
+                  comboCount++;
+                  if (comboCount >= 3) {
+                     let label = 'Triple Kill!';
+                     if (comboCount === 4) label = 'Ultra Kill!';
+                     if (comboCount >= 5) label = 'RAMPAGE!';
+                     events.push({ time: k.time, type: 'milestone', icon: 'trophy', label, color: '#10b981' });
+                  }
+                } else {
+                  comboCount = 1;
+                }
+                lastKillTime = k.time;
+              });
+            }
+
+            // Courier Kills Detection
+            (match.objectives || []).forEach(obj => {
+              if (obj.type === 'courier_kill' && (obj.player_slot === p.player_slot || obj.slot === p.player_slot)) {
+                events.push({ time: obj.time, type: 'milestone', icon: 'package-variant', label: 'Courier Sniped!', color: '#f59e0b' });
+              }
+            });
+
+            return (
+              <View key={pIdx} className="flex-row items-center h-14 border-b border-zinc-800/30">
+                <View style={{ width: 180 }} className="flex-row items-center pr-4 bg-[#2a2a2a] z-20">
+                  <View className="relative">
+                    <Image source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-12 h-8 rounded-sm border border-white/10" />
+                  </View>
+                  <View className="ml-3 flex-1">
+                    <Text className="text-white text-xs font-bold" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
+                    <Text className="text-gray-500 text-[8px] uppercase font-bold">Slot {p.player_slot}</Text>
+                  </View>
+                </View>
+
+                <View className="flex-1 relative h-full justify-center overflow-hidden">
+                  <View className="absolute left-0 right-0 h-[1px] bg-zinc-800/50" />
+                  
+                  {/* Lane Outcome Marker */}
+                  {laningGrade && durationMins >= 10 && (
+                    <View 
+                      style={{ position: 'absolute', left: 140 + (10 * 60), top: '50%', transform: [{ translateY: -10 }, { translateX: -10 }] }}
+                      className="z-10 shadow-lg bg-black/80 rounded-full border border-white/10 p-0.5"
+                    >
+                        <Ionicons 
+                          name={laningGrade.grade.startsWith('A') ? "checkmark-circle" : laningGrade.grade.startsWith('B') || laningGrade.grade.startsWith('C+') ? "remove-circle" : "close-circle"} 
+                          size={14} 
+                          color={laningGrade.color === 'text-win' ? '#10b981' : laningGrade.color === 'text-loss' ? '#ef4444' : '#f59e0b'} 
+                        />
+                    </View>
+                  )}
+
+                  {(() => {
+                    const usedPositions: Record<number, number> = {};
+                    return events.map((event, eIdx) => {
+                      const baseLeft = 140 + (event.time / 60) * 60;
+                      const bucket = Math.round(baseLeft / 8) * 8;
+                      const offsetCount = usedPositions[bucket] || 0;
+                      usedPositions[bucket] = offsetCount + 1;
+                      const horizontalOffset = offsetCount * 22;
+                      const finalLeft = baseLeft + horizontalOffset;
+                      const buybackIcon = 'https://www.opendota.com/assets/images/dota2/buyback_icon.png';
+                      return (
+                        <View key={eIdx} style={{ position: 'absolute', left: finalLeft, top: '50%', marginTop: -12, transform: [{ translateX: -15 }] }} className="z-10 shadow-md">
+                          <View className={`p-[1px] rounded-[3px] border ${
+                            event.type === 'buyback' ? 'bg-orange-500 border-orange-300' : 
+                            event.type === 'milestone' ? 'bg-black/60 border-white/20' :
+                            'bg-zinc-800 border-zinc-600'
+                          }`}>
+                             {event.type === 'buyback' ? (
+                               <Image source={{ uri: buybackIcon }} className="w-7 h-5 rounded-[2px]" resizeMode="cover" />
+                             ) : event.type === 'milestone' ? (
+                               <MaterialCommunityIcons name={event.icon} size={14} color={event.color} style={{ marginHorizontal: 2 }} />
+                             ) : (
+                               <Image source={{ uri: getItemImageUrlByName(event.key || '') }} className="w-7 h-5 rounded-[2px]" resizeMode="cover" />
+                             )}
+                          </View>
+                        </View>
+                      );
+                    });
+                  })()}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
 }
 
 const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode: number }) => {
@@ -158,10 +373,6 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
     if (parseRequested && !matchData?.version && pollCount < 10) {
       interval = setInterval(() => {
         setPollCount(prev => prev + 1);
-        // useMatchDetails will automatically re-fetch if we change something or if we use the query client
-        // But for simplicity, we can rely on the fact that parseRequested changed or we can manually trigger a refetch if we had access to it.
-        // Actually, React Query's useMatchDetails will refetch on mount or if window focus etc.
-        // To force it, we might need to expose refetch from the hook.
       }, 20000); // Poll every 20s
     }
     return () => {
@@ -248,6 +459,17 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
     const isAnonymous = !p.account_id;
     const mainItems = [p.item_0, p.item_1, p.item_2, p.item_3, p.item_4, p.item_5];
     const peer = p.account_id ? userPeers.find(up => up.account_id === p.account_id) : null;
+    const heroData = HEROES[p.hero_id];
+
+    let attrColor = '#6b7280';
+    if (heroData) {
+      switch (heroData.primary_attr) {
+        case 'str': attrColor = '#ef4444'; break;
+        case 'agi': attrColor = '#22c55e'; break;
+        case 'int': attrColor = '#06b6d4'; break;
+        case 'all': attrColor = '#eab308'; break;
+      }
+    }
 
     const laningGrade = calculateLaningGrade(p.lane_efficiency_pct || null, p.benchmarks?.lhten?.pct || null);
 
@@ -261,16 +483,22 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
     };
 
     return (
-      <View key={index} className="border-b border-zinc-800">
+      <View key={index} className="border-b border-zinc-800 relative overflow-hidden">
+        {/* Attribute Glow */}
+        <View className="absolute -left-12 top-0 bottom-0 w-32 opacity-10 blur-xl" style={{ backgroundColor: attrColor }} />
+
         <TouchableOpacity
           onPress={() => !isAnonymous && onPushPlayer?.(p.account_id!)}
           disabled={isAnonymous || !onPushPlayer}
-          className="py-3 active:bg-zinc-700"
+          className="py-3 active:bg-zinc-700 relative z-10"
         >
           <View className="flex-row items-center px-1">
             <View className="w-12 items-center">
-              <Image source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-10 h-7 rounded-sm shadow-sm" resizeMode="cover" />
-              <Text className="text-gray-500 text-[8px] mt-1">LVL {p.level}</Text>
+              <View className="relative">
+                <View className="absolute -inset-0.5 rounded blur-[2px] opacity-40" style={{ backgroundColor: attrColor }} />
+                <Image source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-10 h-7 rounded-sm shadow-sm" resizeMode="cover" />
+              </View>
+              <Text className="text-gray-500 text-[8px] mt-1 uppercase font-black">LVL {p.level}</Text>
             </View>
             <View className="flex-1 ml-2">
               <View className="flex-row items-center">
@@ -375,34 +603,46 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
         <MatchOverviewSkeleton />
       ) : matchData ? (
         <View className="flex-1">
-          {/* Match Header */}
-          <View className="flex-row justify-between items-center p-4 border-b border-zinc-800">
-            <View className="flex-1">
-              <View className="flex-row items-center">
-                <Text className="text-white text-xl font-outfit-bold mr-2">Match Overview</Text>
-                <View className={`px-2 py-0.5 rounded-md border ${matchData.version ? 'bg-win/10 border-win/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
-                  <Text className={`text-[8px] font-black uppercase tracking-widest ${matchData.version ? 'text-win' : 'text-amber-500'}`}>
-                    {matchData.version ? 'Full Analysis' : 'Basic Data'}
-                  </Text>
-                </View>
-              </View>
-              <Text className="text-gray-500 text-[10px] font-outfit">{GAME_MODES[matchData.game_mode] || 'Standard'} • ID: {matchData.match_id}</Text>
-            </View>
-            <TouchableOpacity onPress={onClose}><Ionicons name="close" size={28} color="white" /></TouchableOpacity>
-          </View>
+          {/* Match Header - Immersive Overhaul */}
+          <View className="h-48 rounded-3xl overflow-hidden mb-6 relative border border-white/10">
+             <View className="absolute inset-0 flex-row">
+                <LinearGradient colors={['rgba(16, 185, 129, 0.2)', 'transparent']} start={{x:0, y:0}} end={{x:1, y:1}} className="flex-1" />
+                <LinearGradient colors={['rgba(239, 68, 68, 0.2)', 'transparent']} start={{x:1, y:0}} end={{x:0, y:1}} className="flex-1" />
+             </View>
+             
+             <View className="absolute inset-0 items-center justify-center">
+                <View className="flex-row items-center gap-10">
+                   <View className="items-center">
+                      <Text className="text-win font-outfit-black text-5xl italic leading-none">{matchData.radiant_score}</Text>
+                      <Text className="text-win/40 text-[8px] font-outfit-black uppercase tracking-widest mt-1">Radiant</Text>
+                   </View>
+                   
+                   <View className="items-center">
+                      <View className="bg-black/60 px-4 py-2 rounded-2xl border border-white/10 items-center">
+                         <Text className="text-white font-outfit-black text-lg italic leading-none">
+                            {Math.floor(matchData.duration / 60)}:{String(matchData.duration % 60).padStart(2, '0')}
+                         </Text>
+                         <Text className="text-gray-500 text-[7px] font-outfit-black uppercase mt-1">Duration</Text>
+                      </View>
+                      <View className={`mt-2 px-3 py-1 rounded-full border ${
+                        matchData.radiant_win ? "bg-win/10 border-win/30" : "bg-loss/10 border-loss/30"
+                      }`}>
+                         <Text className={`text-[9px] font-outfit-black uppercase tracking-widest ${matchData.radiant_win ? "text-win" : "text-loss"}`}>
+                            {matchData.radiant_win ? 'Victory' : 'Victory'}
+                         </Text>
+                      </View>
+                   </View>
 
-          <MeshGradient
-            intensity="low"
-            colors={['#1e1e1e', '#1a1a2e', '#451a1a']} 
-            className="p-6 flex-row justify-around items-center border-b border-white/5"
-          >
-            <View className="items-center"><Text className="text-win font-outfit-bold text-4xl">{matchData.radiant_score}</Text><Text className="text-win text-[10px] font-outfit-black">RADIANT</Text></View>
-            <View className="items-center bg-black/40 px-6 py-2 rounded-2xl border border-white/5">
-              <Text className="text-white text-sm font-outfit-bold">{Math.floor(matchData.duration / 60)}:{String(matchData.duration % 60).padStart(2, '0')}</Text>
-              <Text className={`text-[10px] font-outfit-black mt-1 ${matchData.radiant_win ? 'text-win' : 'text-loss'}`}>{matchData.radiant_win ? 'RADIANT WIN' : 'DIRE WIN'}</Text>
-            </View>
-            <View className="items-center"><Text className="text-loss font-outfit-bold text-4xl">{matchData.dire_score}</Text><Text className="text-loss text-[10px] font-outfit-black">DIRE</Text></View>
-          </MeshGradient>
+                   <View className="items-center">
+                      <Text className="text-loss font-outfit-black text-5xl italic leading-none">{matchData.dire_score}</Text>
+                      <Text className="text-loss/40 text-[8px] font-outfit-black uppercase tracking-widest mt-1">Dire</Text>
+                   </View>
+                </View>
+                <Text className="text-gray-500 font-outfit-bold text-[8px] uppercase tracking-[0.3em] mt-4 italic text-center">
+                   {GAME_MODES[matchData.game_mode] || 'Standard Match'} • ID {matchData.match_id}
+                </Text>
+             </View>
+          </View>
 
           <View className="relative bg-[#1e1e1e] border-b border-zinc-800">
             {scrollX > 10 && (
@@ -527,80 +767,9 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
 
             {activeTab === 'Timeline' && (
               <View>
-                <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Player Event Timeline</Text>
+                <Text className="text-gray-400 uppercase tracking-widest text-[10px] font-bold mb-3 pl-1">Strategic Event Trajectory</Text>
                 {matchData.version ? (
-                  <View className="bg-[#2a2a2a] rounded-xl p-4 border border-zinc-800">
-                    <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} className="mb-2">
-                      <View style={{ width: Math.max(screenWidth * 2, (matchData.duration / 60) * 60 + 300) }}>
-                        <View className="flex-row mb-6 border-b border-zinc-800 pb-2">
-                          <View style={{ width: 200 }} /> 
-                          {Array.from({ length: Math.ceil(matchData.duration / 60 / 5) + 1 }).map((_, i) => (
-                            <View key={i} style={{ position: 'absolute', left: 200 + 140 + (i * 5 * 60) }}>
-                              <Text className="text-[10px] text-gray-500 font-bold">{i * 5}'</Text>
-                              <View className="w-[1px] h-3 bg-zinc-800 mt-1" />
-                            </View>
-                          ))}
-                        </View>
-
-                        {matchData.players.map((p, pIdx) => {
-                          const events: { time: number; type: 'purchase' | 'buyback'; key: string }[] = [];
-                          if (p.purchase_log) {
-                            p.purchase_log.forEach(item => {
-                              const minorItems = ['recipe', 'ward_observer', 'ward_sentry', 'smoke_of_deceit', 'dust', 'clarity', 'flask', 'tango', 'enchanted_mango', 'bottle', 'tpscroll', 'ward_dispenser', 'faerie_fire'];
-                              if (!minorItems.some(minor => item.key.includes(minor))) {
-                                events.push({ time: item.time, type: 'purchase', key: item.key });
-                              }
-                            });
-                          }
-                          if (p.buyback_log) {
-                            p.buyback_log.forEach(bb => events.push({ time: bb.time, type: 'buyback', key: 'buyback' }));
-                          }
-
-                          return (
-                            <View key={pIdx} className="flex-row items-center h-14 border-b border-zinc-800/30">
-                              <View style={{ width: 200 }} className="flex-row items-center pr-4 bg-[#2a2a2a] z-20">
-                                <View className="relative">
-                                  <Image source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-12 h-8 rounded-sm border border-white/10" />
-                                </View>
-                                <View className="ml-3 flex-1">
-                                  <Text className="text-white text-xs font-bold" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
-                                  <Text className="text-gray-500 text-[8px] uppercase font-bold">Slot {p.player_slot}</Text>
-                                </View>
-                              </View>
-
-                              <View className="flex-1 relative h-full justify-center overflow-hidden">
-                                <View className="absolute left-0 right-0 h-[1px] bg-zinc-800/50" />
-                                {(() => {
-                                  const usedPositions: Record<number, number> = {};
-                                  return events.map((event, eIdx) => {
-                                    const baseLeft = 140 + (event.time / 60) * 60;
-                                    const bucket = Math.round(baseLeft / 8) * 8;
-                                    const offsetCount = usedPositions[bucket] || 0;
-                                    usedPositions[bucket] = offsetCount + 1;
-                                    const horizontalOffset = offsetCount * 22;
-                                    const finalLeft = baseLeft + horizontalOffset;
-                                    const buybackIcon = 'https://www.opendota.com/assets/images/dota2/buyback_icon.png';
-                                    return (
-                                      <View key={eIdx} style={{ position: 'absolute', left: finalLeft, top: '50%', marginTop: -12, transform: [{ translateX: -15 }] }} className="z-10 shadow-md">
-                                        <View className={`p-[1px] rounded-[3px] border ${event.type === 'buyback' ? 'bg-orange-500 border-orange-300' : 'bg-zinc-800 border-zinc-600'}`}>
-                                          <Image source={{ uri: event.type === 'buyback' ? buybackIcon : getItemImageUrlByName(event.key) }} className="w-7 h-5 rounded-[2px]" resizeMode="cover" />
-                                        </View>
-                                        {offsetCount === 0 && (
-                                          <View className="absolute -top-4 left-0 right-0 items-center">
-                                            <Text className="text-[8px] text-gray-400 font-bold">{Math.floor(event.time / 60)}'</Text>
-                                          </View>
-                                        )}
-                                      </View>
-                                    );
-                                  });
-                                })()}
-                              </View>
-                            </View>
-                          );
-                        })}
-                      </View>
-                    </ScrollView>
-                  </View>
+                  <MatchTimeline match={matchData} />
                 ) : (
                   renderParseInstructions("Timeline visualization requires parsed match data to track specific player events.")
                 )}
@@ -643,13 +812,17 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
                 )}
                 {matchData.picks_bans && <DraftDisplay picksBans={matchData.picks_bans} gameMode={matchData.game_mode} />}
                 <View className="mb-6">
-                  <Text className="text-win font-bold uppercase text-[10px] mb-2 pl-1 tracking-widest">Radiant Team</Text>
+                  <LinearGradient colors={['rgba(16, 185, 129, 0.15)', 'transparent']} start={{x:0, y:0.5}} end={{x:1, y:0.5}} className="px-4 py-2 rounded-t-xl border-l-2 border-win mb-1">
+                     <Text className="text-win font-bold uppercase text-[10px] tracking-widest italic">Radiant Dominion</Text>
+                  </LinearGradient>
                   <View className="bg-[#222] rounded-xl overflow-hidden border border-zinc-800 shadow-sm">
                     {matchData.players.filter(p => p.player_slot < 128).map((p, i) => renderPlayerRow(p, i))}
                   </View>
                 </View>
                 <View className="mb-6">
-                  <Text className="text-loss font-bold uppercase text-[10px] mb-2 pl-1 tracking-widest">Dire Team</Text>
+                  <LinearGradient colors={['rgba(239, 68, 68, 0.15)', 'transparent']} start={{x:0, y:0.5}} end={{x:1, y:0.5}} className="px-4 py-2 rounded-t-xl border-l-2 border-loss mb-1">
+                     <Text className="text-loss font-bold uppercase text-[10px] tracking-widest italic">Dire Authority</Text>
+                  </LinearGradient>
                   <View className="bg-[#222] rounded-xl overflow-hidden border border-zinc-800 shadow-sm">
                     {matchData.players.filter(p => p.player_slot >= 128).map((p, i) => renderPlayerRow(p, i))}
                   </View>

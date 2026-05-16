@@ -85,6 +85,16 @@ export interface PermanentBuff {
   stack_count: number;
 }
 
+export interface MatchObjective {
+  time: number;
+  type: string;
+  unit?: string;
+  key?: string;
+  slot?: number;
+  player_slot?: number;
+  team?: number;
+}
+
 export interface MatchDetails {
   match_id: number;
   radiant_win: boolean;
@@ -101,6 +111,7 @@ export interface MatchDetails {
   radiant_xp_adv: number[];
   chat?: ChatMessage[];
   picks_bans?: PickBan[];
+  objectives?: MatchObjective[];
   players: {
     account_id: number;
     personaname: string;
