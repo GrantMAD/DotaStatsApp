@@ -165,7 +165,23 @@ export default function SearchScreen() {
               className="w-12 h-12 rounded-full border border-zinc-700 mr-4"
             />
             <View className="flex-1">
-              <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>{item.personaname}</Text>
+              <View className="flex-row items-center flex-wrap gap-x-2">
+                <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>{item.personaname}</Text>
+                {item.isPro && (
+                  <View className="bg-gamingAccent px-1.5 py-0.5 rounded flex-row items-center">
+                    <Ionicons name="star" size={8} color="white" />
+                    <Text className="text-white text-[8px] font-black ml-1 uppercase">
+                      PRO {item.team_tag ? `| ${item.team_tag}` : ''}
+                    </Text>
+                  </View>
+                )}
+                {(item.isAppUser || appUserId) && !item.isPro && (
+                  <View className="bg-green-500/20 border border-green-500/30 px-1.5 py-0.5 rounded flex-row items-center">
+                    <Ionicons name="checkmark-circle" size={8} color="#22c55e" />
+                    <Text className="text-green-500 text-[8px] font-black ml-1 uppercase">App User</Text>
+                  </View>
+                )}
+              </View>
               <Text className="text-gray-500 text-xs font-outfit">ID: {item.account_id}</Text>
               {item.last_match_time && (
                 <Text className="text-gray-600 text-[10px] font-outfit mt-1">
@@ -325,7 +341,10 @@ export default function SearchScreen() {
                 />
 
                 {query.length > 0 && (
-                  <TouchableOpacity onPress={() => setQuery('')} style={{ padding: 8 }}>
+                  <TouchableOpacity onPress={() => {
+                    setQuery('');
+                    setActiveQuery('');
+                  }} style={{ padding: 8 }}>
                     <Ionicons name="close-circle" size={20} color="#6b7280" />
                   </TouchableOpacity>
                 )}
@@ -366,7 +385,7 @@ export default function SearchScreen() {
                     marginLeft: 12,
                     flex: 1
                   }}>
-                    Showing players who have played with you and are registered on the app.
+                    Displays your network of frequent teammates and opponents calculated from your public match history. This naturally includes your Steam friends as well as random players you often queue with.
                   </Text>
                 </View>
               )}

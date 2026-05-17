@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../services/supabase';
 import { 
   openDotaApi, 
   PlayerHero, 
@@ -197,9 +198,106 @@ export function useLiveGames() {
  * Hook to search for players.
  */
 export function useSearchPlayers(query: string) {
+  const queryClient = useQueryClient();
+  
   return useQuery({
     queryKey: ['searchPlayers', query],
-    queryFn: () => openDotaApi.searchPlayers(query),
+    queryFn: async () => {
+      if (!query || query.trim().length < 3) return [];
+
+      const cleanQuery = query.trim().toLowerCase();
+      
+      // 1. Instantly resolve from local users (Supabase)
+      const supabaseRes = await supabase
+        .from('users')
+        .select('id, steam_account_id, steam_name')
+        .ilike('steam_name', `%${cleanQuery}%`)
+        .limit(10);
+
+      const localResults: any[] = [];
+      const seenIds = new Set<string>();
+
+      if (supabaseRes.data) {
+        await Promise.all(supabaseRes.data.map(async u => {
+          if (u.steam_account_id) {
+            let avatar = '';
+            try {
+              const profile = await openDotaApi.getPlayerProfile(u.steam_account_id);
+              if (profile && profile.profile) {
+                avatar = profile.profile.avatarfull;
+              }
+            } catch (err) {}
+            localResults.push({
+              account_id: Number(u.steam_account_id),
+              personaname: u.steam_name || 'App User',
+              avatarfull: avatar,
+              isAppUser: true,
+              appUserId: u.id,
+            });
+            seenIds.add(u.steam_account_id.toString());
+          }
+        }));
+      }
+
+      // 2. Add Pro Players that match
+      try {
+        const proPlayers = await openDotaApi.getProPlayers();
+        const matchedPros = proPlayers.filter(p => {
+          const pName = String(p.personaname || '').toLowerCase();
+          const rName = String(p.name || '').toLowerCase();
+          const tTag = String(p.team_tag || '').toLowerCase();
+          return pName.includes(cleanQuery) || rName.includes(cleanQuery) || tTag.includes(cleanQuery);
+        });
+
+        matchedPros.slice(0, 10).forEach(p => {
+          if (!seenIds.has(p.account_id.toString())) {
+            localResults.push({
+              account_id: p.account_id,
+              personaname: p.name || p.personaname || 'Unknown Pro',
+              avatarfull: p.avatar || '',
+              isPro: true,
+              team_tag: p.team_tag,
+            });
+            seenIds.add(p.account_id.toString());
+          }
+        });
+      } catch (err) {
+        console.error("Failed to fetch/filter pro players in hook:", err);
+      }
+
+      // 2. Fire Global Search asynchronously (don't block!)
+      if (cleanQuery.length >= 3) {
+        openDotaApi.searchPlayers(cleanQuery)
+          .then((globalResults) => {
+            if (!globalResults || globalResults.length === 0) return;
+            
+            const newResults = [...localResults];
+            let addedCount = 0;
+            
+            globalResults.forEach(gr => {
+              if (!seenIds.has(gr.account_id.toString())) {
+                newResults.push({
+                  ...gr,
+                  isPro: false,
+                  isAppUser: false
+                });
+                seenIds.add(gr.account_id.toString());
+                addedCount++;
+              }
+            });
+
+            if (addedCount > 0) {
+              queryClient.setQueryData(['searchPlayers', query], newResults);
+            }
+          })
+          .catch(e => {
+            console.log("Global OpenDota search timed out or failed in background:", e.message);
+          });
+      }
+
+      // 3. Instantly return local/pro results to avoid UI hanging
+      return localResults;
+    },
     enabled: query.trim().length >= 3,
   });
 }
