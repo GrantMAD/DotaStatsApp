@@ -20,6 +20,7 @@ export interface ActivityItem {
     matchId?: number;
     newRank?: number;
     win?: boolean;
+    gameMode?: number;
   };
 }
 
@@ -93,17 +94,24 @@ export const useActivityFeed = () => {
               details: { 
                 streakCount: currentStreak,
                 matchId: matches[0].match_id,
-                heroId: matches[0].hero_id
+                heroId: matches[0].hero_id,
+                gameMode: matches[0].game_mode
               }
             });
             playerHasActivity = true;
           }
 
-          // 2. Detect MVP Performances (Lowered thresholds)
+          // 2. Detect MVP Performances (Dynamic thresholds based on game mode)
           const latestMatch = matches[0];
           const kda = (latestMatch.kills + latestMatch.assists) / Math.max(1, latestMatch.deaths);
-          const isHighKda = kda >= 6;
-          const isHighGpm = latestMatch.gold_per_min >= 650;
+          
+          // Use higher thresholds for Turbo matches (game_mode 23)
+          const isTurbo = latestMatch.game_mode === 23;
+          const kdaThreshold = isTurbo ? 10 : 6;
+          const gpmThreshold = isTurbo ? 950 : 650;
+
+          const isHighKda = kda >= kdaThreshold;
+          const isHighGpm = latestMatch.gold_per_min >= gpmThreshold;
 
           if (isHighKda || isHighGpm) {
             activityList.push({
@@ -115,7 +123,8 @@ export const useActivityFeed = () => {
                 heroId: latestMatch.hero_id,
                 kda: kda.toFixed(1),
                 gpm: latestMatch.gold_per_min,
-                matchId: latestMatch.match_id
+                matchId: latestMatch.match_id,
+                gameMode: latestMatch.game_mode
               }
             });
             playerHasActivity = true;
@@ -146,7 +155,8 @@ export const useActivityFeed = () => {
               details: {
                 heroId: latestMatch.hero_id,
                 matchId: latestMatch.match_id,
-                win: (latestMatch.player_slot < 128) === latestMatch.radiant_win
+                win: (latestMatch.player_slot < 128) === latestMatch.radiant_win,
+                gameMode: latestMatch.game_mode
               }
             });
           }

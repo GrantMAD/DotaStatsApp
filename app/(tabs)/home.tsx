@@ -182,7 +182,7 @@ function ActivityFeedSkeleton() {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
       {[1, 2, 3].map(i => (
         <View key={i} style={{
-          width: 260, height: 74, backgroundColor: '#1e1e2e',
+          width: 260, height: 96, backgroundColor: '#1e1e2e',
           borderRadius: 16, marginRight: 12, padding: 12,
           borderWidth: 1, borderColor: '#2a2a3e',
           flexDirection: 'row', alignItems: 'center'
@@ -495,7 +495,7 @@ export default function HomeScreen() {
                       ListEmptyComponent={
                         <View style={{
                           width: 260,
-                          height: 74,
+                          height: 96,
                           backgroundColor: '#1e1e2e',
                           borderRadius: 16,
                           padding: 12,

@@ -34,15 +34,18 @@ const ActivityFeedItem: React.FC<Props> = ({ item, onPressPlayer, onPressMatch }
   };
 
   const getMessage = () => {
+    const isTurbo = item.details.gameMode === 23;
+    const suffix = isTurbo ? ' (Turbo)' : '';
+
     switch (item.type) {
       case 'win_streak':
-        return `reached a ${item.details.streakCount}-win streak!`;
+        return `reached a ${item.details.streakCount}-win streak!${suffix}`;
       case 'mvp':
-        return `had an MVP performance!`;
+        return `had an MVP performance!${suffix}`;
       case 'rank_up':
         return `is ranked at ${getRankName(item.details.newRank || 0)}`;
       case 'recent_match':
-        return `${item.details.win ? 'Won' : 'Played'} a match as ${hero?.localized_name || 'a hero'}`;
+        return `${item.details.win ? 'Won' : 'Played'} a match as ${hero?.localized_name || 'a hero'}${suffix}`;
       default:
         return '';
     }
@@ -69,6 +72,7 @@ const ActivityFeedItem: React.FC<Props> = ({ item, onPressPlayer, onPressMatch }
     >
       <View style={{
         width: 260,
+        height: 96,
         backgroundColor: '#1e1e2e',
         borderRadius: 16,
         padding: 12,
@@ -119,13 +123,15 @@ const ActivityFeedItem: React.FC<Props> = ({ item, onPressPlayer, onPressMatch }
         </View>
 
         {/* Content */}
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
-            {item.player.name}
-          </Text>
-          <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }} numberOfLines={2}>
-            {getMessage()}
-          </Text>
+        <View style={{ flex: 1, height: '100%', paddingVertical: 4 }}>
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+              {item.player.name}
+            </Text>
+            <Text style={{ color: '#9ca3af', fontSize: 11, marginTop: 2 }} numberOfLines={2}>
+              {getMessage()}
+            </Text>
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
             <Ionicons name="time-outline" size={10} color="#6b7280" />
             <Text style={{ color: '#6b7280', fontSize: 10, marginLeft: 4 }}>

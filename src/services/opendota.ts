@@ -53,6 +53,7 @@ export interface RecentMatch {
   player_slot: number;
   radiant_win: boolean;
   duration: number;
+  game_mode: number;
   hero_id: number;
   start_time: number;
   kills: number;
