@@ -167,6 +167,8 @@ export interface MatchDetails {
     lane?: number;
     lane_role?: number;
     is_roaming?: boolean;
+    aegis_snatched?: number;
+    first_blood?: number;
     purchase_log?: { time: number; key: string }[];
     buyback_log?: { time: number; slot: number; type: string; player_slot: number }[];
     avatar?: string;

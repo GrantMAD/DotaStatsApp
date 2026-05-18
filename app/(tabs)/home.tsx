@@ -265,6 +265,11 @@ export default function HomeScreen() {
   // Final bracket to use (user's or manually selected)
   const activeBracket = selectedBracket || userBracket;
 
+  const newHighlightsCount = useMemo(() => {
+    const oneDayAgo = (Date.now() / 1000) - (24 * 60 * 60);
+    return activities.filter(a => a.timestamp > oneDayAgo).length;
+  }, [activities]);
+
   const isLoading = loadingHeroes || loadingMatches;
   const hasError = (errorHeroes && heroesData.length === 0) && (errorMatches && proMatchesData.length === 0);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -474,6 +479,21 @@ export default function HomeScreen() {
                     description="Recent achievements and matches from your friends."
                     color="#22c55e" 
                   />
+                  <View style={{ px: 24, marginBottom: 12, paddingHorizontal: 24 }}>
+                    <View style={{ 
+                      backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+                      paddingHorizontal: 10, 
+                      paddingVertical: 4, 
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: 'rgba(34, 197, 94, 0.2)',
+                      alignSelf: 'flex-start'
+                    }}>
+                      <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        {newHighlightsCount} New Highlights in last 24h
+                      </Text>
+                    </View>
+                  </View>
                   {loadingActivity ? (
                     <ActivityFeedSkeleton />
                   ) : (
@@ -495,7 +515,7 @@ export default function HomeScreen() {
                       ListEmptyComponent={
                         <View style={{
                           width: 260,
-                          height: 96,
+                          height: 120,
                           backgroundColor: '#1e1e2e',
                           borderRadius: 16,
                           padding: 12,
@@ -783,3 +803,4 @@ export default function HomeScreen() {
     </LinearGradient>
   );
 }
+
