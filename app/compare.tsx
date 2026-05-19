@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -27,10 +27,40 @@ import { STEAM_CDN_BASE, getHeroImageUrl } from '../src/services/constants';
 import { SteamAuthContext } from '../src/context/SteamAuthContext';
 
 import { useSupabaseAuth } from '../src/context/SupabaseAuthContext';
+import { PlayerSelectModal } from '../src/components/PlayerSelectModal';
 
 export default function CompareScreen() {
-  const { p1, p2 } = useLocalSearchParams<{ p1?: string, p2?: string }>();
+  const { p1: routeP1, p2: routeP2 } = useLocalSearchParams<{ p1?: string, p2?: string }>();
   const router = useRouter();
+
+  const [p1, setP1] = useState<string | null>(routeP1 || null);
+  const [p2, setP2] = useState<string | null>(routeP2 || null);
+
+  useEffect(() => {
+    if (routeP1) setP1(routeP1);
+  }, [routeP1]);
+
+  useEffect(() => {
+    if (routeP2) setP2(routeP2);
+  }, [routeP2]);
+
+  const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
+  const [selectingFor, setSelectingFor] = useState<'p1' | 'p2' | null>(null);
+
+  const handleOpenSelect = (target: 'p1' | 'p2') => {
+    setSelectingFor(target);
+    setIsSelectModalOpen(true);
+  };
+
+  const handleSelectPlayer = (accountId: string) => {
+    if (selectingFor === 'p1') {
+      setP1(accountId);
+    } else if (selectingFor === 'p2') {
+      setP2(accountId);
+    }
+    setIsSelectModalOpen(false);
+    setSelectingFor(null);
+  };
 
   const steamAuth = useContext(SteamAuthContext);
   const { steamAccountId: supabaseSteamId } = useSupabaseAuth();
@@ -65,18 +95,35 @@ export default function CompareScreen() {
    const isLoading = loadingP1 || loadingP2 || loadingTotals1 || loadingTotals2 || 
                     loadingRecent1 || loadingRecent2 || loadingPeers1 || loadingPeers2;
 
+  const [isAddingMe, setIsAddingMe] = useState(false);
+
+  const handleRemovePlayer = (side: 'left' | 'right') => {
+    if (side === 'left') {
+      setP1(null);
+    } else {
+      setP2(null);
+    }
+  };
+
   const handleAddMe = (side: 'left' | 'right') => {
     if (!myAccountId) return;
-    router.setParams({ [side === 'left' ? 'p1' : 'p2']: myAccountId });
+    setIsAddingMe(true);
+    if (side === 'left') {
+      setP1(myAccountId.toString());
+    } else {
+      setP2(myAccountId.toString());
+    }
+    setTimeout(() => setIsAddingMe(false), 2000);
   };
 
   const renderPlayerHeader = (profile: any, side: 'left' | 'right') => {
+    const target = side === 'left' ? 'p1' : 'p2';
     if (!profile) {
       return (
         <View className="flex-1 items-center justify-center p-4">
           <TouchableOpacity 
             className="items-center justify-center"
-            onPress={() => router.push('/friends')}
+            onPress={() => handleOpenSelect(target)}
           >
             <View className="w-14 h-14 rounded-full bg-zinc-800 items-center justify-center border-2 border-dashed border-zinc-600">
               <Ionicons name="add" size={28} color="#666" />
@@ -98,8 +145,16 @@ export default function CompareScreen() {
     }
 
     return (
-      <View className="flex-1 items-center p-4">
-        <TouchableOpacity onPress={() => router.push('/friends')} className="items-center">
+      <View className="flex-1 items-center p-4 relative" style={{ position: 'relative' }}>
+        <TouchableOpacity 
+          onPress={() => handleRemovePlayer(side)}
+          className="absolute top-2 right-2 p-1.5 bg-red-500/10 rounded-lg z-10"
+          style={{ position: 'absolute', top: 8, right: 8 }}
+        >
+          <Ionicons name="close" size={16} color="#ef4444" />
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => handleOpenSelect(target)} className="items-center">
           <View className="relative">
             <Image 
               source={{ uri: profile.profile.avatarfull }} 
@@ -187,6 +242,13 @@ export default function CompareScreen() {
 
   return (
     <LinearGradient colors={['#1a1a2e', '#121212']} style={{ flex: 1 }}>
+      <PlayerSelectModal 
+        visible={isSelectModalOpen}
+        onClose={() => setIsSelectModalOpen(false)}
+        onSelect={handleSelectPlayer}
+        title={selectingFor === 'p1' ? "Select First Player" : "Select Second Player"}
+      />
+
       <GlassHeader 
         title="Compare Players" 
         leftComponent={
@@ -207,7 +269,9 @@ export default function CompareScreen() {
         {isLoading ? (
           <View className="py-20">
             <ActivityIndicator size="large" color="#8b5cf6" />
-            <Text className="text-zinc-500 text-center mt-4 font-bold">Calculating Stats...</Text>
+            <Text className="text-zinc-500 text-center mt-4 font-bold">
+              {isAddingMe ? "Loading User..." : "Calculating Stats..."}
+            </Text>
           </View>
         ) : profile1 && profile2 ? (
           <View className="px-4 mt-8">
@@ -344,9 +408,9 @@ export default function CompareScreen() {
             </Text>
             <TouchableOpacity 
               className="mt-8 bg-purple-500/20 border border-purple-500/50 px-8 py-3 rounded-2xl"
-              onPress={() => router.push('/friends')}
+              onPress={() => handleOpenSelect('p1')}
             >
-              <Text className="text-purple-400 font-black">BROWSE FRIENDS</Text>
+              <Text className="text-purple-400 font-black">BROWSE PLAYERS</Text>
             </TouchableOpacity>
           </View>
         )}

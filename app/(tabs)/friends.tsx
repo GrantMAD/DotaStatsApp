@@ -35,8 +35,9 @@ export default function FriendsScreen() {
   const filteredFollowing = following.filter(follow => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
+    const name = follow.steam_name?.toLowerCase() || '';
     const id = follow.followed_steam_id.toString();
-    return id.includes(q);
+    return name.includes(q) || id.includes(q);
   });
 
   const openPlayerDetails = (accountId: string) => {
@@ -76,7 +77,7 @@ export default function FriendsScreen() {
         user={{
           id: item.id,
           steam_account_id: item.followed_steam_id,
-          steam_name: '' // UserListItem will fetch profile data anyway
+          steam_name: item.steam_name || ''
         }} 
         index={index} 
         onPress={() => openPlayerDetails(item.followed_steam_id)}
