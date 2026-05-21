@@ -59,11 +59,12 @@ export default function ProSceneScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Queries
-  const { data: leagues = [], isLoading: loadingLeagues, refetch: refetchLeagues } = useLeagues();
-  const { data: teams = [], isLoading: loadingTeams, refetch: refetchTeams } = useProTeams();
-  const { data: players = [], isLoading: loadingPlayers, refetch: refetchPlayers } = useProPlayers();
+  const { data: leagues = [], isLoading: loadingLeagues, isError: leaguesError, refetch: refetchLeagues } = useLeagues();
+  const { data: teams = [], isLoading: loadingTeams, isError: teamsError, refetch: refetchTeams } = useProTeams();
+  const { data: players = [], isLoading: loadingPlayers, isError: playersError, refetch: refetchPlayers } = useProPlayers();
 
   const loading = loadingLeagues || loadingTeams || loadingPlayers;
+  const hasError = leaguesError || teamsError || playersError;
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -339,14 +340,18 @@ export default function ProSceneScreen() {
                   );
                 }
               }}
-              ListEmptyComponent={
+              ListEmptyComponent={() => (
                 <View className="p-10 items-center">
                   <Ionicons name="search-outline" size={48} color="#1e1e2e" />
                   <Text className="text-zinc-600 mt-4 text-center">
-                    No {activeTab.toLowerCase()} found matching "{searchQuery}"
+                    {hasError
+                      ? 'Unable to load pro scene content. Pull to refresh.'
+                      : searchQuery
+                        ? `No ${activeTab.toLowerCase()} found matching "${searchQuery}"`
+                        : `No ${activeTab.toLowerCase()} available for ${subTab}. Pull to refresh or try another tier.`}
                   </Text>
                 </View>
-              }
+              )}
             />
           )}
         </View>

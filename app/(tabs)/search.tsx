@@ -21,6 +21,7 @@ import {
 import { useMenu } from './_layout';
 import { getHeroImageUrl } from '../../src/services/constants';
 import { useModals } from '../../src/context/ModalContext';
+import { useQueryClient } from '@tanstack/react-query';
 import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
 import PressableScale from '../../src/components/PressableScale';
@@ -57,20 +58,27 @@ export default function SearchScreen() {
   const router = useRouter();
   const { q } = useLocalSearchParams<{ q: string }>();
   const { user, session, steamAccountId } = useSupabaseAuth();
+  const { accountId: steamLocalAccountId } = useSteamAuth();
   const { setMenuVisible } = useMenu();
   const { pushModal } = useModals();
   const [query, setQuery] = useState(q || '');
   const [activeQuery, setActiveQuery] = useState(q || '');
   const [searchMode, setSearchMode] = useState<'global' | 'steam'>('global');
 
+  const steamAccountIdToUse = steamAccountId ?? steamLocalAccountId;
+  const steamNotLinked = !steamAccountId && !steamLocalAccountId;
   const { data: globalResults = [], isLoading: searchingGlobal, error } = useSearchPlayers(activeQuery);
-  const { data: peers = [], isLoading: loadingPeers } = usePlayerPeers(searchMode === 'steam' ? steamAccountId : null);
+  const { data: peers, isLoading: loadingPeers } = usePlayerPeers(searchMode === 'steam' ? steamAccountIdToUse : null);
+  const peersArr: Peer[] = React.useMemo(() => {
+    if (!peers || !Array.isArray(peers)) return [] as Peer[];
+    return peers as Peer[];
+  }, [peers]);
+  const queryClient = useQueryClient();
   const { data: heroesData = [] } = useHeroStats();
   const { sendFriendRequest, followUser, unfollowUser, isFollowing, isFriend } = useFriends();
 
   // Cross-reference with app users
   const [appUsersMap, setAppUsersMap] = useState<Record<number, string>>({});
-  const [steamFriendsResults, setSteamFriendsResults] = useState<SearchResult[]>([]);
 
   // Hero & Match ID Results
   const matchingHeroes = React.useMemo(() => {
@@ -85,10 +93,29 @@ export default function SearchScreen() {
     return isMatchId ? parseInt(activeQuery.trim()) : null;
   }, [activeQuery, searchMode]);
 
-  const results = searchMode === 'global'
-    ? globalResults
-    : steamFriendsResults.filter(p => p.personaname.toLowerCase().includes(query.toLowerCase()));
+  const steamFriendsResults = React.useMemo(() => {
+    if (searchMode !== 'steam') return [];
+    const formatted = peersArr.map((p: Peer) => ({
+      account_id: p.account_id,
+      personaname: p.personaname,
+      avatarfull: p.avatar,
+    }));
+
+    if (!query.trim()) return formatted;
+    const qLower = query.toLowerCase();
+    return formatted.filter(p => p.personaname.toLowerCase().includes(qLower));
+  }, [peersArr, query, searchMode]);
+
+  const results = searchMode === 'global' ? globalResults : steamFriendsResults;
   const searching = searchMode === 'global' ? searchingGlobal : loadingPeers;
+
+  // debug logging removed
+
+  // Force-refetch persisted/possibly-cached peers when switching to Steam mode
+  React.useEffect(() => {
+    if (searchMode !== 'steam' || !steamAccountIdToUse) return;
+    queryClient.invalidateQueries({ queryKey: ['playerPeersV2', steamAccountIdToUse], refetchType: 'all' });
+  }, [searchMode, steamAccountIdToUse, queryClient]);
 
   // Handle incoming query param
   React.useEffect(() => {
@@ -111,13 +138,10 @@ export default function SearchScreen() {
 
   React.useEffect(() => {
     async function checkAppUsers() {
-      const sourceResults = searchMode === 'global' ? globalResults : peers;
-      if (!sourceResults.length) {
-        if (searchMode === 'steam') setSteamFriendsResults([]);
-        return;
-      }
+      const sourceResults = (searchMode === 'global' ? globalResults : peersArr) as Array<{ account_id: number }>;
+      if (!sourceResults || sourceResults.length === 0) return;
 
-      const accountIds = sourceResults.map(r => r.account_id.toString());
+      const accountIds = sourceResults.map((r) => r.account_id.toString());
       const { data, error } = await supabase
         .from('users')
         .select('id, steam_account_id')
@@ -129,22 +153,12 @@ export default function SearchScreen() {
           map[Number(u.steam_account_id)] = u.id;
         });
         setAppUsersMap(map);
-
-        if (searchMode === 'steam') {
-          // Map ALL peers to SearchResult format (don't filter by map[p.account_id])
-          const formatted = peers.map(p => ({
-            account_id: p.account_id,
-            personaname: p.personaname,
-            avatarfull: p.avatar,
-          }));
-          setSteamFriendsResults(formatted);
-        }
       } else if (error) {
         console.error('checkAppUsers error:', error);
       }
     }
     checkAppUsers();
-  }, [globalResults, peers, searchMode]);
+  }, [globalResults, peersArr, searchMode]);
 
   const handleSearch = () => {
     if (!query.trim()) return;
@@ -378,15 +392,25 @@ export default function SearchScreen() {
                   alignItems: 'center'
                 }}>
                   <Ionicons name="information-circle" size={24} color="#60a5fa" />
-                  <Text style={{
-                    color: '#bfdbfe',
-                    fontSize: 12,
-                    fontFamily: 'Outfit_600SemiBold',
-                    marginLeft: 12,
-                    flex: 1
-                  }}>
-                    Displays your network of frequent teammates and opponents calculated from your public match history. This naturally includes your Steam friends as well as random players you often queue with.
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{
+                      color: '#bfdbfe',
+                      fontSize: 12,
+                      fontFamily: 'Outfit_600SemiBold',
+                      marginLeft: 12,
+                    }}>
+                      Displays your network of frequent teammates and opponents calculated from your public match history. This naturally includes your Steam friends as well as random players you often queue with.
+                    </Text>
+                    <Text style={{
+                      color: '#c7d2fe',
+                      fontSize: 11,
+                      fontFamily: 'Outfit_400Regular',
+                      marginLeft: 12,
+                      marginTop: 8,
+                    }}>
+                      {`Steam ID: ${steamAccountIdToUse ?? 'none'} • Peers: ${peersArr.length} • Loading: ${loadingPeers ? 'yes' : 'no'}`}
+                    </Text>
+                  </View>
                 </View>
               )}
 
@@ -406,14 +430,14 @@ export default function SearchScreen() {
                   <Text style={{ color: '#9ca3af', textAlign: 'center', fontFamily: 'Outfit_600SemiBold', fontSize: 18 }}>
                     {searchMode === 'global'
                       ? (activeQuery ? `No results found for "${activeQuery}"` : "Who are you looking for?")
-                      : (!steamAccountId ? "Steam Not Linked" : "No Friends Found")}
+                      : (steamNotLinked ? "Steam Not Linked" : "No Friends Found")}
                   </Text>
                   <Text style={{ color: '#6b7280', textAlign: 'center', marginTop: 8, fontFamily: 'Outfit_400Regular' }}>
                     {searchMode === 'global'
                       ? "Search for players by name or Steam ID."
-                      : (!steamAccountId ? "Link your Steam account to find your frequent teammates here." : "We've matched your Steam frequent teammates with our users.")}
+                      : (steamNotLinked ? "Link your Steam account to find your frequent teammates here." : "We've matched your Steam frequent teammates with our users.")}
                   </Text>
-                  {!steamAccountId && searchMode === 'steam' && (
+                  {steamNotLinked && searchMode === 'steam' && (
                     <TouchableOpacity 
                       onPress={() => router.push('/profile')}
                       style={{

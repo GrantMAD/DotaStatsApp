@@ -4,6 +4,7 @@ import { supabase } from '../services/supabase';
 import { 
   openDotaApi, 
   PlayerHero, 
+  Peer,
   HeroStats, 
   OPENDOTA_BASE_URL,
   isProfilePrivate,
@@ -105,11 +106,18 @@ export function useRecentMatches(accountId: string | number | null, limit: numbe
  * Hook to fetch players who have played in the same matches.
  */
 export function usePlayerPeers(accountId: string | number | null) {
-  return useQuery({
+  return useQuery<Peer[]>({
     queryKey: ['playerPeersV2', accountId],
-    queryFn: () => (accountId ? openDotaApi.getPlayerPeers(accountId) : []),
+    queryFn: async () => {
+      if (!accountId) return [];
+      const data = await openDotaApi.getPlayerPeers(accountId);
+      return data;
+    },
+    onSuccess: () => {},
     enabled: !!accountId,
     staleTime: 1000 * 60 * 60, // Peers don't change that fast, cache for 1 hour
+    refetchOnMount: 'always',
+    retry: 1,
   });
 }
 
@@ -310,6 +318,8 @@ export function useProPlayers() {
     queryKey: ['proPlayers'],
     queryFn: openDotaApi.getProPlayers,
     staleTime: 1000 * 60 * 60 * 24, // Cache for a day
+    retry: 1,
+    refetchOnMount: 'always',
   });
 }
 
@@ -321,6 +331,8 @@ export function useProTeams() {
     queryKey: ['proTeams'],
     queryFn: openDotaApi.getProTeams,
     staleTime: 1000 * 60 * 60 * 24, // Cache for a day
+    retry: 1,
+    refetchOnMount: 'always',
   });
 }
 
@@ -332,6 +344,8 @@ export function useLeagues() {
     queryKey: ['leagues'],
     queryFn: openDotaApi.getLeagues,
     staleTime: 1000 * 60 * 60 * 24, // Cache for a day
+    retry: 1,
+    refetchOnMount: 'always',
   });
 }
 
