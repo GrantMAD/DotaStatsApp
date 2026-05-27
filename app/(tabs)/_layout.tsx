@@ -25,9 +25,8 @@ export default function TabsLayout() {
   }
 
   return (
-    <ModalProvider>
-      <MenuContext.Provider value={{ setMenuVisible }}>
-        <Tabs
+    <MenuContext.Provider value={{ setMenuVisible }}>
+      <Tabs
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
@@ -183,7 +182,5 @@ export default function TabsLayout() {
           </Modal>
         )}
       </MenuContext.Provider>
-      <GlobalModalContainer />
-    </ModalProvider>
-  );
+    );
 }

@@ -22,7 +22,6 @@ import GlassModal from '../../src/components/GlassModal';
 import MeshGradient from '../../src/components/MeshGradient';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
-import { useModals } from '../../src/context/ModalContext';
 import ErrorBoundary from '../../src/components/ErrorBoundary';
 
 
@@ -31,7 +30,6 @@ export default function ProfileScreen() {
   const { steamAccountId, session, matchLimit } = useSupabaseAuth();
   const { login, isLoading: steamLoading } = useSteamAuth();
   const { setMenuVisible } = useMenu();
-  const { pushModal } = useModals();
   const accountId = steamAccountId ? steamAccountId.toString() : null;
 
   // Friends & Following Data
@@ -54,12 +52,12 @@ export default function ProfileScreen() {
   };
 
   const handleMatchPress = (matchId: number) => {
-    pushModal('match', matchId);
+    router.push(`/match/${matchId}`);
   };
 
   const handlePlayerPress = (pAccountId: number | null) => {
     if (!pAccountId) return;
-    pushModal('player', pAccountId);
+    router.push(`/profile/${pAccountId}`);
   };
 
   if (isDataLoading && !profile && accountId) {

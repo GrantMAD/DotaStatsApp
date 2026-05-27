@@ -20,7 +20,6 @@ import {
 } from '../../src/services/opendota';
 import { useMenu } from './_layout';
 import { getHeroImageUrl } from '../../src/services/constants';
-import { useModals } from '../../src/context/ModalContext';
 import { useQueryClient } from '@tanstack/react-query';
 import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
@@ -60,7 +59,6 @@ export default function SearchScreen() {
   const { user, session, steamAccountId } = useSupabaseAuth();
   const { accountId: steamLocalAccountId } = useSteamAuth();
   const { setMenuVisible } = useMenu();
-  const { pushModal } = useModals();
   const [query, setQuery] = useState(q || '');
   const [activeQuery, setActiveQuery] = useState(q || '');
   const [searchMode, setSearchMode] = useState<'global' | 'steam'>('global');
@@ -76,7 +74,6 @@ export default function SearchScreen() {
   const queryClient = useQueryClient();
   const { data: heroesData = [] } = useHeroStats();
   const { sendFriendRequest, followUser, unfollowUser, isFollowing, isFriend } = useFriends();
-
   // Cross-reference with app users
   const [appUsersMap, setAppUsersMap] = useState<Record<number, string>>({});
 
@@ -171,7 +168,7 @@ export default function SearchScreen() {
     const friend = appUserId ? isFriend(appUserId) : false;
 
     return (
-      <PressableScale onPress={() => pushModal('player', item.account_id)}>
+      <PressableScale onPress={() => router.push(`/profile/${item.account_id}`)}>
         <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
           <View className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center">
             <Image
@@ -463,7 +460,7 @@ export default function SearchScreen() {
                   {matchingHeroes.map(hero => (
                     <TouchableOpacity 
                       key={hero.id} 
-                      onPress={() => pushModal('hero', hero.id)} 
+                      onPress={() => router.push(`/hero/${hero.id}`)} 
                       style={{ 
                         flexDirection: 'row', 
                         alignItems: 'center', 
@@ -495,7 +492,7 @@ export default function SearchScreen() {
                     MATCH ID
                   </Text>
                   <TouchableOpacity 
-                    onPress={() => pushModal('match', matchingMatchId)}
+                    onPress={() => router.push(`/match/${matchingMatchId}`)}
                     style={{ 
                       flexDirection: 'row', 
                       alignItems: 'center', 

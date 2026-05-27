@@ -191,7 +191,6 @@ export function PlayerOverviewContent({
   const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
   const { data: peers = [], isLoading: peersLoading } = usePlayerPeers(accountId);
   const { data: allHeroStats = [] } = useHeroStats();
-  const { pushModal } = useModals();
   const [activeTab, setActiveTab] = useState<ProfileTab>('Recent');
   const [networkSubTab, setNetworkSubTab] = useState<'Allies' | 'Opponents'>('Allies');
 
@@ -550,7 +549,7 @@ export function PlayerOverviewContent({
 
           return (
             <TouchableOpacity
-              onPress={() => pushModal('player', item.account_id)}
+              onPress={() => router.push(`/profile/${item.account_id}`)}
               className="mx-4 mb-3 bg-[#1e1e2e] p-4 rounded-xl border border-white/5 flex-row items-center"
             >
               <Image source={{ uri: item.avatarfull || item.avatar }} className="w-12 h-12 rounded-full mr-4 bg-zinc-900" />
@@ -649,15 +648,7 @@ export function PlayerOverviewContent({
 
     return (
       <TouchableOpacity
-        onPress={() => {
-          const heroStats = allHeroStats.find(
-            (h) => h.id === Number(item.hero_id)
-          ) || null;
-
-          setSelectedHero(heroStats);
-          setSelectedPlayerHeroStats(item);
-          setHeroModalVisible(true);
-        }}
+        onPress={() => router.push(`/hero/${item.hero_id}`)}
         className="mx-4 mb-3 bg-[#1e1e2e] p-4 rounded-xl border border-white/5 flex-row items-center"
       >
         <Image
@@ -800,17 +791,6 @@ export function PlayerOverviewContent({
       ) : (
         renderLifetimeContent()
       )}
-
-      <HeroDetailModal
-        visible={heroModalVisible}
-        hero={selectedHero}
-        playerStats={selectedPlayerHeroStats}
-        onClose={() => {
-          setHeroModalVisible(false);
-          setSelectedHero(null);
-          setSelectedPlayerHeroStats(null);
-        }}
-      />
     </View>
   );
 }

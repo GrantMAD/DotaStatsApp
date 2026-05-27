@@ -249,7 +249,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const { session, steamAccountId } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
-  const { pushModal } = useModals();
 
   // Queries
   const { data: heroesData = [], isLoading: loadingHeroes, isError: errorHeroes, refetch: refetchHeroes } = useHeroStats();
@@ -299,24 +298,26 @@ export default function HomeScreen() {
   };
 
   const openHeroModal = useCallback((heroId: number) => {
-    pushModal('hero', heroId);
-  }, [pushModal]);
+    router.push(`/hero/${heroId}`);
+  }, [router]);
 
   const openMatchModal = useCallback((match: ProMatch) => {
-    pushModal('match', match.match_id);
-  }, [pushModal]);
+    router.push(`/match/${match.match_id}`);
+  }, [router]);
 
   const openMatchById = useCallback((matchId: number) => {
-    pushModal('match', matchId);
-  }, [pushModal]);
+    router.push(`/match/${matchId}`);
+  }, [router]);
 
   const openLiveMatchModal = useCallback((matchId: number) => {
-    pushModal('liveMatch', matchId);
-  }, [pushModal]);
+    // Live match modal still requires specialized context, so we'll revisit this.
+    // For now, logging a warning instead of crashing.
+    console.warn('Live match modal navigation is not yet migrated to route-based navigation.');
+  }, []);
 
   const openPlayerDetails = useCallback((accountId: string | number) => {
-    pushModal('player', accountId);
-  }, [pushModal]);
+    router.push(`/profile/${accountId}`);
+  }, [router]);
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);

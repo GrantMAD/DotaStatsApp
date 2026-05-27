@@ -17,7 +17,6 @@ type TabType = 'Friends' | 'Following';
 
 export default function FriendsScreen() {
   const { setMenuVisible } = useMenu();
-  const { pushModal } = useModals();
   const router = useRouter();
   const { steamAccountId, session } = useSupabaseAuth();
   const { friends, following, loading, fetchFriends, unfollowUser } = useFriends();
@@ -41,11 +40,11 @@ export default function FriendsScreen() {
   });
 
   const openPlayerDetails = (accountId: string) => {
-    pushModal('player', accountId);
+    router.push(`/profile/${accountId}`);
   };
 
   const openMatchById = (matchId: number) => {
-    pushModal('match', matchId);
+    router.push(`/match/${matchId}`);
   };
 
   const renderFriend = ({ item, index }: { item: any; index: number }) => {

@@ -9,6 +9,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Outfit_400Regular, Outfit_600SemiBold, Outfit_700Bold, Outfit_800ExtraBold, Outfit_900Black } from '@expo-google-fonts/outfit';
 import { SupabaseAuthProvider, useSupabaseAuth } from '../src/context/SupabaseAuthContext';
 import { SteamAuthProvider } from '../src/context/SteamAuthContext';
+import { ModalProvider } from '../src/context/ModalContext';
+import GlobalModalContainer from '../src/components/GlobalModalContainer';
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
@@ -103,23 +105,46 @@ export default function RootLayout() {
       <SupabaseAuthProvider>
         <NotificationManager>
           <SteamAuthProvider>
-            <StatusBar style="light" />
-            <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-              <ErrorBoundary>
-                <Stack 
-                  screenOptions={{ headerShown: false }}
-                >
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="welcome" />
-                  <Stack.Screen name="sign-in" />
-                  <Stack.Screen name="sign-up" />
-                  <Stack.Screen name="notifications" />
-                </Stack>
-              </ErrorBoundary>
-            </View>
-            <Toast config={toastConfig} />
-          </SteamAuthProvider>
+            <ModalProvider>
+              <StatusBar style="light" />
+              <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+                <ErrorBoundary>
+                  <Stack 
+                    screenOptions={{ headerShown: false }}
+                  >
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="welcome" />
+                    <Stack.Screen name="sign-in" />
+                    <Stack.Screen name="sign-up" />
+                    <Stack.Screen name="notifications" />
+                    <Stack.Screen 
+                      name="match/[id]" 
+                      options={{ 
+                        presentation: 'modal',
+                        gestureEnabled: true,
+                      }} 
+                    />
+                    <Stack.Screen 
+                      name="profile/[id]" 
+                      options={{ 
+                        presentation: 'modal',
+                        gestureEnabled: true,
+                      }} 
+                    />
+                    <Stack.Screen 
+                      name="hero/[id]" 
+                      options={{ 
+                        presentation: 'modal',
+                        gestureEnabled: true,
+                      }} 
+                    />
+                  </Stack>
+                </ErrorBoundary>
+                </View>
+                <GlobalModalContainer />
+                <Toast config={toastConfig} />
+                </ModalProvider>          </SteamAuthProvider>
         </NotificationManager>
       </SupabaseAuthProvider>
     </QueryClientProvider>

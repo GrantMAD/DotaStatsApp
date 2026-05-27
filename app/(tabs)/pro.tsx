@@ -53,7 +53,7 @@ function ProSkeleton() {
 export default function ProSceneScreen() {
   const { session } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
-  const { pushModal } = useModals();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('Tournaments');
   const [subTab, setSubTab] = useState<SubTabType>('Premium');
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,19 +134,19 @@ export default function ProSceneScreen() {
   }, [players, teams, searchQuery, subTab]);
 
   const handleLeaguePress = (id: number) => {
-    pushModal('league', id);
+    router.push(`/league/${id}`);
   };
 
   const handleTeamPress = (id: number) => {
-    pushModal('team', id);
+    router.push(`/team/${id}`);
   };
 
   const handlePlayerPress = (id: number) => {
-    pushModal('player', id);
+    router.push(`/profile/${id}`);
   };
 
   const handleMatchPress = (id: number) => {
-    pushModal('match', id);
+    router.push(`/match/${id}`);
   };
 
   const memoizedHeader = useMemo(() => (
