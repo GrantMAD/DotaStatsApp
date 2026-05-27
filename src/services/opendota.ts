@@ -490,10 +490,17 @@ export interface LiveGame {
   lobby_id: string;
   game_time: number;
   average_mmr: number;
+  radiant_score: number;
+  dire_score: number;
+  radiant_lead: number;
+  spectators: number;
+  game_mode: number;
+  building_state?: number;
   players: {
     account_id: number;
     hero_id: number;
     name?: string;
+    team?: number;
   }[];
 }
 

@@ -310,6 +310,10 @@ export default function HomeScreen() {
     pushModal('match', matchId);
   }, [pushModal]);
 
+  const openLiveMatchModal = useCallback((matchId: number) => {
+    pushModal('liveMatch', matchId);
+  }, [pushModal]);
+
   const openPlayerDetails = useCallback((accountId: string | number) => {
     pushModal('player', accountId);
   }, [pushModal]);
@@ -785,9 +789,9 @@ export default function HomeScreen() {
                     contentContainerStyle={{ paddingHorizontal: 20 }}
                     keyExtractor={(item) => `live-${item.match_id}`}
                     renderItem={({ item, index }) => (
-                      <PressableScale onPress={() => openMatchById(item.match_id)}>
+                      <PressableScale onPress={() => openLiveMatchModal(item.match_id)}>
                         <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 80).springify()}>
-                          <LiveGameCard game={item} onPress={openMatchById} />
+                          <LiveGameCard game={item} onPress={openLiveMatchModal} />
                         </Animated.View>
                       </PressableScale>
                     )}

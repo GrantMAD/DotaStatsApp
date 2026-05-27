@@ -5,6 +5,7 @@ import { MatchOverviewModal } from './MatchOverviewModal';
 import HeroDetailModal from './HeroDetailModal';
 import TeamDetailModal from './TeamDetailModal';
 import LeagueDetailModal from './LeagueDetailModal';
+import LiveMatchModal from './LiveMatchModal';
 import { useHeroStats, useLeagues, useProTeams } from '../hooks/useOpenDota';
 import ErrorBoundary from './ErrorBoundary';
 
@@ -40,6 +41,17 @@ export default function GlobalModalContainer() {
             return (
               <ErrorBoundary key={`${item.type}-${item.id}-${index}`}>
                 <MatchOverviewModal
+                  visible={true}
+                  matchId={item.id as number}
+                  onClose={popModal}
+                  onPushPlayer={(playerId) => pushModal('player', playerId)}
+                />
+              </ErrorBoundary>
+            );
+          case 'liveMatch':
+            return (
+              <ErrorBoundary key={`${item.type}-${item.id}-${index}`}>
+                <LiveMatchModal
                   visible={true}
                   matchId={item.id as number}
                   onClose={popModal}

@@ -609,6 +609,14 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
                 <LinearGradient colors={['rgba(16, 185, 129, 0.2)', 'transparent']} start={{x:0, y:0}} end={{x:1, y:1}} className="flex-1" />
                 <LinearGradient colors={['rgba(239, 68, 68, 0.2)', 'transparent']} start={{x:1, y:0}} end={{x:0, y:1}} className="flex-1" />
              </View>
+
+             {/* Close Button */}
+             <TouchableOpacity 
+                onPress={onClose}
+                className="absolute top-4 right-4 z-50 w-8 h-8 rounded-full bg-black/40 border border-white/10 items-center justify-center"
+             >
+                <Ionicons name="close" size={20} color="white" />
+             </TouchableOpacity>
              
              <View className="absolute inset-0 items-center justify-center">
                 <View className="flex-row items-center gap-10">

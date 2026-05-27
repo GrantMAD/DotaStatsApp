@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { HeroStats } from '../services/opendota';
 import { PlayerHeroStats } from '../components/HeroDetailModal';
 
-export type ModalType = 'player' | 'match' | 'hero' | 'team' | 'league';
+export type ModalType = 'player' | 'match' | 'hero' | 'team' | 'league' | 'liveMatch';
 
 export interface ModalItem {
   type: ModalType;
