@@ -673,11 +673,20 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
 
     const laningGrade = calculateLaningGrade(p.lane_efficiency_pct || null, p.benchmarks?.lhten?.pct || null);
 
-    const showLaningInfo = () => {
-      if (!laningGrade) return;
+    const showPerformanceInfo = () => {
+      if (!p.benchmarks) return;
+      const b = p.benchmarks;
+      const format = (val: any) => val ? `${((val.pct || 0) * 100).toFixed(0)}th` : 'N/A';
+      
       Alert.alert(
-        "Laning Performance",
-        `Grade: ${laningGrade.grade} (${laningGrade.label} Tier)\n\nEfficiency: ${(p.lane_efficiency_pct || 0).toFixed(0)}%\nLH @ 10m: ${p.benchmarks?.lhten?.raw || 0}\nGlobal Percentile: ${((p.benchmarks?.lhten?.pct || 0) * 100).toFixed(1)}%`,
+        `${p.personaname || 'Player'} Performance`,
+        `Global Percentiles for ${HEROES[p.hero_id]?.localized_name || 'Hero'}:\n\n` +
+        `• GPM: ${b.gold_per_min?.raw} (${format(b.gold_per_min)} percentile)\n` +
+        `• XPM: ${b.xp_per_min?.raw} (${format(b.xp_per_min)} percentile)\n` +
+        `• Kills: ${b.kills_per_min?.raw?.toFixed(2)} (${format(b.kills_per_min)})\n` +
+        `• Hero Damage: ${b.hero_damage_per_min?.raw?.toFixed(0)} (${format(b.hero_damage_per_min)})\n` +
+        `• Last Hits @ 10m: ${b.lhten?.raw} (${format(b.lhten)})\n\n` +
+        (laningGrade ? `Laning Grade: ${laningGrade.grade} (${laningGrade.label})` : ''),
         [{ text: "Close", style: "cancel" }]
       );
     };
@@ -689,6 +698,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
 
         <TouchableOpacity
           onPress={() => !isAnonymous && onPushPlayer?.(p.account_id!)}
+          onLongPress={showPerformanceInfo}
           disabled={isAnonymous || !onPushPlayer}
           className="py-3 active:bg-zinc-700 relative z-10"
         >
@@ -713,23 +723,35 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
                   </View>
                 )}
               </View>
-              <Text className="text-[9px] text-gray-500 mt-0.5">
-                NW: {(p.net_worth / 1000).toFixed(1)}k • G/X: {p.gold_per_min}/{p.xp_per_min}
-              </Text>
+              <View className="flex-row items-center mt-0.5">
+                <Text className="text-[9px] text-gray-500">
+                  NW: {(p.net_worth / 1000).toFixed(1)}k • G/X: {p.gold_per_min}/{p.xp_per_min}
+                </Text>
+                {p.benchmarks?.gold_per_min && (
+                   <View className="ml-2 bg-zinc-800 px-1 rounded flex-row items-center border border-white/5">
+                      <Ionicons name="trending-up" size={8} color={p.benchmarks.gold_per_min.pct > 0.8 ? "#10b981" : "#71717a"} />
+                      <Text className={`text-[7px] font-black ml-0.5 ${p.benchmarks.gold_per_min.pct > 0.8 ? "text-win" : "text-gray-500"}`}>
+                        {Math.round(p.benchmarks.gold_per_min.pct * 100)}%
+                      </Text>
+                   </View>
+                )}
+              </View>
             </View>
 
-            {/* Laning Grade Badge */}
-            {laningGrade ? (
-              <TouchableOpacity onPress={showLaningInfo} className="mx-2 items-center">
-                <Text style={{ color: laningGrade.color }} className="text-xs font-black italic">{laningGrade.grade}</Text>
-                <Text className="text-gray-600 text-[6px] font-black uppercase">LANE</Text>
-              </TouchableOpacity>
-            ) : matchData && !matchData.version && (
-              <View className="mx-2 items-center opacity-30">
-                <Ionicons name="time-outline" size={10} color="#71717a" />
-                <Text className="text-gray-600 text-[6px] font-black uppercase">WAIT</Text>
-              </View>
-            )}
+            {/* Performance Badge */}
+            <TouchableOpacity onPress={showPerformanceInfo} className="mx-2 items-center">
+              {laningGrade ? (
+                <>
+                  <Text style={{ color: laningGrade.color }} className="text-xs font-black italic">{laningGrade.grade}</Text>
+                  <Text className="text-gray-600 text-[6px] font-black uppercase">PERF</Text>
+                </>
+              ) : (
+                <>
+                   <Ionicons name="analytics-outline" size={14} color="#71717a" />
+                   <Text className="text-gray-600 text-[6px] font-black uppercase">STATS</Text>
+                </>
+              )}
+            </TouchableOpacity>
 
             <View className="w-16 items-center">
               <Text className="text-white text-[10px] font-bold">{p.kills}/{p.deaths}/{p.assists}</Text>
@@ -1044,20 +1066,60 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
                   const h = getHighlights(matchData);
                   return (
                     <View>
-                      <View className="bg-[#2a2a2a] p-4 rounded-xl mb-3 flex-row items-center border border-red-900/20">
-                        <View className="bg-red-500/10 p-2 rounded-full mr-4"><Ionicons name="flame" size={24} color="#ef4444" /></View>
-                        <View className="flex-1">
-                          <Text className="text-red-500 text-[10px] font-bold uppercase">Top Hero Damage</Text>
-                          <Text className="text-white font-bold">{h.topDamage.personaname || 'Anonymous'}</Text>
-                          <Text className="text-gray-400 text-xs">{h.topDamage.hero_damage.toLocaleString()} damage</Text>
+                      <View className="flex-row gap-3 mb-3">
+                        <View className="flex-1 bg-[#2a2a2a] p-4 rounded-xl flex-row items-center border border-red-900/20">
+                          <View className="bg-red-500/10 p-2 rounded-full mr-3"><Ionicons name="flame" size={20} color="#ef4444" /></View>
+                          <View className="flex-1">
+                            <Text className="text-red-500 text-[8px] font-bold uppercase">Hero Damage</Text>
+                            <Text className="text-white font-bold text-xs" numberOfLines={1}>{h.topDamage.personaname || 'Anonymous'}</Text>
+                            <Text className="text-gray-400 text-[10px]">{h.topDamage.hero_damage.toLocaleString()}</Text>
+                          </View>
+                        </View>
+                        <View className="flex-1 bg-[#2a2a2a] p-4 rounded-xl flex-row items-center border border-yellow-900/20">
+                          <View className="bg-yellow-500/10 p-2 rounded-full mr-3"><Ionicons name="cash" size={20} color="#eab308" /></View>
+                          <View className="flex-1">
+                            <Text className="text-yellow-500 text-[8px] font-bold uppercase">Net Worth</Text>
+                            <Text className="text-white font-bold text-xs" numberOfLines={1}>{h.topNetWorth.personaname || 'Anonymous'}</Text>
+                            <Text className="text-gray-400 text-[10px]">{(h.topNetWorth.net_worth / 1000).toFixed(1)}k</Text>
+                          </View>
                         </View>
                       </View>
-                      <View className="bg-[#2a2a2a] p-4 rounded-xl mb-3 flex-row items-center border border-yellow-900/20">
-                        <View className="bg-yellow-500/10 p-2 rounded-full mr-4"><Ionicons name="cash" size={24} color="#eab308" /></View>
-                        <View className="flex-1">
-                          <Text className="text-yellow-500 text-[10px] font-bold uppercase">Highest Net Worth</Text>
-                          <Text className="text-white font-bold">{h.topNetWorth.personaname || 'Anonymous'}</Text>
-                          <Text className="text-gray-400 text-xs">{(h.topNetWorth.net_worth / 1000).toFixed(1)}k gold</Text>
+
+                      <View className="flex-row gap-3 mb-3">
+                        <View className="flex-1 bg-[#2a2a2a] p-4 rounded-xl flex-row items-center border border-orange-900/20">
+                          <View className="bg-orange-500/10 p-2 rounded-full mr-3"><MaterialCommunityIcons name="castle" size={20} color="#f97316" /></View>
+                          <View className="flex-1">
+                            <Text className="text-orange-500 text-[8px] font-bold uppercase">Tower Damage</Text>
+                            <Text className="text-white font-bold text-xs" numberOfLines={1}>{h.topTowers.personaname || 'Anonymous'}</Text>
+                            <Text className="text-gray-400 text-[10px]">{h.topTowers.tower_damage.toLocaleString()}</Text>
+                          </View>
+                        </View>
+                        <View className="flex-1 bg-[#2a2a2a] p-4 rounded-xl flex-row items-center border border-blue-900/20">
+                          <View className="bg-blue-500/10 p-2 rounded-full mr-3"><Ionicons name="heart" size={20} color="#3b82f6" /></View>
+                          <View className="flex-1">
+                            <Text className="text-blue-500 text-[8px] font-bold uppercase">Hero Healing</Text>
+                            <Text className="text-white font-bold text-xs" numberOfLines={1}>{h.topHealing.personaname || 'Anonymous'}</Text>
+                            <Text className="text-gray-400 text-[10px]">{h.topHealing.hero_healing.toLocaleString()}</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View className="flex-row gap-3">
+                        <View className="flex-1 bg-[#2a2a2a] p-4 rounded-xl flex-row items-center border border-green-900/20">
+                          <View className="bg-green-500/10 p-2 rounded-full mr-3"><Ionicons name="eye" size={20} color="#22c55e" /></View>
+                          <View className="flex-1">
+                            <Text className="text-green-500 text-[8px] font-bold uppercase">Vision Support</Text>
+                            <Text className="text-white font-bold text-xs" numberOfLines={1}>{h.topWards.personaname || 'Anonymous'}</Text>
+                            <Text className="text-gray-400 text-[10px]">{(h.topWards.obs_placed || 0) + (h.topWards.sen_placed || 0)} Wards</Text>
+                          </View>
+                        </View>
+                        <View className="flex-1 bg-[#2a2a2a] p-4 rounded-xl flex-row items-center border border-purple-900/20">
+                          <View className="bg-purple-500/10 p-2 rounded-full mr-3"><MaterialCommunityIcons name="layers" size={20} color="#a855f7" /></View>
+                          <View className="flex-1">
+                            <Text className="text-purple-500 text-[8px] font-bold uppercase">Stack Master</Text>
+                            <Text className="text-white font-bold text-xs" numberOfLines={1}>{h.topStacks.personaname || 'Anonymous'}</Text>
+                            <Text className="text-gray-400 text-[10px]">{h.topStacks.camps_stacked || 0} Stacks</Text>
+                          </View>
                         </View>
                       </View>
                     </View>
@@ -1069,31 +1131,112 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
             {activeTab === 'Economy' && (
               <View>
                 {matchData.radiant_gold_adv && matchData.radiant_xp_adv ? (
-                  <View className="bg-[#2a2a2a] p-4 rounded-xl border border-zinc-800 mb-4">
-                    <Text className="text-white font-bold mb-4 text-center">Net Worth & XP Difference</Text>
-                    <LineChart
-                      data={{
-                        labels: matchData.radiant_gold_adv.map((_, i) => i % 10 === 0 ? `${i}` : ''),
-                        datasets: [
-                          { data: matchData.radiant_gold_adv, color: (opacity = 1) => `rgba(234, 179, 8, ${opacity})`, strokeWidth: 2 },
-                          { data: matchData.radiant_xp_adv, color: (opacity = 1) => `rgba(168, 85, 247, ${opacity})`, strokeWidth: 2 }
-                        ],
-                        legend: ["NW", "XP"]
-                      }}
-                      width={screenWidth}
-                      height={220}
-                      chartConfig={{
-                        backgroundColor: "#1e1e1e",
-                        backgroundGradientFrom: "#2a2a2a",
-                        backgroundGradientTo: "#2a2a2a",
-                        decimalPlaces: 0,
-                        color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(156, 163, 175, ${opacity})`,
-                        propsForDots: { r: "0" },
-                      }}
-                      bezier
-                      style={{ marginVertical: 8, borderRadius: 16 }}
-                    />
+                  <View>
+                    {/* Economy Summary Cards */}
+                    <View className="flex-row gap-3 mb-6">
+                      {(() => {
+                        const finalGold = matchData.radiant_gold_adv[matchData.radiant_gold_adv.length - 1];
+                        const finalXp = matchData.radiant_xp_adv[matchData.radiant_xp_adv.length - 1];
+
+                        return (
+                          <>
+                            <View className="flex-1 bg-[#2a2a2a] p-4 rounded-2xl border border-zinc-800 relative overflow-hidden">
+                              <View 
+                                className={`absolute inset-0 opacity-10 ${finalGold >= 0 ? 'bg-win' : 'bg-loss'}`} 
+                              />
+                              <View className="relative z-10">
+                                <Text className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">
+                                  Net Worth Diff
+                                </Text>
+                                <View className="flex-row items-end">
+                                  <Text 
+                                    className={`text-2xl font-black italic tracking-tighter ${finalGold >= 0 ? 'text-win' : 'text-loss'}`}
+                                  >
+                                    {finalGold >= 0 ? '+' : ''}
+                                    {Math.abs(finalGold) >= 1000 ? `${(finalGold / 1000).toFixed(1)}k` : finalGold}
+                                  </Text>
+                                  <MaterialCommunityIcons 
+                                    name="flash" 
+                                    size={16} 
+                                    color={finalGold >= 0 ? '#10b981' : '#ef4444'} 
+                                    className="ml-1 mb-1 opacity-50"
+                                  />
+                                </View>
+                              </View>
+                            </View>
+
+                            <View className="flex-1 bg-[#2a2a2a] p-4 rounded-2xl border border-zinc-800 relative overflow-hidden">
+                              <View 
+                                className={`absolute inset-0 opacity-10 ${finalXp >= 0 ? 'bg-win' : 'bg-loss'}`} 
+                              />
+                              <View className="relative z-10">
+                                <Text className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1 italic">
+                                  Experience Diff
+                                </Text>
+                                <View className="flex-row items-end">
+                                  <Text 
+                                    className={`text-2xl font-black italic tracking-tighter ${finalXp >= 0 ? 'text-win' : 'text-loss'}`}
+                                  >
+                                    {finalXp >= 0 ? '+' : ''}
+                                    {Math.abs(finalXp) >= 1000 ? `${(finalXp / 1000).toFixed(1)}k` : finalXp}
+                                  </Text>
+                                  <MaterialCommunityIcons 
+                                    name="trending-up" 
+                                    size={16} 
+                                    color={finalXp >= 0 ? '#10b981' : '#ef4444'} 
+                                    className="ml-1 mb-1 opacity-50"
+                                  />
+                                </View>
+                              </View>
+                            </View>
+                          </>
+                        );
+                      })()}
+                    </View>
+
+                    <View className="bg-[#2a2a2a] p-4 rounded-2xl border border-zinc-800 mb-4 overflow-hidden relative">
+                      <View className="absolute top-0 left-0 w-24 h-24 bg-win/5 blur-2xl rounded-full" />
+                      <View className="absolute bottom-0 right-0 w-24 h-24 bg-loss/5 blur-2xl rounded-full" />
+                      
+                      <Text className="text-gray-500 uppercase tracking-[0.2em] text-[9px] font-black mb-4 text-center">Team Advantage Over Time</Text>
+                      <LineChart
+                        data={{
+                          labels: matchData.radiant_gold_adv.map((_, i) => i % 10 === 0 ? `${i}'` : ''),
+                          datasets: [
+                            { data: matchData.radiant_gold_adv, color: (opacity = 1) => `rgba(234, 179, 8, ${opacity})`, strokeWidth: 3 },
+                            { data: matchData.radiant_xp_adv, color: (opacity = 1) => `rgba(139, 92, 246, ${opacity})`, strokeWidth: 3 }
+                          ],
+                          legend: ["Gold", "XP"]
+                        }}
+                        width={screenWidth}
+                        height={240}
+                        chartConfig={{
+                          backgroundColor: "#1e1e1e",
+                          backgroundGradientFrom: "#2a2a2a",
+                          backgroundGradientTo: "#2a2a2a",
+                          decimalPlaces: 0,
+                          color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                          labelColor: (opacity = 1) => `rgba(156, 163, 175, ${opacity})`,
+                          propsForDots: { r: "0" },
+                          propsForBackgroundLines: {
+                            strokeDasharray: "", // solid background lines
+                            stroke: "rgba(255, 255, 255, 0.05)"
+                          }
+                        }}
+                        bezier
+                        style={{ marginVertical: 8, borderRadius: 16 }}
+                      />
+                      <View className="flex-row justify-center gap-6 mt-2">
+                        <View className="flex-row items-center">
+                          <View className="w-2 h-2 rounded-full bg-yellow-500 mr-2" />
+                          <Text className="text-[10px] font-bold text-gray-400">NET WORTH</Text>
+                        </View>
+                        <View className="flex-row items-center">
+                          <View className="w-2 h-2 rounded-full bg-purple-500 mr-2" />
+                          <Text className="text-[10px] font-bold text-gray-400">EXPERIENCE</Text>
+                        </View>
+                      </View>
+                    </View>
                   </View>
                 ) : (
                   renderParseInstructions("Economy trends require parsed match data.")
