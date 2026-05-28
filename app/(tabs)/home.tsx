@@ -484,7 +484,7 @@ export default function HomeScreen() {
                     description="Recent achievements and matches from your friends."
                     color="#22c55e" 
                   />
-                  <View style={{ px: 24, marginBottom: 12, paddingHorizontal: 24 }}>
+                  <View style={{ paddingHorizontal: 24, marginBottom: 12 }}>
                     <View style={{ 
                       backgroundColor: 'rgba(34, 197, 94, 0.1)', 
                       paddingHorizontal: 10, 
