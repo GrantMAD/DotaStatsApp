@@ -86,6 +86,13 @@ export default function TabsLayout() {
             }}
           />
           <Tabs.Screen
+            name="compare"
+            options={{
+              tabBarIcon: ({ color }) => <Ionicons name="git-compare" size={24} color={color} />,
+              tabBarLabel: 'Compare'
+            }}
+          />
+          <Tabs.Screen
             name="friends"
             options={{
               href: null,
@@ -137,17 +144,6 @@ export default function TabsLayout() {
                 >
                   <Ionicons name="people-outline" size={20} color="white" />
                   <Text className="text-white ml-3 font-medium">Friends</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    setMenuVisible(false);
-                    router.push('/compare');
-                  }}
-                  className="px-4 py-3 flex-row items-center active:bg-zinc-800"
-                >
-                  <Ionicons name="stats-chart-outline" size={20} color="white" />
-                  <Text className="text-white ml-3 font-medium">Compare</Text>
                 </TouchableOpacity>
 
                 <View className="px-4 py-2 mt-2 mb-1 border-b border-zinc-800/50">

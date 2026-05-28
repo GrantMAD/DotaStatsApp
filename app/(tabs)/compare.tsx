@@ -10,7 +10,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import GlassHeader from '../src/components/GlassHeader';
+import GlassHeader from '../../src/components/GlassHeader';
 import { 
   usePlayerProfile, 
   usePlayerWinLoss, 
@@ -20,14 +20,14 @@ import {
   usePlayerPeers,
   isProfilePrivate,
   isDataRestricted
-} from '../src/hooks/useOpenDota';
-import CompareStatRow from '../src/components/CompareStatRow';
-import { RankBadge } from '../src/components/RankBadge';
-import { STEAM_CDN_BASE, getHeroImageUrl } from '../src/services/constants';
-import { SteamAuthContext } from '../src/context/SteamAuthContext';
+} from '../../src/hooks/useOpenDota';
+import CompareStatRow from '../../src/components/CompareStatRow';
+import { RankBadge } from '../../src/components/RankBadge';
+import { STEAM_CDN_BASE, getHeroImageUrl } from '../../src/services/constants';
+import { SteamAuthContext } from '../../src/context/SteamAuthContext';
 
-import { useSupabaseAuth } from '../src/context/SupabaseAuthContext';
-import { PlayerSelectModal } from '../src/components/PlayerSelectModal';
+import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
+import { PlayerSelectModal } from '../../src/components/PlayerSelectModal';
 
 export default function CompareScreen() {
   const { p1: routeP1, p2: routeP2 } = useLocalSearchParams<{ p1?: string, p2?: string }>();
