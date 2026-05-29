@@ -9,94 +9,111 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  const { notifications, markAllAsRead, handleFriendRequest } = useNotifications();
+  const { notifications, markAllAsRead, markAsRead, handleFriendRequest } = useNotifications();
 
   const renderItem = ({ item, index }: { item: AppNotification; index: number }) => {
     return (
       <Animated.View
         entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}
-        style={{
-          backgroundColor: '#1E1E2E',
-          padding: 16,
-          marginHorizontal: 16,
-          marginBottom: 12,
-          borderRadius: 14,
-          borderWidth: 1,
-          borderColor: item.is_read ? '#2a2a3e' : '#8b5cf6',
-          boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.2)',
-          elevation: 3,
-        }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <View 
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 12,
-              backgroundColor: item.is_read ? '#1a1a2e' : 'rgba(139, 92, 246, 0.15)',
-            }}
-          >
-            <Ionicons 
-              name={item.type === 'friend_request' ? 'person-add' : 'notifications'} 
-              size={22} 
-              color={item.is_read ? '#6b7280' : '#8b5cf6'} 
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text 
+        <TouchableOpacity 
+          activeOpacity={0.7}
+          onPress={() => !item.is_read && markAsRead(item.id)}
+          style={{
+            backgroundColor: '#1E1E2E',
+            padding: 16,
+            marginHorizontal: 16,
+            marginBottom: 12,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: item.is_read ? '#2a2a3e' : '#8b5cf6',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+            elevation: 3,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View 
               style={{
-                color: '#fff',
-                fontFamily: 'Outfit_700Bold',
-                fontSize: 16,
-                marginBottom: 2,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 12,
+                backgroundColor: item.is_read ? '#1a1a2e' : 'rgba(139, 92, 246, 0.15)',
               }}
             >
-              {item.message}
-            </Text>
-            <Text 
-              style={{
-                color: '#6b7280',
-                fontSize: 12,
-                fontFamily: 'Outfit_400Regular',
-              }}
-            >
-              {new Date(item.created_at).toLocaleString()}
-            </Text>
+              <Ionicons 
+                name={item.type === 'friend_request' ? 'person-add' : 'notifications'} 
+                size={22} 
+                color={item.is_read ? '#6b7280' : '#8b5cf6'} 
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text 
+                style={{
+                  color: '#fff',
+                  fontFamily: 'Outfit_700Bold',
+                  fontSize: 16,
+                  marginBottom: 2,
+                }}
+              >
+                {item.message}
+              </Text>
+              <Text 
+                style={{
+                  color: '#6b7280',
+                  fontSize: 12,
+                  fontFamily: 'Outfit_400Regular',
+                }}
+              >
+                {new Date(item.created_at).toLocaleString()}
+              </Text>
+            </View>
+            
+            {!item.is_read && item.type !== 'friend_request' && (
+              <TouchableOpacity 
+                onPress={() => markAsRead(item.id)}
+                style={{ padding: 8 }}
+              >
+                <Ionicons name="checkmark-circle-outline" size={24} color="#8b5cf6" />
+              </TouchableOpacity>
+            )}
           </View>
-        </View>
 
-        {item.type === 'friend_request' && !item.is_read && (
-          <View style={{ flexDirection: 'row', marginTop: 16 }}>
-            <TouchableOpacity 
-              onPress={() => handleFriendRequest(item, true)}
-              style={{
-                flex: 1,
-                backgroundColor: '#8b5cf6',
-                paddingVertical: 10,
-                borderRadius: 10,
-                alignItems: 'center',
-                marginRight: 12
-              }}
-            >
-              <Text style={{ color: '#fff', fontFamily: 'Outfit_700Bold' }}>Accept</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => handleFriendRequest(item, false)}
-              style={{
-                flex: 1,
-                backgroundColor: '#2a2a3e',
-                paddingVertical: 10,
-                borderRadius: 10,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ color: '#fff', fontFamily: 'Outfit_700Bold' }}>Decline</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          {item.type === 'friend_request' && !item.is_read && (
+            <View style={{ flexDirection: 'row', marginTop: 16 }}>
+              <TouchableOpacity 
+                onPress={() => handleFriendRequest(item, true)}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#8b5cf6',
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  marginRight: 12
+                }}
+              >
+                <Text style={{ color: '#fff', fontFamily: 'Outfit_700Bold' }}>Accept</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => handleFriendRequest(item, false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#2a2a3e',
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: '#fff', fontFamily: 'Outfit_700Bold' }}>Decline</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </TouchableOpacity>
       </Animated.View>
     );
   };

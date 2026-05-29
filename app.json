@@ -3,7 +3,7 @@
     "name": "temp_app",
     "slug": "temp_app",
     "version": "1.0.0",
-    "scheme": "acme",
+    "scheme": "dotaapp",
     "userInterfaceStyle": "automatic",
     "plugins": [
       "expo-router",

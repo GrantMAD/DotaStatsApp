@@ -96,6 +96,10 @@ export default function SearchScreen() {
       account_id: p.account_id,
       personaname: p.personaname,
       avatarfull: p.avatar,
+      win: p.with_win,
+      games: p.with_games,
+      against_win: p.against_win,
+      against_games: p.against_games,
     }));
 
     if (!query.trim()) return formatted;
@@ -162,70 +166,97 @@ export default function SearchScreen() {
     setActiveQuery(query);
   };
 
-  const renderResult = ({ item, index }: { item: SearchResult, index: number }) => {
+  const renderResult = ({ item, index }: { item: any, index: number }) => {
     const appUserId = appUsersMap[item.account_id];
     const following = isFollowing(item.account_id.toString());
     const friend = appUserId ? isFriend(appUserId) : false;
+    
+    // Calculate win rates for peers
+    const hasPeerStats = item.games > 0 || item.against_games > 0;
+    const winRateWith = item.games > 0 ? (item.win / item.games) * 100 : 0;
+    const winRateAgainst = item.against_games > 0 ? (item.against_win / item.against_games) * 100 : 0;
 
     return (
       <PressableScale onPress={() => router.push(`/profile/${item.account_id}`)}>
         <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).springify()}>
-          <View className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl flex-row items-center">
-            <Image
-              source={{ uri: item.avatarfull }}
-              className="w-12 h-12 rounded-full border border-zinc-700 mr-4"
-            />
-            <View className="flex-1">
-              <View className="flex-row items-center flex-wrap gap-x-2">
-                <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>{item.personaname}</Text>
-                {item.isPro && (
-                  <View className="bg-gamingAccent px-1.5 py-0.5 rounded flex-row items-center">
-                    <Ionicons name="star" size={8} color="white" />
-                    <Text className="text-white text-[8px] font-black ml-1 uppercase">
-                      PRO {item.team_tag ? `| ${item.team_tag}` : ''}
-                    </Text>
-                  </View>
-                )}
-                {(item.isAppUser || appUserId) && !item.isPro && (
-                  <View className="bg-green-500/20 border border-green-500/30 px-1.5 py-0.5 rounded flex-row items-center">
-                    <Ionicons name="checkmark-circle" size={8} color="#22c55e" />
-                    <Text className="text-green-500 text-[8px] font-black ml-1 uppercase">App User</Text>
-                  </View>
-                )}
-              </View>
-              <Text className="text-gray-500 text-xs font-outfit">ID: {item.account_id}</Text>
-              {item.last_match_time && (
-                <Text className="text-gray-600 text-[10px] font-outfit mt-1">
-                  Last match: {new Date(item.last_match_time).toLocaleDateString()}
-                </Text>
-              )}
-
-              {steamAccountId !== item.account_id.toString() && (
-                <View className="flex-row items-center mt-3">
-                  <TouchableOpacity
-                    onPress={() => following ? unfollowUser(item.account_id.toString()) : followUser(item.account_id.toString())}
-                    className={`${following ? 'bg-zinc-800' : 'bg-blue-600'} px-3 py-1.5 rounded-lg mr-2 flex-row items-center`}
-                  >
-                    <Ionicons name={following ? "checkmark" : "add"} size={14} color="white" />
-                    <Text className="text-white text-xs font-outfit-bold ml-1">
-                      {following ? 'Following' : 'Follow'}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {appUserId && user?.id !== appUserId && !friend && (
-                    <TouchableOpacity
-                      onPress={() => sendFriendRequest(appUserId)}
-                      className="bg-gamingAccent px-3 py-1.5 rounded-lg flex-row items-center"
-                    >
-                      <Ionicons name="person-add" size={14} color="white" />
-                      <Text className="text-white text-xs font-outfit-bold ml-1">Add Friend</Text>
-                    </TouchableOpacity>
+          <View className="bg-[#1e1e1e] p-4 mx-4 mb-3 rounded-xl border border-zinc-800 shadow-sm">
+            <View className="flex-row items-center">
+              <Image
+                source={{ uri: item.avatarfull }}
+                className="w-12 h-12 rounded-full border border-zinc-700 mr-4"
+              />
+              <View className="flex-1">
+                <View className="flex-row items-center flex-wrap gap-x-2">
+                  <Text className="text-white font-outfit-bold text-lg" numberOfLines={1}>{item.personaname}</Text>
+                  {item.isPro && (
+                    <View className="bg-gamingAccent px-1.5 py-0.5 rounded flex-row items-center">
+                      <Ionicons name="star" size={8} color="white" />
+                      <Text className="text-white text-[8px] font-black ml-1 uppercase">
+                        PRO {item.team_tag ? `| ${item.team_tag}` : ''}
+                      </Text>
+                    </View>
+                  )}
+                  {(item.isAppUser || appUserId) && !item.isPro && (
+                    <View className="bg-green-500/20 border border-green-500/30 px-1.5 py-0.5 rounded flex-row items-center">
+                      <Ionicons name="checkmark-circle" size={8} color="#22c55e" />
+                      <Text className="text-green-500 text-[8px] font-black ml-1 uppercase">App User</Text>
+                    </View>
                   )}
                 </View>
-              )}
+                <Text className="text-gray-500 text-xs font-outfit">ID: {item.account_id}</Text>
+                
+                {hasPeerStats && (
+                  <View className="flex-row items-center mt-1 flex-wrap">
+                    {item.games > 0 && (
+                      <View className="bg-blue-500/10 px-1.5 py-0.5 rounded mr-2 mb-1 flex-row items-center border border-blue-500/20">
+                        <Text className="text-blue-400 text-[9px] font-bold uppercase tracking-tighter">
+                          With You: {winRateWith.toFixed(0)}% WR ({item.games}g)
+                        </Text>
+                      </View>
+                    )}
+                    {item.against_games > 0 && (
+                      <View className="bg-orange-500/10 px-1.5 py-0.5 rounded mb-1 flex-row items-center border border-orange-500/20">
+                        <Text className="text-orange-400 text-[9px] font-bold uppercase tracking-tighter">
+                          Against You: {winRateAgainst.toFixed(0)}% WR ({item.against_games}g)
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {item.last_match_time && !hasPeerStats && (
+                  <Text className="text-gray-600 text-[10px] font-outfit mt-1">
+                    Last match: {new Date(item.last_match_time).toLocaleDateString()}
+                  </Text>
+                )}
+              </View>
+              
+              <Ionicons name="chevron-forward" size={20} color="#4b5563" />
             </View>
 
-            <Ionicons name="chevron-forward" size={20} color="#4b5563" />
+            {steamAccountId !== item.account_id.toString() && (
+              <View className="flex-row items-center mt-3 border-t border-zinc-800/50 pt-3">
+                <TouchableOpacity
+                  onPress={() => following ? unfollowUser(item.account_id.toString()) : followUser(item.account_id.toString())}
+                  className={`${following ? 'bg-zinc-800' : 'bg-blue-600'} px-3 py-1.5 rounded-lg mr-2 flex-row items-center`}
+                >
+                  <Ionicons name={following ? "checkmark" : "add"} size={14} color="white" />
+                  <Text className="text-white text-xs font-outfit-bold ml-1">
+                    {following ? 'Following' : 'Follow'}
+                  </Text>
+                </TouchableOpacity>
+
+                {appUserId && user?.id !== appUserId && !friend && (
+                  <TouchableOpacity
+                    onPress={() => sendFriendRequest(appUserId)}
+                    className="bg-gamingAccent px-3 py-1.5 rounded-lg flex-row items-center"
+                  >
+                    <Ionicons name="person-add" size={14} color="white" />
+                    <Text className="text-white text-xs font-outfit-bold ml-1">Add Friend</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
           </View>
         </Animated.View>
       </PressableScale>
@@ -397,15 +428,6 @@ export default function SearchScreen() {
                       marginLeft: 12,
                     }}>
                       Displays your network of frequent teammates and opponents calculated from your public match history. This naturally includes your Steam friends as well as random players you often queue with.
-                    </Text>
-                    <Text style={{
-                      color: '#c7d2fe',
-                      fontSize: 11,
-                      fontFamily: 'Outfit_400Regular',
-                      marginLeft: 12,
-                      marginTop: 8,
-                    }}>
-                      {`Steam ID: ${steamAccountIdToUse ?? 'none'} • Peers: ${peersArr.length} • Loading: ${loadingPeers ? 'yes' : 'no'}`}
                     </Text>
                   </View>
                 </View>

@@ -19,6 +19,8 @@ import ErrorCard from '../../src/components/ErrorCard';
 import { useHeroStats, useProMatches, useLiveGames, usePlayerProfile } from '../../src/hooks/useOpenDota';
 import { useActivityFeed } from '../../src/hooks/useActivityFeed';
 import ActivityFeedItem from '../../src/components/ActivityFeedItem';
+import AppLogo from '../../src/components/AppLogo';
+import { ICON_MAP } from '../../src/services/iconMap';
 import { queryClient } from '../../src/services/queryClient';
 import Skeleton from '../../src/components/Skeleton';
 import PressableScale from '../../src/components/PressableScale';
@@ -90,11 +92,11 @@ function processHeroStats(heroes: HeroStats[]): { topWinRate: ProcessedHero[]; m
   return { topWinRate, mostPicked, proPicks, proBans };
 }
 
-function SectionHeader({ icon, title, description, color }: { icon: string; title: string; description?: string; color: string }) {
+function SectionHeader({ icon, title, description, color }: { icon: keyof typeof ICON_MAP; title: string; description?: string; color: string }) {
   return (
     <View style={{ paddingHorizontal: 20, marginTop: 28, marginBottom: 14 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Ionicons name={icon as any} size={20} color={color} style={{ marginRight: 8 }} />
+        <Ionicons name={ICON_MAP[icon] as any} size={20} color={color} style={{ marginRight: 8 }} />
         <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.3 }}>{title}</Text>
       </View>
       {description && (
@@ -360,10 +362,8 @@ export default function HomeScreen() {
         >
           {/* Header Content Area */}
           <View style={{ paddingTop: 20, paddingHorizontal: 24 }}>
-            <Text style={{ fontSize: 28, color: '#fff', fontWeight: '800', marginBottom: 6 }}>
-              Dota Stuff
-            </Text>
-            <Text style={{ color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 20 }}>
+            <AppLogo size={48} showText />
+            <Text style={{ color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 20, marginTop: 10 }}>
               Hero stats, pro matches, and performance insights
             </Text>
 
@@ -519,10 +519,10 @@ export default function HomeScreen() {
                       )}
                       ListEmptyComponent={
                         <View style={{
-                          width: 260,
-                          height: 120,
+                          width: 200,
+                          height: 60,
                           backgroundColor: '#1e1e2e',
-                          borderRadius: 16,
+                          borderRadius: 12,
                           padding: 12,
                           borderWidth: 1,
                           borderColor: '#2a2a3e',
@@ -531,9 +531,9 @@ export default function HomeScreen() {
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                          <Ionicons name="people-outline" size={20} color="#4b5563" style={{ marginRight: 10 }} />
-                          <Text style={{ color: '#4b5563', fontSize: 13, fontFamily: 'Outfit_600SemiBold' }}>
-                            No recent activity from friends
+                          <Ionicons name="people-outline" size={16} color="#4b5563" style={{ marginRight: 8 }} />
+                          <Text style={{ color: '#4b5563', fontSize: 11, fontFamily: 'Outfit_600SemiBold' }}>
+                            No recent activity
                           </Text>
                         </View>
                       }
