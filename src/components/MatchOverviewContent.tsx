@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Alert,
-  Pressable
+  Pressable,
+  useWindowDimensions
 } from 'react-native';
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LineChart } from "react-native-chart-kit";
@@ -44,6 +45,7 @@ interface MatchOverviewContentProps {
 
 // --- Enhanced Timeline Component ---
 function MatchTimeline({ match }: { match: MatchDetails }) {
+  const durationMins = Math.ceil(match.duration / 60);
   const screenWidth = Dimensions.get('window').width - 64;
   const [selectedEvent, setSelectedEvent] = useState<{
     time: number;
@@ -55,6 +57,23 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
     type: string;
   } | null>(null);
   const [scrubTime, setScrubTime] = useState<number | null>(null);
+
+  // Phase Definitions
+  const phases = useMemo(() => {
+    const laningEnd = 12; // 0-12m
+    const midEnd = 30;    // 12-30m
+    
+    const list = [
+      { id: 'laning', label: 'Laning', start: 0, end: laningEnd, color: '#10b981', opacity: 0.05, border: 'rgba(16, 185, 129, 0.2)', textColor: 'rgba(16, 185, 129, 0.6)' },
+      { id: 'mid', label: 'Mid-Game', start: laningEnd, end: Math.min(midEnd, durationMins), color: '#f59e0b', opacity: 0.05, border: 'rgba(245, 158, 11, 0.2)', textColor: 'rgba(245, 158, 11, 0.6)' },
+    ];
+
+    if (durationMins > midEnd) {
+      list.push({ id: 'late', label: 'Late-Game', start: midEnd, end: durationMins, color: '#8b5cf6', opacity: 0.05, border: 'rgba(139, 92, 246, 0.2)', textColor: 'rgba(139, 92, 246, 0.6)' });
+    }
+
+    return list;
+  }, [durationMins]);
 
   // Filter and group objectives
   const objectives = useMemo(() => {
@@ -149,8 +168,20 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
     return match.radiant_gold_adv[index] || 0;
   };
 
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isPortrait = windowHeight > windowWidth;
+
   return (
     <View className="bg-[#2a2a2a] rounded-xl p-4 border border-zinc-800 relative">
+      {isPortrait && (
+        <View className="flex-row items-center justify-center mb-4 px-2 py-1.5 bg-white/5 rounded-lg border border-white/10">
+          <MaterialCommunityIcons name="screen-rotation" size={14} color="#8b5cf6" />
+          <Text className="text-[10px] font-bold text-gray-400 ml-2 uppercase tracking-tight">
+            Rotate device for better view
+          </Text>
+        </View>
+      )}
+
       {selectedEvent && (
         <View className="absolute top-2 right-4 left-4 z-50 bg-[#1a1a1a]/95 border border-white/10 p-3 rounded-lg shadow-2xl flex-row items-center">
           <View className="p-2 bg-white/5 rounded-md mr-3">
@@ -175,12 +206,46 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
 
       <ScrollView horizontal nestedScrollEnabled={true} showsHorizontalScrollIndicator={true} className="mb-2">
         <View style={{ width: Math.max(screenWidth * 2, (match.duration / 60) * 60 + 400) }}>
+          {/* Phase Background Overlays */}
+          <View style={{ position: 'absolute', inset: 0, left: 180 + 140, flexDirection: 'row', zIndex: 0 }}>
+            {phases.map((phase) => {
+              const width = ((phase.end - phase.start) / durationMins) * ((match.duration / 60) * 60);
+              return (
+                <View 
+                  key={phase.id} 
+                  style={{ 
+                    width, 
+                    height: '100%', 
+                    backgroundColor: phase.color, 
+                    opacity: phase.opacity,
+                    borderLeftWidth: 1,
+                    borderLeftColor: phase.border
+                  }} 
+                />
+              );
+            })}
+          </View>
+
+          {/* Phase Labels */}
+          <View style={{ position: 'relative', height: 20, marginBottom: 8, left: 180 + 140, flexDirection: 'row', zIndex: 10 }}>
+            {phases.map((phase) => {
+              const width = ((phase.end - phase.start) / durationMins) * ((match.duration / 60) * 60);
+              return (
+                <View key={phase.id} style={{ width, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: phase.textColor, fontSize: 8, fontWeight: 'bold', fontStyle: 'italic', letterSpacing: 2 }}>
+                    {phase.label.toUpperCase()}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
           <View className="flex-row mb-6 border-b border-zinc-800 pb-2">
             <View style={{ width: 180 }} /> 
             {Array.from({ length: Math.ceil(match.duration / 60 / 5) + 1 }).map((_, i) => (
               <View key={i} style={{ position: 'absolute', left: 180 + 140 + (i * 5 * 60) }}>
                 <Text className="text-[10px] text-gray-500 font-bold">{i * 5}'</Text>
-                <div className="w-[1px] h-3 bg-zinc-800 mt-1" />
+                <View style={{ width: 1, height: 12, backgroundColor: '#3f3f46', marginTop: 4 }} />
               </View>
             ))}
           </View>
