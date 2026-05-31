@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PlayerMatchFilters } from '../services/opendota';
+import { PlayerMatchFilters } from '../services/types';
 
 interface MatchFiltersProps {
   filters: PlayerMatchFilters;

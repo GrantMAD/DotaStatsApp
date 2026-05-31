@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Dimensions, ActivityIndicator } from 'react-native';
-import { openDotaApi } from '../../services/opendota';
+import * as heroService from '../../services/heroService';
 import { BarChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -27,7 +27,7 @@ export function CommunityDistribution() {
       setLoading(true);
 
       try {
-        const distribution = await openDotaApi.getDistributions();
+        const distribution = await heroService.getDistributions();
 
         if (distribution && distribution.ranks) {
           const total = distribution.ranks.sum.count;

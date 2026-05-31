@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { GlobalRecord } from '../services/opendota';
+import { GlobalRecord } from '../services/types';
 
 interface Props {
   title: string;

@@ -7,7 +7,8 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { openDotaApi, HeroStats } from '../../services/opendota';
+import { HeroStats } from '../../services/types';
+import * as heroService from '../../services/heroService';
 import { getHeroImageUrl } from '../../services/constants';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInRight, FadeInUp } from 'react-native-reanimated';
@@ -33,7 +34,7 @@ export function ProVsPubMeta() {
     async function fetchData() {
       setLoading(true);
       try {
-        const data = await openDotaApi.getHeroStats();
+        const data = await heroService.getHeroStats();
         setStats(data);
       } catch (error) {
         console.error('Error fetching hero stats for pro vs pub:', error);

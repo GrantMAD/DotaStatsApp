@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
-import { WardMapData } from '../services/opendota';
+import { WardMapData } from '../services/types';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 

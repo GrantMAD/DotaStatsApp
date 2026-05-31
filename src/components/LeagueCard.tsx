@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { League } from '../services/opendota';
+import { League } from '../services/types';
 
 interface Props {
   league: League;

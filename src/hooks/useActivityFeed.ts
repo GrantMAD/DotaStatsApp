@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useFriends } from './useFriends';
-import { openDotaApi, ActivityItem as ActivityItemType } from '../services/opendota';
+import * as playerService from '../services/playerService';
+import * as matchService from '../services/matchService';
 import { useMemo } from 'react';
 
 export interface ActivityItem {
@@ -58,8 +59,8 @@ export const useActivityFeed = () => {
         playerIds.map(async (id) => {
           try {
             const [profile, matches] = await Promise.all([
-              openDotaApi.getPlayerProfile(id),
-              openDotaApi.getRecentMatches(id, 10)
+              playerService.getPlayerProfile(id),
+              playerService.getRecentMatches(id, 10)
             ]);
             
             // If there's a very recent match (last 24h), fetch its full details for rich highlights
@@ -68,7 +69,7 @@ export const useActivityFeed = () => {
               const latestMatch = matches[0];
               const oneDayAgo = (Date.now() / 1000) - (24 * 60 * 60);
               if (latestMatch.start_time > oneDayAgo) {
-                latestMatchDetails = await openDotaApi.getMatchDetails(latestMatch.match_id);
+                latestMatchDetails = await matchService.getMatchDetails(latestMatch.match_id);
               }
             }
 

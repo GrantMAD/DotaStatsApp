@@ -18,14 +18,13 @@ import {
   WinLossStats,
   RecentMatch,
   PlayerTotal,
-  getPlayerWinLoss,
-  getPlayerTotals,
-  getPlayerCounts,
   HeroStats,
   PlayerMatchFilters,
-  isProfilePrivate,
-  isDataRestricted
-} from '../services/opendota';
+  WardMapData,
+  PlayerRating
+} from '../services/types';
+import { isProfilePrivate, isDataRestricted } from '../services/apiUtils';
+import { getPlayerWinLoss, getPlayerTotals, getPlayerCounts, getPlayerWardMap, getPlayerRatings } from '../services/playerService';
 import DataPrivacyIndicator from './DataPrivacyIndicator';
 import MatchFilters from './MatchFilters';
 import { getHeroImageUrl, HEROES, REGIONS } from '../services/constants';

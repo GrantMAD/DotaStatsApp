@@ -1,15 +1,17 @@
 import { useMemo } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import { OPENDOTA_BASE_URL } from '../services/constants';
+import { isProfilePrivate, isDataRestricted } from '../services/apiUtils';
 import { 
-  openDotaApi, 
   PlayerHero, 
   Peer,
-  HeroStats, 
-  OPENDOTA_BASE_URL,
-  isProfilePrivate,
-  isDataRestricted 
-} from '../services/opendota';
+  HeroStats,
+} from '../services/types';
+import * as playerService from '../services/playerService';
+import * as matchService from '../services/matchService';
+import * as heroService from '../services/heroService';
+import * as proSceneService from '../services/proSceneService';
 
 export { isProfilePrivate, isDataRestricted };
 
@@ -19,7 +21,7 @@ export { isProfilePrivate, isDataRestricted };
 export function usePlayerProfile(accountId: string | number | null) {
   return useQuery({
     queryKey: ['playerProfile', accountId],
-    queryFn: () => (accountId ? openDotaApi.getPlayerProfile(accountId) : null),
+    queryFn: () => (accountId ? playerService.getPlayerProfile(accountId) : null),
     enabled: !!accountId,
   });
 }
@@ -38,7 +40,7 @@ export function usePlayerHeroes(accountId: string | number | null) {
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       const [heroes, matches] = await Promise.all([
-        openDotaApi.getPlayerHeroes(accountId),
+        playerService.getPlayerHeroes(accountId),
         // Fetch matches with projected fields and limit to 100 for KDA calculation
         fetch(`${OPENDOTA_BASE_URL}/players/${accountId}/matches?project=hero_id&project=kills&project=deaths&project=assists&limit=100`, {
           signal: controller.signal
@@ -85,7 +87,7 @@ export function usePlayerHeroes(accountId: string | number | null) {
 export function usePlayerWinLoss(accountId: string | number | null) {
   return useQuery({
     queryKey: ['playerWinLoss', accountId],
-    queryFn: () => (accountId ? openDotaApi.getPlayerWinLoss(accountId) : null),
+    queryFn: () => (accountId ? playerService.getPlayerWinLoss(accountId) : null),
     enabled: !!accountId,
   });
 }
@@ -96,7 +98,7 @@ export function usePlayerWinLoss(accountId: string | number | null) {
 export function useRecentMatches(accountId: string | number | null, limit: number = 20) {
   return useQuery({
     queryKey: ['recentMatches', accountId, limit],
-    queryFn: () => (accountId ? openDotaApi.getRecentMatches(accountId, limit) : []),
+    queryFn: () => (accountId ? playerService.getRecentMatches(accountId, limit) : []),
     enabled: !!accountId,
     placeholderData: keepPreviousData,
   });
@@ -110,7 +112,7 @@ export function usePlayerPeers(accountId: string | number | null) {
     queryKey: ['playerPeersV2', accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const data = await openDotaApi.getPlayerPeers(accountId);
+      const data = await playerService.getPlayerPeers(accountId);
       return data;
     },
     onSuccess: () => {},
@@ -127,7 +129,7 @@ export function usePlayerPeers(accountId: string | number | null) {
 export function useEncounterHistory(accountId: string | number | null, targetId: string | number | null) {
   return useQuery({
     queryKey: ['encounterHistory', accountId, targetId],
-    queryFn: () => (accountId && targetId) ? openDotaApi.getSharedStats(accountId, targetId) : null,
+    queryFn: () => (accountId && targetId) ? playerService.getSharedStats(accountId, targetId) : null,
     enabled: !!accountId && !!targetId && accountId !== targetId,
     staleTime: 1000 * 60 * 5,
   });
@@ -139,7 +141,7 @@ export function useEncounterHistory(accountId: string | number | null, targetId:
 export function useHeroMatchups(heroId: number | null) {
   return useQuery({
     queryKey: ['heroMatchups', heroId],
-    queryFn: () => (heroId ? openDotaApi.getHeroMatchups(heroId) : []),
+    queryFn: () => (heroId ? heroService.getHeroMatchups(heroId) : []),
     enabled: !!heroId,
     staleTime: 1000 * 60 * 60 * 24,
   });
@@ -151,7 +153,7 @@ export function useHeroMatchups(heroId: number | null) {
 export function useHeroDurations(heroId: number | null) {
   return useQuery({
     queryKey: ['heroDurations', heroId],
-    queryFn: () => (heroId ? openDotaApi.getHeroDurations(heroId) : []),
+    queryFn: () => (heroId ? heroService.getHeroDurations(heroId) : []),
     enabled: !!heroId,
     staleTime: 1000 * 60 * 60 * 24,
   });
@@ -163,7 +165,7 @@ export function useHeroDurations(heroId: number | null) {
 export function useHeroItemPopularity(heroId: number | null) {
   return useQuery({
     queryKey: ['heroItemPopularity', heroId],
-    queryFn: () => (heroId ? openDotaApi.getHeroItemPopularity(heroId) : null),
+    queryFn: () => (heroId ? heroService.getHeroItemPopularity(heroId) : null),
     enabled: !!heroId,
     staleTime: 1000 * 60 * 60 * 24,
   });
@@ -175,7 +177,7 @@ export function useHeroItemPopularity(heroId: number | null) {
 export function useHeroStats() {
   return useQuery({
     queryKey: ['heroStats'],
-    queryFn: openDotaApi.getHeroStats,
+    queryFn: heroService.getHeroStats,
     staleTime: 1000 * 60 * 60, // Hero stats change slowly, cache for 1 hour
   });
 }
@@ -186,7 +188,7 @@ export function useHeroStats() {
 export function useProMatches(limit: number = 20) {
   return useQuery({
     queryKey: ['proMatches', limit],
-    queryFn: () => openDotaApi.getProMatches(limit),
+    queryFn: () => proSceneService.getProMatches(limit),
   });
 }
 
@@ -196,7 +198,7 @@ export function useProMatches(limit: number = 20) {
 export function useLiveGames() {
   return useQuery({
     queryKey: ['liveGames'],
-    queryFn: openDotaApi.getLiveGames,
+    queryFn: matchService.getLiveGames,
     refetchInterval: 1000 * 20, // Refresh every 20 seconds
     refetchIntervalInBackground: false,
   });
@@ -230,7 +232,7 @@ export function useSearchPlayers(query: string) {
           if (u.steam_account_id) {
             let avatar = '';
             try {
-              const profile = await openDotaApi.getPlayerProfile(u.steam_account_id);
+              const profile = await playerService.getPlayerProfile(u.steam_account_id);
               if (profile && profile.profile) {
                 avatar = profile.profile.avatarfull;
               }
@@ -249,7 +251,7 @@ export function useSearchPlayers(query: string) {
 
       // 2. Add Pro Players that match
       try {
-        const proPlayers = await openDotaApi.getProPlayers();
+        const proPlayers = await proSceneService.getProPlayers();
         const matchedPros = proPlayers.filter(p => {
           const pName = String(p.personaname || '').toLowerCase();
           const rName = String(p.name || '').toLowerCase();
@@ -275,7 +277,7 @@ export function useSearchPlayers(query: string) {
 
       // 2. Fire Global Search asynchronously (don't block!)
       if (cleanQuery.length >= 3) {
-        openDotaApi.searchPlayers(cleanQuery)
+        playerService.searchPlayers(cleanQuery)
           .then((globalResults) => {
             if (!globalResults || globalResults.length === 0) return;
             
@@ -316,7 +318,7 @@ export function useSearchPlayers(query: string) {
 export function useProPlayers() {
   return useQuery({
     queryKey: ['proPlayers'],
-    queryFn: openDotaApi.getProPlayers,
+    queryFn: proSceneService.getProPlayers,
     staleTime: 1000 * 60 * 60 * 24, // Cache for a day
     retry: 1,
     refetchOnMount: 'always',
@@ -329,7 +331,7 @@ export function useProPlayers() {
 export function useProTeams() {
   return useQuery({
     queryKey: ['proTeams'],
-    queryFn: openDotaApi.getProTeams,
+    queryFn: proSceneService.getProTeams,
     staleTime: 1000 * 60 * 60 * 24, // Cache for a day
     retry: 1,
     refetchOnMount: 'always',
@@ -342,7 +344,7 @@ export function useProTeams() {
 export function useLeagues() {
   return useQuery({
     queryKey: ['leagues'],
-    queryFn: openDotaApi.getLeagues,
+    queryFn: proSceneService.getLeagues,
     staleTime: 1000 * 60 * 60 * 24, // Cache for a day
     retry: 1,
     refetchOnMount: 'always',
@@ -355,7 +357,7 @@ export function useLeagues() {
 export function useTeamRoster(teamId: number | null) {
   return useQuery({
     queryKey: ['teamRoster', teamId],
-    queryFn: () => (teamId ? openDotaApi.getTeamRoster(teamId) : []),
+    queryFn: () => (teamId ? proSceneService.getTeamRoster(teamId) : []),
     enabled: !!teamId,
   });
 }
@@ -366,7 +368,7 @@ export function useTeamRoster(teamId: number | null) {
 export function useLeagueMatches(leagueId: number | null) {
   return useQuery({
     queryKey: ['leagueMatches', leagueId],
-    queryFn: () => (leagueId ? openDotaApi.getLeagueMatches(leagueId) : []),
+    queryFn: () => (leagueId ? proSceneService.getLeagueMatches(leagueId) : []),
     enabled: !!leagueId,
   });
 }
@@ -377,7 +379,7 @@ export function useLeagueMatches(leagueId: number | null) {
 export function useTeamMatches(teamId: number | null) {
   return useQuery({
     queryKey: ['teamMatches', teamId],
-    queryFn: () => (teamId ? openDotaApi.getTeamMatches(teamId) : []),
+    queryFn: () => (teamId ? proSceneService.getTeamMatches(teamId) : []),
     enabled: !!teamId,
   });
 }
@@ -388,7 +390,7 @@ export function useTeamMatches(teamId: number | null) {
 export function useGlobalRecords(field: string) {
   return useQuery({
     queryKey: ['globalRecords', field],
-    queryFn: () => openDotaApi.getGlobalRecords(field),
+    queryFn: () => matchService.getGlobalRecords(field),
     staleTime: 1000 * 60 * 60 * 24, // Records don't change often
   });
 }
@@ -401,7 +403,7 @@ export function useGlobalRecordsMulti(fields: string[]) {
     queryKey: ['globalRecordsMulti', ...fields],
     queryFn: async () => {
       const results = await Promise.all(
-        fields.map(field => openDotaApi.getGlobalRecords(field))
+        fields.map(field => matchService.getGlobalRecords(field))
       );
       // Map back to an object with fields as keys
       return fields.reduce((acc, field, index) => {
@@ -419,7 +421,7 @@ export function useGlobalRecordsMulti(fields: string[]) {
 export function useMatchDetails(matchId: number | null) {
   return useQuery({
     queryKey: ['matchDetails', matchId],
-    queryFn: () => (matchId ? openDotaApi.getMatchDetails(matchId) : null),
+    queryFn: () => (matchId ? matchService.getMatchDetails(matchId) : null),
     enabled: !!matchId,
   });
 }
@@ -430,7 +432,7 @@ export function useMatchDetails(matchId: number | null) {
 export function usePlayerTotals(accountId: string | number | null) {
   return useQuery({
     queryKey: ['playerTotals', accountId],
-    queryFn: () => (accountId ? openDotaApi.getPlayerTotals(accountId) : []),
+    queryFn: () => (accountId ? playerService.getPlayerTotals(accountId) : []),
     enabled: !!accountId,
   });
 }
@@ -441,7 +443,7 @@ export function usePlayerTotals(accountId: string | number | null) {
 export function usePlayerCounts(accountId: string | number | null) {
   return useQuery({
     queryKey: ['playerCounts', accountId],
-    queryFn: () => (accountId ? openDotaApi.getPlayerCounts(accountId) : null),
+    queryFn: () => (accountId ? playerService.getPlayerCounts(accountId) : null),
     enabled: !!accountId,
   });
 }
@@ -452,7 +454,7 @@ export function usePlayerCounts(accountId: string | number | null) {
 export function usePlayerMatches(accountId: string | number | null, filters: any = {}) {
   return useQuery({
     queryKey: ['playerMatches', accountId, filters],
-    queryFn: () => (accountId ? openDotaApi.getPlayerMatches(accountId, filters) : []),
+    queryFn: () => (accountId ? playerService.getPlayerMatches(accountId, filters) : []),
     enabled: !!accountId,
   });
 }
@@ -463,7 +465,7 @@ export function usePlayerMatches(accountId: string | number | null, filters: any
 export function usePlayerWordCloud(accountId: string | number | null) {
   return useQuery({
     queryKey: ['playerWordCloud', accountId],
-    queryFn: () => (accountId ? openDotaApi.getPlayerWordCloud(accountId) : null),
+    queryFn: () => (accountId ? playerService.getPlayerWordCloud(accountId) : null),
     enabled: !!accountId,
     staleTime: 1000 * 60 * 60 * 24, // Chat stats change slowly
   });
@@ -475,7 +477,7 @@ export function usePlayerWordCloud(accountId: string | number | null) {
 export function usePlayerWardMap(accountId: string | number | null) {
   return useQuery({
     queryKey: ['playerWardMap', accountId],
-    queryFn: () => (accountId ? openDotaApi.getPlayerWardMap(accountId) : null),
+    queryFn: () => (accountId ? playerService.getPlayerWardMap(accountId) : null),
     enabled: !!accountId,
     staleTime: 1000 * 60 * 60 * 24,
   });
@@ -487,20 +489,19 @@ export function usePlayerWardMap(accountId: string | number | null) {
 export function usePlayerRatings(accountId: string | number | null) {
   return useQuery({
     queryKey: ['playerRatings', accountId],
-    queryFn: () => (accountId ? openDotaApi.getPlayerRatings(accountId) : []),
+    queryFn: () => (accountId ? playerService.getPlayerRatings(accountId) : []),
     enabled: !!accountId,
     staleTime: 1000 * 60 * 60 * 24,
   });
 }
 
 /**
- * Hook to fetch hero matchups.
-
+ * Hook to fetch hero scenarios (item timings).
  */
 export function useScenariosItemTimings(item?: string, hero_id?: number) {
   return useQuery({
     queryKey: ['scenariosItemTimings', item, hero_id],
-    queryFn: () => openDotaApi.getScenariosItemTimings({ item, hero_id }),
+    queryFn: () => heroService.getScenariosItemTimings({ item, hero_id }),
     staleTime: 1000 * 60 * 60 * 24, // Scenarios don't change fast
   });
 }
@@ -511,7 +512,7 @@ export function useScenariosItemTimings(item?: string, hero_id?: number) {
 export function useScenariosLaneRoles(lane_role?: number, hero_id?: number) {
   return useQuery({
     queryKey: ['scenariosLaneRoles', lane_role, hero_id],
-    queryFn: () => openDotaApi.getScenariosLaneRoles({ lane_role, hero_id }),
+    queryFn: () => heroService.getScenariosLaneRoles({ lane_role, hero_id }),
     staleTime: 1000 * 60 * 60 * 24, // Scenarios don't change fast
   });
 }
@@ -524,7 +525,7 @@ export function useScenarioFunFacts(scenarios: string[]) {
     queryKey: ['scenarioFunFacts', scenarios],
     queryFn: async () => {
       const results = await Promise.all(
-        scenarios.map(scenario => openDotaApi.getScenariosMisc({ scenario }))
+        scenarios.map(scenario => heroService.getScenariosMisc({ scenario }))
       );
       
       const processedData: Record<string, { winRate: number; games: number }> = {};

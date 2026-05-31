@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { 
   ProTeam 
-} from '../services/opendota';
+} from '../services/types';
 import ProPlayerItem from './ProPlayerItem';
 import ProMatchCard from './ProMatchCard';
 import { MatchOverviewModal } from './MatchOverviewModal';

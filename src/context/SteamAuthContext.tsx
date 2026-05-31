@@ -4,7 +4,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as SecureStore from 'expo-secure-store';
 import { useSupabaseAuth } from './SupabaseAuthContext';
-import { getPlayerProfile } from '../services/opendota';
+import { getPlayerProfile } from '../services/playerService';
 import { supabase } from '../services/supabase';
 
 const STORAGE_KEY = 'account_id';

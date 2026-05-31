@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProPlayer } from '../services/opendota';
+import { ProPlayer } from '../services/types';
 
 interface Props {
   player: ProPlayer;

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { HeroStats } from '../services/opendota';
+import { HeroStats } from '../services/types';
 import { PlayerHeroStats } from '../components/HeroDetailModal';
 
 export type ModalType = 'player' | 'match' | 'hero' | 'team' | 'league' | 'liveMatch';

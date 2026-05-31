@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProTeam } from '../services/opendota';
+import { ProTeam } from '../services/types';
 
 interface Props {
   team: ProTeam;

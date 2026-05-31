@@ -7,7 +7,8 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { openDotaApi, HeroStats } from '../../services/opendota';
+import { HeroStats } from '../../services/types';
+import * as heroService from '../../services/heroService';
 import { getHeroImageUrl } from '../../services/constants';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInRight } from 'react-native-reanimated';
@@ -41,7 +42,7 @@ export function BracketLeaderboards() {
       setLoading(true);
 
       try {
-        const stats = await openDotaApi.getHeroStats();
+        const stats = await heroService.getHeroStats();
 
         const rankKey = selectedRank as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
         const isImmortal = selectedRank === 8;

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -12,7 +13,7 @@ import {
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { League, ProTeam, ProPlayer } from '../../src/services/opendota';
+import { League, ProTeam, ProPlayer } from '../../src/services/types';
 import LeagueCard from '../../src/components/LeagueCard';
 import TeamListItem from '../../src/components/TeamListItem';
 import ProPlayerItem from '../../src/components/ProPlayerItem';

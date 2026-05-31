@@ -3,7 +3,7 @@ import {
   View, Text, Modal, ScrollView, TouchableOpacity, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ProMatch } from '../services/opendota';
+import { ProMatch } from '../services/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

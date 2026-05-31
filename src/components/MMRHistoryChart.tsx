@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions, ActivityIndicator } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
-import { PlayerRating } from '../services/opendota';
+import { PlayerRating } from '../services/types';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { format } from 'date-fns';

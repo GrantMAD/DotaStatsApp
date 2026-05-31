@@ -13,12 +13,12 @@ import {
 import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LineChart } from "react-native-chart-kit";
 import {
-  requestMatchParse,
   MatchDetails,
-  GAME_MODES,
   PickBan,
   MatchObjective
-} from '../services/opendota';
+} from '../services/types';
+import { requestMatchParse } from '../services/matchService';
+import { GAME_MODES } from '../services/apiUtils';
 import {
   getHeroImageUrl,
   getItemImageUrl,

@@ -17,7 +17,7 @@ import {
   SearchResult,
   Peer,
   HeroStats,
-} from '../../src/services/opendota';
+} from '../../src/services/types';
 import { useMenu } from './_layout';
 import { getHeroImageUrl } from '../../src/services/constants';
 import { useQueryClient } from '@tanstack/react-query';
