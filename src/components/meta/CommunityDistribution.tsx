@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Dimensions, ActivityIndicator } from 'react-native';
 import * as heroService from '../../services/heroService';
+import { trackOpenDotaMetaInteraction } from '../../services/analytics';
 import { BarChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -30,6 +31,7 @@ export function CommunityDistribution() {
         const distribution = await heroService.getDistributions();
 
         if (distribution && distribution.ranks) {
+          trackOpenDotaMetaInteraction('meta_distribution');
           const total = distribution.ranks.sum.count;
 
           setTotalPlayers(total);

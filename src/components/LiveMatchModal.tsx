@@ -50,6 +50,12 @@ export default function LiveMatchModal({ visible, matchId, onClose, onPushPlayer
     return game.players.filter(p => p.team === 1 || game.players.indexOf(p) >= 5);
   }, [game]);
 
+  React.useEffect(() => {
+    if (visible && matchId) {
+      trackOpenDotaMatchView(matchId.toString(), true);
+    }
+  }, [visible, matchId]);
+
   if (!visible) return null;
 
   return (

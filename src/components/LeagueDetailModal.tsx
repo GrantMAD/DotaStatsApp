@@ -8,6 +8,7 @@ import ProMatchCard from './ProMatchCard';
 import { MatchOverviewModal } from './MatchOverviewModal';
 import PlayerDetailModal from './PlayerDetailModal';
 import { useLeagueMatches } from '../hooks/useOpenDota';
+import { trackOpenDotaMetaInteraction } from '../services/analytics';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -36,6 +37,12 @@ export default function LeagueDetailModal({ visible, league, onClose }: Props) {
     setSelectedPlayerId(id);
     setPlayerModalVisible(true);
   };
+
+  React.useEffect(() => {
+    if (visible && league) {
+      trackOpenDotaMetaInteraction('pro_league_view', league.leagueid.toString());
+    }
+  }, [visible, league]);
 
   if (!league) return null;
 

@@ -12,6 +12,7 @@ import ProMatchCard from './ProMatchCard';
 import { MatchOverviewModal } from './MatchOverviewModal';
 import PlayerDetailModal from './PlayerDetailModal';
 import { useTeamRoster, useTeamMatches } from '../hooks/useOpenDota';
+import { trackOpenDotaMetaInteraction } from '../services/analytics';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 

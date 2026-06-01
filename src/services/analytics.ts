@@ -16,7 +16,12 @@ export type EventType =
   | 'setting_change'
   | 'error'
   | 'comparison_view'
-  | 'live_match_view';
+  | 'live_match_view'
+  | 'opendota_player_search'
+  | 'opendota_match_view'
+  | 'opendota_player_view'
+  | 'opendota_hero_view'
+  | 'opendota_meta_interaction';
 
 interface AnalyticsEventPayload {
   eventType: EventType;
@@ -254,6 +259,44 @@ export async function trackError(errorType: string, message: string): Promise<vo
   await trackEvent({
     eventType: 'error',
     metadata: { errorType, message },
+  });
+}
+
+/**
+ * Track OpenDota specific interactions
+ */
+export async function trackOpenDotaPlayerSearch(query: string, resultsCount: number): Promise<void> {
+  await trackEvent({
+    eventType: 'opendota_player_search',
+    metadata: { query, resultsCount },
+  });
+}
+
+export async function trackOpenDotaMatchView(matchId: string, isLive: boolean = false): Promise<void> {
+  await trackEvent({
+    eventType: 'opendota_match_view',
+    metadata: { matchId, isLive },
+  });
+}
+
+export async function trackOpenDotaPlayerView(accountId: string, section: string = 'overview'): Promise<void> {
+  await trackEvent({
+    eventType: 'opendota_player_view',
+    metadata: { accountId, section },
+  });
+}
+
+export async function trackOpenDotaHeroView(heroId: number, heroName: string, section: string = 'overview'): Promise<void> {
+  await trackEvent({
+    eventType: 'opendota_hero_view',
+    metadata: { heroId, heroName, section },
+  });
+}
+
+export async function trackOpenDotaMetaInteraction(tool: string, action?: string): Promise<void> {
+  await trackEvent({
+    eventType: 'opendota_meta_interaction',
+    metadata: { tool, action },
   });
 }
 

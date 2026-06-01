@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
 import { useScenariosLaneRoles } from '../../hooks/useOpenDota';
+import { trackOpenDotaMetaInteraction } from '../../services/analytics';
 import { HEROES, getHeroImageUrl } from '../../services/constants';
 import { Ionicons } from '@expo/vector-icons';
 

@@ -29,6 +29,7 @@ import { getChatWheelPhrase } from '../services/chatwheel';
 import * as Linking from 'expo-linking';
 import { useMatchDetails, usePlayerPeers } from '../hooks/useOpenDota';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
+import { trackOpenDotaMatchView, trackEvent } from '../services/analytics';
 import { MatchOverviewSkeleton } from './Skeleton';
 import PressableScale from './PressableScale';
 import { calculateLaningGrade } from '../utils/matchAnalytics';
@@ -399,6 +400,21 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
   const [isParsing, setIsParsing] = useState(false);
   const [parseRequested, setParseRequested] = useState(false);
   const [showChatWheel, setShowChatWheel] = useState(true);
+
+  useEffect(() => {
+    if (matchId) {
+      trackOpenDotaMatchView(matchId.toString(), false);
+    }
+  }, [matchId]);
+
+  useEffect(() => {
+    if (matchId) {
+      trackEvent({
+        eventType: 'opendota_match_view',
+        metadata: { matchId: matchId.toString(), section: activeTab.toLowerCase() }
+      });
+    }
+  }, [activeTab, matchId]);
 
   const handleRequestParse = async () => {
     if (!matchId || isParsing) return;

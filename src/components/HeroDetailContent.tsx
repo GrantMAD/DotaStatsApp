@@ -5,6 +5,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { HeroStats } from '../services/types';
 import { STEAM_CDN_BASE } from '../services/constants';
+import { trackOpenDotaHeroView } from '../services/analytics';
 import HeroMatchups from './HeroMatchups';
 import HeroPowerSpikes from './HeroPowerSpikes';
 import HeroItemBuilds from './HeroItemBuilds';
@@ -73,6 +74,12 @@ interface Props {
 }
 
 export function HeroDetailContent({ hero, playerStats, onClose }: Props) {
+  React.useEffect(() => {
+    if (hero) {
+      trackOpenDotaHeroView(hero.id, hero.localized_name);
+    }
+  }, [hero]);
+
   if (!hero) return null;
 
   const imgUrl = `${STEAM_CDN_BASE}${hero.img}`;

@@ -52,6 +52,7 @@ import { useModals } from '../context/ModalContext';
 import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
 import PerformanceTrends from './PerformanceTrends';
 import { WordCloud } from './WordCloud';
+import { trackOpenDotaPlayerView } from '../services/analytics';
 import MMRHistoryChart from './MMRHistoryChart';
 import WardMapHeatmap from './WardMapHeatmap';
 
@@ -210,6 +211,16 @@ export function PlayerOverviewContent({
     : richLoading || statsLoading;
   const [recentView, setRecentView] = useState<'matches' | 'trends'>('matches');
   const [lifetimeSubTab, setLifetimeSubTab] = useState<'Stats' | 'Rank' | 'Vision'>('Stats');
+
+  useEffect(() => {
+    let section = activeTab.toLowerCase();
+    if (activeTab === 'Network') {
+      section = `network_${networkSubTab.toLowerCase()}`;
+    } else if (activeTab === 'Lifetime') {
+      section = `lifetime_${lifetimeSubTab.toLowerCase()}`;
+    }
+    trackOpenDotaPlayerView(accountId.toString(), section);
+  }, [accountId, activeTab, networkSubTab, lifetimeSubTab]);
 
   // Compute lifetime stats on the fly
   const createStatFromCount = (label: string, countObj?: { games: number; win: number }) => ({
