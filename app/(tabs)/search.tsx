@@ -20,6 +20,7 @@ import {
 } from '../../src/services/types';
 import { useMenu } from './_layout';
 import { getHeroImageUrl } from '../../src/services/constants';
+import { trackScreenView } from '../../src/services/analytics';
 import { useQueryClient } from '@tanstack/react-query';
 import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
@@ -136,6 +137,10 @@ export default function SearchScreen() {
       };
     }, [])
   );
+
+  React.useEffect(() => {
+    trackScreenView('search');
+  }, []);
 
   React.useEffect(() => {
     async function checkAppUsers() {

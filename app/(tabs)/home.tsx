@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import {
   View, Text, Image, TouchableOpacity, TextInput,
@@ -28,6 +28,7 @@ import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
+import { trackScreenView } from '../../src/services/analytics';
 import { useModals } from '../../src/context/ModalContext';
 import { calculateTierList, getBracketFromRankTier, BRACKET_NAMES, TierHero } from '../../src/services/tierList';
 import ErrorBoundary from '../../src/components/ErrorBoundary';
@@ -252,6 +253,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const { session, steamAccountId } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
+
+  useEffect(() => {
+    trackScreenView('home');
+  }, []);
 
   // Queries
   const { data: heroesData = [], isLoading: loadingHeroes, isError: errorHeroes, refetch: refetchHeroes } = useHeroStats();

@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { addNotificationListeners } from '../src/services/notifications';
 import ErrorBoundary from '../src/components/ErrorBoundary';
+import { flushAnalytics, initializeAnalytics, setupAnalyticsPeriodicFlushing } from '../src/services/analytics';
 
 const toastConfig = {
   success: (props: any) => (
@@ -57,6 +58,15 @@ SplashScreen.preventAutoHideAsync();
 function NotificationManager({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { session } = useSupabaseAuth();
+
+  useEffect(() => {
+    initializeAnalytics();
+    setupAnalyticsPeriodicFlushing(30000);
+
+    return () => {
+      flushAnalytics();
+    };
+  }, []);
 
   useEffect(() => {
     if (!session) return;

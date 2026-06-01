@@ -3,6 +3,7 @@ import { View, Text, TextInput, ActivityIndicator, Alert, TouchableOpacity } fro
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../src/services/supabase';
+import { trackSignUp } from '../src/services/analytics';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
@@ -35,20 +36,24 @@ export default function SignUpScreen() {
         text2: error.message
       });
       setLoading(false);
-    } else if (data.session) {
-      Toast.show({
-        type: 'success',
-        text1: 'Welcome!',
-        text2: 'Account created successfully.'
-      });
-      router.replace('/(tabs)/home');
     } else {
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: 'Account created! Please check your email to verify.'
-      });
-      router.replace('/sign-in');
+      trackSignUp();
+
+      if (data.session) {
+        Toast.show({
+          type: 'success',
+          text1: 'Welcome!',
+          text2: 'Account created successfully.'
+        });
+        router.replace('/(tabs)/home');
+      } else {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Account created! Please check your email to verify.'
+        });
+        router.replace('/sign-in');
+      }
     }
   };
 

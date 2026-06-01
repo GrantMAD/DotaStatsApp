@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
 import { HeroDetailContent } from '../../src/components/HeroDetailContent';
 import { useHeroStats } from '../../src/hooks/useOpenDota';
+import { trackHeroView } from '../../src/services/analytics';
 
 export default function HeroScreen() {
   const { id } = useLocalSearchParams();
   const { data: heroes = [], isLoading } = useHeroStats();
   
   const hero = heroes.find(h => h.id.toString() === id);
+
+  useEffect(() => {
+    if (hero) {
+      trackHeroView();
+    }
+  }, [hero]);
 
   return (
     <View className="flex-1 bg-[#0d0d1a]">

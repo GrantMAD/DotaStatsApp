@@ -3,6 +3,7 @@ import { View, Text, TextInput, ActivityIndicator, Alert, TouchableOpacity } fro
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '../src/services/supabase';
+import { trackSignIn } from '../src/services/analytics';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
@@ -41,6 +42,7 @@ export default function SignInScreen() {
         text1: 'Welcome Back!',
         text2: 'Successfully signed in.'
       });
+      trackSignIn();
       router.replace('/(tabs)/home');
     }
   };
