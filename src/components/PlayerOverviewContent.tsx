@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  View,
+  View, 
   Text,
   FlatList,
   ActivityIndicator,
@@ -34,9 +34,9 @@ import Skeleton, { PlayerProfileSkeleton } from './Skeleton';
 import MeshGradient from './MeshGradient';
 import GlassModal from './GlassModal';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
-import { 
-  useEncounterHistory, 
-  usePlayerHeroes, 
+import {
+  useEncounterHistory,
+  usePlayerHeroes,
   usePlayerPeers,
   usePlayerProfile,
   usePlayerWinLoss,
@@ -52,7 +52,7 @@ import { useModals } from '../context/ModalContext';
 import HeroDetailModal, { PlayerHeroStats } from './HeroDetailModal';
 import PerformanceTrends from './PerformanceTrends';
 import { WordCloud } from './WordCloud';
-import { trackOpenDotaPlayerView } from '../services/analytics';
+import { trackOpenDotaPlayerView, trackPlayerSnapshot } from '../services/analytics';
 import MMRHistoryChart from './MMRHistoryChart';
 import WardMapHeatmap from './WardMapHeatmap';
 
@@ -109,7 +109,7 @@ interface PlayerOverviewContentProps {
   isPrivate?: boolean;
 }
 
-const MatchItem = React.memo(({ item, index, onMatchPress }: { item: RecentMatch, index: number, onMatchPress: (id: number) => void }) => {
+const MatchItem = React.memo(({ item, index, onMatchPress }: { item: RecentMatch, index: number, onMatchPress: (id: number) => void }) => {    
   const isRadiant = item.player_slot < 128;
   const isWin = (isRadiant && item.radiant_win) || (!isRadiant && !item.radiant_win);
   const heroName = HEROES[item.hero_id]?.localized_name || `Hero ${item.hero_id}`;
@@ -149,7 +149,7 @@ const MatchItem = React.memo(({ item, index, onMatchPress }: { item: RecentMatch
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}>
-          <Text style={{ color: '#9ca3af', fontFamily: 'Outfit_600SemiBold', fontSize: 13, marginRight: 8 }}>
+          <Text style={{ color: '#9ca3af', fontFamily: 'Outfit_600SemiBold', fontSize: 13 }}>
             {Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, '0')}
           </Text>
           <Ionicons name="chevron-forward" size={18} color="#4b5563" />
@@ -180,12 +180,12 @@ export function PlayerOverviewContent({
   const [filters, setFilters] = useState<PlayerMatchFilters>({ limit });
   const { data: filteredMatches = [], isLoading: matchesLoading } = usePlayerMatches(accountId, filters);
   const { data: richRecentMatches = [], isLoading: richLoading } = useRecentMatches(accountId, limit);
-  
+
   const displayMatches = filteredMatches;
-  
+
   // Use rich data for trends if no filters are applied
   const trendMatches = (filters.win !== undefined || filters.date !== undefined || filters.game_mode !== undefined)
-    ? filteredMatches 
+    ? filteredMatches
     : richRecentMatches;
   const { data: encounterHistory } = useEncounterHistory(currentUserId, accountId);
   const { data: playerHeroes = [], isLoading: heroesLoading } = usePlayerHeroes(accountId);
@@ -264,7 +264,7 @@ export function PlayerOverviewContent({
       >
         <View className="flex-row items-center">
           {profile?.profile?.avatarfull ? (
-            <Image source={{ uri: profile.profile.avatarfull }} className="w-20 h-20 rounded-full border-2 border-gamingAccent mr-4" />
+            <Image source={{ uri: profile.profile.avatarfull }} className="w-20 h-20 rounded-full border-2 border-gamingAccent mr-4" />        
           ) : (
             <View className="w-20 h-20 rounded-full bg-gray-600 mr-4" />
           )}
@@ -322,7 +322,8 @@ export function PlayerOverviewContent({
               <TouchableOpacity
                 key={tab}
                 onPress={() => setActiveTab(tab)}
-                className={`flex-1 py-2.5 rounded-lg items-center relative ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'}`}
+                className={`flex-1 py-2.5 rounded-lg items-center relative ${activeTab === tab ? 'bg-gamingAccent shadow-md' : 'bg-transparent'
+}`}
               >
                 <Text className={`font-outfit-bold text-[9px] ${activeTab === tab ? 'text-white' : 'text-gray-400'}`}>
                   {tab.toUpperCase()}
@@ -356,7 +357,8 @@ export function PlayerOverviewContent({
               <View className="flex-1 border-l border-white/5 pl-4">
                 <Text className="text-gray-500 text-[10px] uppercase font-outfit-black mb-1">As Opponent</Text>
                 <Text className="text-white font-outfit-bold">{encounterHistory.against_games} Games</Text>
-                <Text className="text-loss text-[10px] font-outfit-bold">{encounterHistory.against_games - encounterHistory.against_win} Losses</Text>
+                <Text className="text-loss text-[10px] font-outfit-bold">{encounterHistory.against_games - encounterHistory.against_win} Losses
+</Text>
               </View>
               <View className="flex-1 border-l border-white/5 pl-4">
                 <Text className="text-gray-400 text-[10px] uppercase font-outfit-black mb-1">Last Played</Text>
@@ -380,7 +382,8 @@ export function PlayerOverviewContent({
             </View>
             <View className="items-center">
               <Text className="text-gray-400 text-xs uppercase tracking-widest font-outfit-bold">Win Rate</Text>
-              <Text className="text-white text-xl font-outfit-bold">{wl.win + wl.lose > 0 ? ((wl.win / (wl.win + wl.lose)) * 100).toFixed(2) : '0.00'}%</Text>
+              <Text className="text-white text-xl font-outfit-bold">{wl.win + wl.lose > 0 ? ((wl.win / (wl.win + wl.lose)) * 100).toFixed(2) : 
+'0.00'}%</Text>
             </View>
           </View>
         )}
@@ -415,19 +418,21 @@ export function PlayerOverviewContent({
               <View className="items-center">
                 <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">Avg GPM</Text>
                 <Text className="text-yellow-500 text-lg font-outfit-bold">
-                  {Math.round((totals.find(t => t.field === 'gold_per_min')?.sum || 0) / (totals.find(t => t.field === 'gold_per_min')?.n || 1))}
+                  {Math.round((totals.find(t => t.field === 'gold_per_min')?.sum || 0) / (totals.find(t => t.field === 'gold_per_min')?.n || 1)
+)}
                 </Text>
               </View>
               <View className="items-center">
                 <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">Avg XPM</Text>
                 <Text className="text-blue-500 text-lg font-outfit-bold">
-                  {Math.round((totals.find(t => t.field === 'xp_per_min')?.sum || 0) / (totals.find(t => t.field === 'xp_per_min')?.n || 1))}
+                  {Math.round((totals.find(t => t.field === 'xp_per_min')?.sum || 0) / (totals.find(t => t.field === 'xp_per_min')?.n || 1))}  
                 </Text>
               </View>
               <View className="items-center">
                 <Text className="text-gray-400 text-[10px] uppercase tracking-widest font-outfit-black">Impact</Text>
                 <Text className="text-red-500 text-lg font-outfit-bold">
-                  {Math.round((totals.find(t => t.field === 'hero_damage')?.sum || 0) / (totals.find(t => t.field === 'hero_damage')?.n || 1)).toLocaleString()}
+                  {Math.round((totals.find(t => t.field === 'hero_damage')?.sum || 0) / (totals.find(t => t.field === 'hero_damage')?.n || 1)).
+toLocaleString()}
                 </Text>
               </View>
             </View>
@@ -435,7 +440,7 @@ export function PlayerOverviewContent({
         )}
       </View>
     </View>
-  ), [profile, accountId, isCurrentUser, onStatsPress, friendsCount, followingCount, isPrivate, activeTab, encounterHistory, wl, totals]);
+  ), [profile, accountId, isCurrentUser, onStatsPress, friendsCount, followingCount, isPrivate, activeTab, encounterHistory, wl, totals]);     
 
   const renderStatSection = (title: string, icon: string, stats: CategoryStats[]) => (
     <Animated.View
@@ -470,8 +475,8 @@ export function PlayerOverviewContent({
   const renderNetworkContent = () => {
     const sortedPeers = [...peers]
       .filter(p => networkSubTab === 'Allies' ? p.with_games > 0 : p.against_games > 0)
-      .sort((a, b) => networkSubTab === 'Allies' 
-        ? b.with_games - a.with_games 
+      .sort((a, b) => networkSubTab === 'Allies'
+        ? b.with_games - a.with_games
         : b.against_games - a.against_games
       );
 
@@ -487,11 +492,11 @@ export function PlayerOverviewContent({
         ListHeaderComponent={
           <>
             {memoizedHeader}
-            
+
             {/* Highlights */}
             <View className="flex-row px-4 mb-6">
               {duo && duo.with_games > 1 && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.push(`/compare?p1=${accountId}&p2=${duo.account_id}`)}
                   activeOpacity={0.7}
                   className="flex-1 bg-win/10 border border-win/20 p-3 rounded-xl mr-2"
@@ -513,7 +518,7 @@ export function PlayerOverviewContent({
                 </TouchableOpacity>
               )}
               {nemesis && nemesis.against_games >= 3 && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => router.push(`/compare?p1=${accountId}&p2=${nemesis.account_id}`)}
                   activeOpacity={0.7}
                   className="flex-1 bg-loss/10 border border-loss/20 p-3 rounded-xl ml-2"
@@ -645,10 +650,10 @@ export function PlayerOverviewContent({
   );
 
   const renderMatch = ({ item, index }: { item: RecentMatch, index: number }) => (
-    <MatchItem 
-      item={item} 
-      index={index} 
-      onMatchPress={onMatchPress} 
+    <MatchItem
+      item={item}
+      index={index}
+      onMatchPress={onMatchPress}
     />
   );
 
@@ -711,13 +716,13 @@ export function PlayerOverviewContent({
               {!isPrivate && (
                 <View>
                   <View className="flex-row px-4 mb-2 mt-2">
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => setRecentView('matches')}
                       className={`flex-1 py-2 items-center rounded-l-xl border-y border-l ${recentView === 'matches' ? 'bg-purple-500 border-purple-400' : 'bg-zinc-800/50 border-zinc-700'}`}
                     >
                       <Text className={`text-[10px] font-outfit-black uppercase ${recentView === 'matches' ? 'text-white' : 'text-gray-500'}`}>Match History</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={() => setRecentView('trends')}
                       className={`flex-1 py-2 items-center rounded-r-xl border ${recentView === 'trends' ? 'bg-purple-500 border-purple-400' : 'bg-zinc-800/50 border-zinc-700'}`}
                     >
@@ -726,15 +731,15 @@ export function PlayerOverviewContent({
                   </View>
 
                   {recentView === 'matches' ? (
-                    <MatchFilters 
-                      filters={filters} 
-                      onFilterChange={setFilters} 
+                    <MatchFilters
+                      filters={filters}
+                      onFilterChange={setFilters}
                     />
                   ) : (
                     <View className="mt-4 px-4">
-                      <PerformanceTrends 
-                        matches={trendMatches} 
-                        totals={totals} 
+                      <PerformanceTrends
+                        matches={trendMatches}
+                        totals={totals}
                         rankTier={profile?.rank_tier || null}
                         loading={isTrendsLoading}
                       />
@@ -748,16 +753,16 @@ export function PlayerOverviewContent({
             <View style={{ paddingBottom: 60, alignItems: 'center' }}>
               {matchesLoading && <ActivityIndicator color="#8b5cf6" style={{ marginBottom: 20 }} />}
               {recentView === 'matches' && displayMatches.length >= limit && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => {
                     const newLimit = limit + 20;
                     setLimit(newLimit);
                     setFilters(prev => ({ ...prev, limit: newLimit }));
                   }}
-                  style={{ 
-                    backgroundColor: '#1e1e2e', 
-                    paddingVertical: 12, 
-                    paddingHorizontal: 24, 
+                  style={{
+                    backgroundColor: '#1e1e2e',
+                    paddingVertical: 12,
+                    paddingHorizontal: 24,
                     borderRadius: 12,
                     borderWidth: 1,
                     borderColor: '#8b5cf633',
@@ -769,7 +774,7 @@ export function PlayerOverviewContent({
               )}
             </View>
           }
-          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
+          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}        
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       ) : activeTab === 'Heroes' ? (
@@ -784,14 +789,14 @@ export function PlayerOverviewContent({
             ) : null
           }
           ListFooterComponent={<View style={{ height: 40 }} />}
-          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
+          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}        
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       ) : activeTab === 'Network' ? (
         renderNetworkContent()
       ) : activeTab === 'Social' ? (
         <ScrollView
-          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}
+          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#8b5cf6" /> : undefined}        
           className="flex-1"
         >
           {memoizedHeader}

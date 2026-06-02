@@ -31,6 +31,7 @@ import { getChatWheelPhrase } from '../services/chatwheel';
 import * as Linking from 'expo-linking';
 import { useMatchDetails, usePlayerPeers } from '../hooks/useOpenDota';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
+import { trackMatchSnapshot } from '../services/analytics';
 import { MatchOverviewSkeleton } from './Skeleton';
 import GlassModal from './GlassModal';
 import MeshGradient from './MeshGradient';
@@ -566,6 +567,18 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
   const [parseRequested, setParseRequested] = useState(false);
   const [showChatWheel, setShowChatWheel] = useState(true);
   const [pollCount, setPollCount] = useState(0);
+
+  useEffect(() => {
+    if (visible && matchId) {
+      trackOpenDotaMatchView(matchId.toString(), false);
+    }
+  }, [visible, matchId]);
+
+  useEffect(() => {
+    if (matchData) {
+      trackMatchSnapshot(matchData);
+    }
+  }, [matchData]);
 
   // Auto-refresh polling logic
   useEffect(() => {

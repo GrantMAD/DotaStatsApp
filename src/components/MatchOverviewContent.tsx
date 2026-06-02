@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
-  View,
+  View, 
   Text,
   Image,
   ActivityIndicator,
@@ -29,7 +29,7 @@ import { getChatWheelPhrase } from '../services/chatwheel';
 import * as Linking from 'expo-linking';
 import { useMatchDetails, usePlayerPeers } from '../hooks/useOpenDota';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
-import { trackOpenDotaMatchView, trackEvent } from '../services/analytics';
+import { trackOpenDotaMatchView, trackEvent, trackMatchSnapshot } from '../services/analytics';
 import { MatchOverviewSkeleton } from './Skeleton';
 import PressableScale from './PressableScale';
 import { calculateLaningGrade } from '../utils/matchAnalytics';
@@ -63,7 +63,7 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
   const phases = useMemo(() => {
     const laningEnd = 12; // 0-12m
     const midEnd = 30;    // 12-30m
-    
+
     const list = [
       { id: 'laning', label: 'Laning', start: 0, end: laningEnd, color: '#10b981', opacity: 0.05, border: 'rgba(16, 185, 129, 0.2)', textColor: 'rgba(16, 185, 129, 0.6)' },
       { id: 'mid', label: 'Mid-Game', start: laningEnd, end: Math.min(midEnd, durationMins), color: '#f59e0b', opacity: 0.05, border: 'rgba(245, 158, 11, 0.2)', textColor: 'rgba(245, 158, 11, 0.6)' },
@@ -79,8 +79,8 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
   // Filter and group objectives
   const objectives = useMemo(() => {
     if (!match.objectives) return [];
-    
-    return match.objectives.filter(obj => 
+
+    return match.objectives.filter(obj =>
       ['building_kill', 'chat_roshan_kill', 'chat_aegis_pickup', 'chat_aegis_snatch', 'courier_kill'].includes(obj.type)
     ).map(obj => {
       let icon = 'castle';
@@ -125,7 +125,7 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
     if (!match.kill_log || match.kill_log.length < 3) return [];
     const kills = [...match.kill_log].sort((a, b) => a.time - b.time);
     const result: { time: number; count: number; description: string }[] = [];
-    
+
     let currentGroup: typeof kills = [];
     for (let i = 0; i < kills.length; i++) {
       if (currentGroup.length === 0 || kills[i].time <= currentGroup[0].time + 40) {
@@ -212,16 +212,16 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
             {phases.map((phase) => {
               const width = ((phase.end - phase.start) / durationMins) * ((match.duration / 60) * 60);
               return (
-                <View 
-                  key={phase.id} 
-                  style={{ 
-                    width, 
+                <View
+                  key={phase.id}
+                  style={{
+                    width,
                     height: '100%', 
-                    backgroundColor: phase.color, 
+                    backgroundColor: phase.color,
                     opacity: phase.opacity,
                     borderLeftWidth: 1,
                     borderLeftColor: phase.border
-                  }} 
+                  }}
                 />
               );
             })}
@@ -242,7 +242,7 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
           </View>
 
           <View className="flex-row mb-6 border-b border-zinc-800 pb-2">
-            <View style={{ width: 180 }} /> 
+            <View style={{ width: 180 }} />
             {Array.from({ length: Math.ceil(match.duration / 60 / 5) + 1 }).map((_, i) => (
               <View key={i} style={{ position: 'absolute', left: 180 + 140 + (i * 5 * 60) }}>
                 <Text className="text-[10px] text-gray-500 font-bold">{i * 5}'</Text>
@@ -263,7 +263,7 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
                    )}
                 </View>
              </View>
-             <Pressable 
+             <Pressable
                className="flex-1 h-full bg-black/40 rounded border border-white/5 overflow-hidden relative"
                onPress={handleScrub}
              >
@@ -290,7 +290,7 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
              <View className="flex-1 h-full bg-red-500/5 rounded border border-red-500/10 relative">
                 {teamfights.map((tf, i) => (
                   <View key={i} style={{ position: 'absolute', left: 140 + (tf.time / 60) * 60, top: '50%', transform: [{ translateY: -10 }, { translateX: -10 }] }} className="z-20">
-                    <PressableScale 
+                    <PressableScale
                       onPress={() => setSelectedEvent({ time: tf.time, label: 'Major Teamfight', description: tf.description, icon: 'sword-cross', color: '#f87171', type: 'teamfight' })}
                       className="p-1 rounded bg-black/60 border border-red-500/40"
                     >
@@ -330,7 +330,7 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
                   <View className="absolute left-0 right-0 h-[1px] bg-zinc-800/50" />
                   {events.map((event, eIdx) => (
                     <View key={eIdx} style={{ position: 'absolute', left: 140 + (event.time / 60) * 60, top: '50%', marginTop: -12, transform: [{ translateX: -15 }] }} className="z-10 shadow-md">
-                      <PressableScale 
+                      <PressableScale
                         onPress={() => setSelectedEvent({ time: event.time, label: event.label || 'Event', description: event.description || '', icon: event.icon, imageUrl: event.type === 'buyback' ? 'https://www.opendota.com/assets/images/dota2/buyback_icon.png' : getItemImageUrlByName(event.key || ''), color: event.color, type: event.type })}
                         className={`p-[1px] rounded-[3px] border ${event.type === 'buyback' ? 'bg-orange-500 border-orange-300' : 'bg-zinc-800 border-zinc-600'}`}
                       >
@@ -363,12 +363,12 @@ const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode:
 
   return (
     <View className="bg-[#2a2a2a] p-5 rounded-2xl mb-6 border border-zinc-800 shadow-xl overflow-hidden">
-      <Text className="text-gray-500 uppercase tracking-[0.3em] text-[9px] font-black mb-6 text-center">Strategic Draft Analysis</Text>
+      <Text className="text-gray-500 uppercase tracking-[0.3em] text-[9px] font-black mb-6 text-center">Strategic Draft Analysis</Text>        
       <View className="flex-row items-center justify-between mb-6 px-2">
         <View className="flex-1 items-center">
           <View className="flex-row flex-wrap justify-center gap-1.5">
             {radiantPicks.map((p, i) => (
-              <Image key={i} source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-9 h-5 rounded-sm border border-win/20 shadow-sm" />
+              <Image key={i} source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-9 h-5 rounded-sm border border-win/20 shadow-sm" />     
             ))}
           </View>
         </View>
@@ -382,7 +382,7 @@ const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode:
         <View className="flex-1 items-center">
           <View className="flex-row flex-wrap justify-center gap-1.5">
             {direPicks.map((p, i) => (
-              <Image key={i} source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-9 h-5 rounded-sm border border-loss/20 shadow-sm" />
+              <Image key={i} source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-9 h-5 rounded-sm border border-loss/20 shadow-sm" />    
             ))}
           </View>
         </View>
@@ -450,14 +450,14 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
   const renderPlayerRow = (p: MatchDetails['players'][0], index: number) => {
     const isAnonymous = !p.account_id;
     const laningGrade = calculateLaningGrade(p.lane_efficiency_pct || null, p.benchmarks?.lhten?.pct || null);
-    
+
     return (
       <View key={index} className="border-b border-zinc-800 py-3 px-2 flex-row items-center">
         <TouchableOpacity onPress={() => p.account_id && onPushPlayer?.(p.account_id)} className="flex-row items-center flex-1">
           <Image source={{ uri: getHeroImageUrl(p.hero_id) }} className="w-10 h-7 rounded-sm mr-3" />
           <View className="flex-1">
             <Text className="text-white text-xs font-bold" numberOfLines={1}>{p.personaname || 'Anonymous'}</Text>
-            <Text className="text-gray-500 text-[9px]">NW: {(p.net_worth / 1000).toFixed(1)}k • G/X: {p.gold_per_min}/{p.xp_per_min}</Text>
+            <Text className="text-gray-500 text-[9px]">NW: {(p.net_worth / 1000).toFixed(1)}k • G/X: {p.gold_per_min}/{p.xp_per_min}</Text>  
           </View>
         </TouchableOpacity>
         <View className="w-16 items-center">
@@ -484,7 +484,7 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
   const screenWidth = Dimensions.get('window').width - 64;
 
   if (loading) return <MatchOverviewSkeleton />;
-  if (!matchData) return <View className="flex-1 justify-center items-center"><Text className="text-red-500">Match not found.</Text></View>;
+  if (!matchData) return <View className="flex-1 justify-center items-center"><Text className="text-red-500">Match not found.</Text></View>;   
 
   return (
     <View className="flex-1">
@@ -509,7 +509,7 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
         <View className="flex-row border-b border-zinc-800 mb-6">
           {(['Scoreboard', 'Highlights', 'Economy', 'Timeline', 'Chat'] as MatchTab[]).map(tab => (
             <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} className={`flex-1 py-3 items-center border-b-2 ${activeTab === tab ? 'border-gamingAccent' : 'border-transparent'}`}>
-              <Text className={`text-[10px] font-bold ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>{tab.toUpperCase()}</Text>
+              <Text className={`text-[10px] font-bold ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>{tab.toUpperCase()}</Text>       
             </TouchableOpacity>
           ))}
         </View>
@@ -585,7 +585,7 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
 
           {activeTab === 'Timeline' && (
             <View>
-               {matchData.version ? <MatchTimeline match={matchData} /> : renderParseInstructions("Timeline data requires parsed match.")}
+               {matchData.version ? <MatchTimeline match={matchData} /> : renderParseInstructions("Timeline data requires parsed match.")}     
             </View>
           )}
 

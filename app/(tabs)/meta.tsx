@@ -18,6 +18,10 @@ export default function MetaScreen() {
   const { setMenuVisible } = useMenu();
   const { session } = useSupabaseAuth();
 
+  React.useEffect(() => {
+    trackOpenDotaMetaInteraction(activeTab);
+  }, [activeTab]);
+
   return (
     <LinearGradient colors={['#1a1a2e', '#121212']} style={{ flex: 1 }}>
       <GlassHeader 

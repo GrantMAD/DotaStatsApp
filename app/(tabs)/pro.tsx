@@ -28,6 +28,7 @@ import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
+import { trackOpenDotaMetaInteraction } from '../../src/services/analytics';
 import { useModals } from '../../src/context/ModalContext';
 import ErrorBoundary from '../../src/components/ErrorBoundary';
 
@@ -149,6 +150,10 @@ export default function ProSceneScreen() {
   const handleMatchPress = (id: number) => {
     router.push(`/match/${id}`);
   };
+
+  React.useEffect(() => {
+    trackOpenDotaMetaInteraction(`pro_${activeTab.toLowerCase()}`, subTab.toLowerCase());
+  }, [activeTab, subTab]);
 
   const memoizedHeader = useMemo(() => (
     <View style={{ paddingBottom: 20, paddingTop: 10 }}>

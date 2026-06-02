@@ -1,365 +1,179 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
-  ActivityIndicator 
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import GlassHeader from '../../src/components/GlassHeader';
-import { 
-  usePlayerProfile, 
-  usePlayerWinLoss, 
-  usePlayerHeroes,
-  usePlayerTotals,
-  useRecentMatches,
-  usePlayerPeers,
-  isProfilePrivate,
-  isDataRestricted
-} from '../../src/hooks/useOpenDota';
-import CompareStatRow from '../../src/components/CompareStatRow';
-import { RankBadge } from '../../src/components/RankBadge';
-import { STEAM_CDN_BASE, getHeroImageUrl } from '../../src/services/constants';
-import { SteamAuthContext } from '../../src/context/SteamAuthContext';
-
-import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
+import { Ionicons } from '@expo/vector-icons';
+import { useOpenDota } from '../../src/hooks/useOpenDota';
+import { getHeroImageUrl } from '../../src/services/apiUtils';
 import { PlayerSelectModal } from '../../src/components/PlayerSelectModal';
+import { CompareStatRow } from '../../src/components/CompareStatRow';
+import { trackComparisonView } from '../../src/services/analytics';
+
+const { width } = Dimensions.get('window');
 
 export default function CompareScreen() {
-  const { p1: routeP1, p2: routeP2 } = useLocalSearchParams<{ p1?: string, p2?: string }>();
-  const router = useRouter();
-
-  const [p1, setP1] = useState<string | null>(routeP1 || null);
-  const [p2, setP2] = useState<string | null>(routeP2 || null);
-
-  useEffect(() => {
-    if (routeP1) setP1(routeP1);
-  }, [routeP1]);
-
-  useEffect(() => {
-    if (routeP2) setP2(routeP2);
-  }, [routeP2]);
-
-  const [isSelectModalOpen, setIsSelectModalOpen] = useState(false);
+  const [p1, setP1] = useState<any>(null);
+  const [p2, setP2] = useState<any>(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const [selectingFor, setSelectingFor] = useState<'p1' | 'p2' | null>(null);
+
+  const { getPlayerDetails, getPlayerWinLoss, getPlayerHeroes } = useOpenDota();
+
+  const [data1, setData1] = useState<any>(null);
+  const [data2, setData2] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (p1 && p2) {
+      loadData();
+      trackComparisonView('player_vs_player', 2);
+    }
+  }, [p1, p2]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [details1, wl1, heroes1, details2, wl2, heroes2] = await Promise.all([
+        getPlayerDetails(p1.account_id),
+        getPlayerWinLoss(p1.account_id),
+        getPlayerHeroes(p1.account_id),
+        getPlayerDetails(p2.account_id),
+        getPlayerWinLoss(p2.account_id),
+        getPlayerHeroes(p2.account_id),
+      ]);
+
+      setData1({ details: details1, wl: wl1, heroes: heroes1 });
+      setData2({ details: details2, wl: wl2, heroes: heroes2 });
+    } catch (error) {
+      console.error('Error loading comparison data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleOpenSelect = (target: 'p1' | 'p2') => {
     setSelectingFor(target);
-    setIsSelectModalOpen(true);
+    setModalVisible(true);
   };
 
-  const handleSelectPlayer = (accountId: string) => {
-    if (selectingFor === 'p1') {
-      setP1(accountId);
-    } else if (selectingFor === 'p2') {
-      setP2(accountId);
-    }
-    setIsSelectModalOpen(false);
+  const handleSelect = (player: any) => {
+    if (selectingFor === 'p1') setP1(player);
+    else setP2(player);
+    setModalVisible(false);
     setSelectingFor(null);
   };
 
-  const steamAuth = useContext(SteamAuthContext);
-  const { steamAccountId: supabaseSteamId } = useSupabaseAuth();
-  
-  // Use either the Steam OpenID accountId or the Supabase-linked steamAccountId
-  const myAccountId = steamAuth?.accountId || supabaseSteamId;
-  
-  // Player 1 Data
-  const { data: profile1, isLoading: loadingP1 } = usePlayerProfile(p1 || null);
-  const { data: wl1 } = usePlayerWinLoss(p1 || null);
-  const { data: heroes1 } = usePlayerHeroes(p1 || null);
-  const { data: totals1, isLoading: loadingTotals1 } = usePlayerTotals(p1 || null);
-  const { data: recent1, isLoading: loadingRecent1 } = useRecentMatches(p1 || null, 20);
-  const { data: peers1, isLoading: loadingPeers1 } = usePlayerPeers(p1 || null);
-
-  // Player 2 Data
-  const { data: profile2, isLoading: loadingP2 } = usePlayerProfile(p2 || null);
-  const { data: wl2 } = usePlayerWinLoss(p2 || null);
-  const { data: heroes2 } = usePlayerHeroes(p2 || null);
-  const { data: totals2, isLoading: loadingTotals2 } = usePlayerTotals(p2 || null);
-  const { data: recent2, isLoading: loadingRecent2 } = useRecentMatches(p2 || null, 20);
-  const { data: peers2, isLoading: loadingPeers2 } = usePlayerPeers(p2 || null);
-
-  // Hardened check: Check parameters AND fetched profile data
-  const isMeInComparison = !!(myAccountId && (
-    p1 === myAccountId || 
-    p2 === myAccountId || 
-    profile1?.profile?.account_id?.toString() === myAccountId || 
-    profile2?.profile?.account_id?.toString() === myAccountId
-  ));
-
-   const isLoading = loadingP1 || loadingP2 || loadingTotals1 || loadingTotals2 || 
-                    loadingRecent1 || loadingRecent2 || loadingPeers1 || loadingPeers2;
-
-  const [isAddingMe, setIsAddingMe] = useState(false);
-
-  const handleRemovePlayer = (side: 'left' | 'right') => {
-    if (side === 'left') {
-      setP1(null);
-    } else {
-      setP2(null);
-    }
-  };
-
-  const handleAddMe = (side: 'left' | 'right') => {
-    if (!myAccountId) return;
-    setIsAddingMe(true);
-    if (side === 'left') {
-      setP1(myAccountId.toString());
-    } else {
-      setP2(myAccountId.toString());
-    }
-    setTimeout(() => setIsAddingMe(false), 2000);
-  };
-
-  const renderPlayerHeader = (profile: any, side: 'left' | 'right') => {
-    const target = side === 'left' ? 'p1' : 'p2';
-    if (!profile) {
-      return (
-        <View className="flex-1 items-center justify-center p-4">
-          <TouchableOpacity 
-            className="items-center justify-center"
-            onPress={() => handleOpenSelect(target)}
-          >
-            <View className="w-14 h-14 rounded-full bg-zinc-800 items-center justify-center border-2 border-dashed border-zinc-600">
-              <Ionicons name="add" size={28} color="#666" />
-            </View>
-            <Text className="text-zinc-500 mt-2 text-[10px] font-bold uppercase">Select Player</Text>
-          </TouchableOpacity>
-
-          {myAccountId && !isMeInComparison && (
-            <TouchableOpacity 
-              className="mt-4 bg-purple-600 px-4 py-2 rounded-xl border border-purple-500 shadow-lg shadow-purple-500/20 flex-row items-center"
-              onPress={() => handleAddMe(side)}
-            >
-              <Ionicons name="person-add" size={14} color="white" />
-              <Text className="text-white text-[11px] font-black uppercase ml-2 tracking-tighter">Add My Stats</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      );
-    }
-
-    return (
-      <View className="flex-1 items-center p-4 relative" style={{ position: 'relative' }}>
-        <TouchableOpacity 
-          onPress={() => handleRemovePlayer(side)}
-          className="absolute top-2 right-2 p-1.5 bg-red-500/10 rounded-lg z-10"
-          style={{ position: 'absolute', top: 8, right: 8 }}
-        >
-          <Ionicons name="close" size={16} color="#ef4444" />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => handleOpenSelect(target)} className="items-center">
-          <View className="relative">
-            <Image 
-              source={{ uri: profile.profile.avatarfull }} 
-              className="w-14 h-14 rounded-2xl border-2 border-purple-500/50"
-            />
-            {isProfilePrivate(profile) && (
-              <View className="absolute -top-1 -right-1 bg-red-600 rounded-full p-0.5 border border-[#1a1a2e]">
-                <Ionicons name="eye-off" size={10} color="white" />
-              </View>
-            )}
-            {!isProfilePrivate(profile) && isDataRestricted(profile) && (
-              <View className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border border-[#1a1a2e]">
-                <Ionicons name="alert" size={10} color="black" />
-              </View>
-            )}
-            <View className="absolute -bottom-2 -right-2 scale-75">
-              <RankBadge rankTier={profile.rank_tier} size={36} />
-            </View>
-          </View>
-          <Text className="text-white font-black mt-3 text-center text-[10px]" numberOfLines={1}>
-            {profile.profile.personaname}
-          </Text>
-        </TouchableOpacity>
-
-        {myAccountId && !isMeInComparison && myAccountId !== profile.profile.account_id?.toString() && (
-          <TouchableOpacity 
-            className="mt-4 bg-zinc-800 px-3 py-1.5 rounded-xl border border-zinc-700 flex-row items-center"
-            onPress={() => handleAddMe(side)}
-          >
-            <Ionicons name="swap-horizontal" size={12} color="#8b5cf6" />
-            <Text className="text-purple-400 text-[9px] font-black uppercase ml-1.5">Switch to Me</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  };
-
-  const getWR = (wl: any) => {
-    if (!wl || (wl.win + wl.lose) === 0) return 0;
-    return ((wl.win / (wl.win + wl.lose)) * 100).toFixed(1);
-  };
-
-  const getKDA = (heroes: any[]) => {
-    if (!heroes || heroes.length === 0) return "0.00";
-    const totals = heroes.reduce((acc, h) => {
-      acc.kills += h.avg_kills * h.games;
-      acc.deaths += h.avg_deaths * h.games;
-      acc.assists += h.avg_assists * h.games;
-      acc.count += h.games;
-      return acc;
-    }, { kills: 0, deaths: 0, assists: 0, count: 0 });
-
-    if (totals.count === 0) return "0.00";
-    return ((totals.kills + totals.assists) / Math.max(1, totals.deaths)).toFixed(2);
-  };
-
-  const getAvg = (totals: any[], field: string) => {
-    const entry = totals?.find(t => t.field === field);
-    if (!entry || entry.n === 0) return 0;
-    return Math.round(entry.sum / entry.n);
-  };
-
-  const getRecentWR = (matches: any[]) => {
-    if (!matches || matches.length === 0) return 0;
-    const wins = matches.filter(m => {
-      const isRadiant = m.player_slot < 128;
-      return (isRadiant && m.radiant_win) || (!isRadiant && !m.radiant_win);
-    }).length;
-    return ((wins / matches.length) * 100).toFixed(1);
-  };
-
-  const getVersatility = (heroes: any[]) => {
-    return heroes?.filter(h => h.games > 0).length || 0;
-  };
-
-  const getMatchup = (peers: any[], targetId: string) => {
-    const peer = peers?.find(p => p.account_id.toString() === targetId);
-    if (!peer) return null;
-    return {
-      with: `${peer.with_win}W - ${peer.with_games - peer.with_win}L`,
-      against: `${peer.against_games - peer.against_win}W - ${peer.against_win}L`, // "My wins against them"
-      games: peer.games
-    };
-  };
+  const winRate1 = data1?.wl ? (data1.wl.win / (data1.wl.win + data1.wl.lose) * 100).toFixed(1) : '0';
+  const winRate2 = data2?.wl ? (data2.wl.win / (data2.wl.win + data2.wl.lose) * 100).toFixed(1) : '0';
 
   return (
-    <LinearGradient colors={['#1a1a2e', '#121212']} style={{ flex: 1 }}>
-      <PlayerSelectModal 
-        visible={isSelectModalOpen}
-        onClose={() => setIsSelectModalOpen(false)}
-        onSelect={handleSelectPlayer}
-        title={selectingFor === 'p1' ? "Select First Player" : "Select Second Player"}
-      />
+    <LinearGradient colors={['#0f0f13', '#16161e']} className="flex-1">
+      <View className="pt-14 pb-4 px-6 border-b border-zinc-800/50 bg-zinc-900/50">
+        <Text className="text-3xl font-black text-white italic tracking-tighter">COMPARE</Text>
+        <Text className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest mt-1">Player Statistics Battle</Text>
+      </View>
 
-      <GlassHeader 
-        title="Compare Players" 
-        leftComponent={
-          <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
-            <Ionicons name="chevron-back" size={28} color="white" />
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Selection Area */}
+        <View className="flex-row p-4 gap-4">
+          <TouchableOpacity 
+            onPress={() => handleOpenSelect('p1')}
+            className="flex-1 aspect-square bg-zinc-900 rounded-3xl border border-zinc-800 items-center justify-center overflow-hidden"
+          >
+            {p1 ? (
+              <>
+                <Image source={{ uri: p1.avatarfull }} className="w-full h-full absolute opacity-40" />
+                <View className="bg-black/40 w-full h-full items-center justify-center p-4">
+                  <Image source={{ uri: p1.avatarfull }} className="w-16 h-16 rounded-2xl border-2 border-white/20 mb-2" />
+                  <Text className="text-white font-black text-center text-xs" numberOfLines={1}>{p1.personaname}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View className="w-16 h-16 rounded-2xl bg-zinc-800 items-center justify-center mb-2">
+                  <Ionicons name="add" size={32} color="#555" />
+                </View>
+                <Text className="text-zinc-500 font-bold text-[10px] uppercase">Select Player 1</Text>
+              </>
+            )}
           </TouchableOpacity>
-        }
-      />
 
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-        {/* Comparison Header */}
-        <View className="flex-row items-center justify-between bg-zinc-900/50 mx-4 mt-4 rounded-3xl border border-zinc-800">
-          {renderPlayerHeader(profile1, 'left')}
-          <View className="w-[1px] h-12 bg-zinc-800" />
-          {renderPlayerHeader(profile2, 'right')}
+          <View className="items-center justify-center">
+            <View className="w-10 h-10 rounded-full bg-purple-500 items-center justify-center shadow-lg shadow-purple-500/50">
+              <Text className="text-white font-black italic">VS</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            onPress={() => handleOpenSelect('p2')}
+            className="flex-1 aspect-square bg-zinc-900 rounded-3xl border border-zinc-800 items-center justify-center overflow-hidden"
+          >
+            {p2 ? (
+              <>
+                <Image source={{ uri: p2.avatarfull }} className="w-full h-full absolute opacity-40" />
+                <View className="bg-black/40 w-full h-full items-center justify-center p-4">
+                  <Image source={{ uri: p2.avatarfull }} className="w-16 h-16 rounded-2xl border-2 border-white/20 mb-2" />
+                  <Text className="text-white font-black text-center text-xs" numberOfLines={1}>{p2.personaname}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View className="w-16 h-16 rounded-2xl bg-zinc-800 items-center justify-center mb-2">
+                  <Ionicons name="add" size={32} color="#555" />
+                </View>
+                <Text className="text-zinc-500 font-bold text-[10px] uppercase">Select Player 2</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
-        {isLoading ? (
+        {loading ? (
           <View className="py-20">
-            <ActivityIndicator size="large" color="#8b5cf6" />
-            <Text className="text-zinc-500 text-center mt-4 font-bold">
-              {isAddingMe ? "Loading User..." : "Calculating Stats..."}
-            </Text>
+            <ActivityIndicator size="large" color="#a855f7" />
           </View>
-        ) : profile1 && profile2 ? (
-          <View className="px-4 mt-8">
-            {(isProfilePrivate(profile1) || isProfilePrivate(profile2) || isDataRestricted(profile1) || isDataRestricted(profile2)) && (
-              <View className="mb-6 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex-row items-center">
-                <Ionicons name="information-circle" size={20} color="#f59e0b" className="mr-3" />
-                <Text className="text-amber-500 text-[10px] font-outfit-bold flex-1 uppercase tracking-tight">
-                  One or both players have restricted privacy settings. Some comparison data may be missing or inaccurate.
-                </Text>
-              </View>
-            )}
+        ) : data1 && data2 ? (
+          <View className="p-4">
+            {/* Main Stats Card */}
+            <View className="bg-zinc-900/80 rounded-3xl border border-zinc-800 p-6 mb-6">
+              <Text className="text-zinc-500 font-black text-[10px] uppercase tracking-widest mb-6 text-center">Core Performance</Text>
+              
+              <CompareStatRow 
+                label="WIN RATE"
+                val1={winRate1 + '%'}
+                val2={winRate2 + '%'}
+                percent1={Number(winRate1)}
+                percent2={Number(winRate2)}
+                isBetter={Number(winRate1) > Number(winRate2)}
+              />
 
-            <CompareStatRow 
-              label="Win Rate" 
-              val1={getWR(wl1)} 
-              val2={getWR(wl2)} 
-              unit="%" 
-            />
-            <CompareStatRow 
-              label="Total Matches" 
-              val1={wl1 ? wl1.win + wl1.lose : 0} 
-              val2={wl2 ? wl2.win + wl2.lose : 0} 
-            />
-            <CompareStatRow 
-              label="Average KDA" 
-              val1={getKDA(heroes1 || [])} 
-              val2={getKDA(heroes2 || [])} 
-            />
-            <CompareStatRow 
-              label="Avg GPM" 
-              val1={getAvg(totals1 || [], 'gold_per_min')} 
-              val2={getAvg(totals2 || [], 'gold_per_min')} 
-            />
-            <CompareStatRow 
-              label="Avg Deaths" 
-              val1={getAvg(totals1 || [], 'deaths')} 
-              val2={getAvg(totals2 || [], 'deaths')} 
-              isHigherBetter={false}
-            />
-            <CompareStatRow 
-              label="Avg XPM" 
-              val1={getAvg(totals1 || [], 'xp_per_min')} 
-              val2={getAvg(totals2 || [], 'xp_per_min')} 
-            />
-            <CompareStatRow 
-              label="Recent Win Rate (Last 20)" 
-              val1={getRecentWR(recent1 || [])} 
-              val2={getRecentWR(recent2 || [])} 
-              unit="%" 
-            />
-            <CompareStatRow 
-              label="Hero Pool Size" 
-              val1={getVersatility(heroes1 || [])} 
-              val2={getVersatility(heroes2 || [])} 
-              unit=" Heroes"
-            />
+              <CompareStatRow 
+                label="RANK TIER"
+                val1={data1.details?.rank_tier || '??'}
+                val2={data2.details?.rank_tier || '??'}
+                percent1={((data1.details?.rank_tier || 0) / 80) * 100}
+                percent2={((data2.details?.rank_tier || 0) / 80) * 100}
+                isBetter={(data1.details?.rank_tier || 0) > (data2.details?.rank_tier || 0)}
+              />
 
-            {/* Direct Matchup */}
-            {getMatchup(peers1 || [], p2!) && (
-              <View className="mt-4 bg-purple-500/10 p-4 rounded-3xl border border-purple-500/20">
-                <Text className="text-purple-400 text-xs font-black text-center uppercase tracking-widest mb-3">
-                  Direct History ({getMatchup(peers1 || [], p2!)?.games} Shared Matches)
-                </Text>
-                <View className="flex-row justify-between px-4">
-                  <View className="items-center">
-                    <Text className="text-gray-500 text-[10px] uppercase font-black mb-1">As Allies</Text>
-                    <Text className="text-white font-bold">{getMatchup(peers1 || [], p2!)?.with}</Text>
-                  </View>
-                  <View className="items-center">
-                    <Text className="text-gray-500 text-[10px] uppercase font-black mb-1">As Opponents</Text>
-                    <Text className="text-white font-bold">{getMatchup(peers1 || [], p2!)?.against}</Text>
-                  </View>
-                </View>
-                <Text className="text-zinc-500 text-[9px] text-center mt-3 italic">
-                  *History from {profile1?.profile.personaname}'s perspective
-                </Text>
-              </View>
-            )}
+              <CompareStatRow 
+                label="TOTAL GAMES"
+                val1={data1.wl.win + data1.wl.lose}
+                val2={data2.wl.win + data2.wl.lose}
+                percent1={Math.min(((data1.wl.win + data1.wl.lose) / 5000) * 100, 100)}
+                percent2={Math.min(((data2.wl.win + data2.wl.lose) / 5000) * 100, 100)}
+                isBetter={(data1.wl.win + data1.wl.lose) > (data2.wl.win + data2.wl.lose)}
+              />
+            </View>
 
-            {/* Top Heroes Comparison */}
-            <View className="mt-8">
-              <Text className="text-white font-black text-lg mb-6 text-center">Top Heroes Comparison</Text>
-              {[0, 1, 2].map((idx) => {
-                const h1 = heroes1?.sort((a, b) => b.games - a.games)[idx];
-                const h2 = heroes2?.sort((a, b) => b.games - a.games)[idx];
-                
+            {/* Hero Battle */}
+            <View className="bg-zinc-900/80 rounded-3xl border border-zinc-800 p-6">
+              <Text className="text-zinc-500 font-black text-[10px] uppercase tracking-widest mb-6 text-center">Top Hero comparison</Text>
+              
+              {[0, 1, 2, 3, 4].map((idx) => {
+                const h1 = data1.heroes[idx];
+                const h2 = data2.heroes[idx];
+
                 return (
-                  <View key={idx} className="flex-row items-center justify-between mb-6 bg-zinc-900/30 p-4 rounded-2xl border border-zinc-800/50">
+                  <View key={idx} className="flex-row items-center mb-6 last:mb-0">
                     {/* Hero 1 */}
                     <View className="flex-1 items-center">
                       {h1 ? (
@@ -415,6 +229,13 @@ export default function CompareScreen() {
           </View>
         )}
       </ScrollView>
+
+      <PlayerSelectModal 
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSelect={handleSelect}
+        title={selectingFor === 'p1' ? 'Select Player 1' : 'Select Player 2'}
+      />
     </LinearGradient>
   );
 }
