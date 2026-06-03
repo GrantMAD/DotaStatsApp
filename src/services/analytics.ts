@@ -34,12 +34,23 @@ interface AnalyticsEventPayload {
 }
 
 interface AnalyticsEvent {
+  id?: string;
   user_id?: string;
   event_type: EventType;
   metadata?: Record<string, any>;
   platform: 'mobile';
   route?: string;
   session_id: string;
+  created_at?: string;
+}
+
+export interface RecentlyViewedItem {
+  id: string;
+  type: 'hero' | 'match' | 'player';
+  entityId: string | number;
+  title: string;
+  subtitle?: string;
+  timestamp: string;
 }
 
 const SESSION_ID_KEY = 'dota_app_session_id';
@@ -104,6 +115,91 @@ export async function trackEvent(payload: AnalyticsEventPayload): Promise<void> 
     }
   } catch (err) {
     console.warn('Analytics tracking error:', err);
+  }
+}
+
+/**
+ * Fetch recently viewed items for the current user or session
+ */
+export async function getRecentlyViewed(limit: number = 10): Promise<RecentlyViewedItem[]> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let query = supabase
+      .from('analytics_events')
+      .select('*')
+      .in('event_type', [
+        'hero_view', 
+        'match_view', 
+        'profile_view', 
+        'opendota_match_view', 
+        'opendota_player_view', 
+        'opendota_hero_view'
+      ])
+      .order('created_at', { ascending: false });
+
+    if (user) {
+      query = query.eq('user_id', user.id);
+    } else {
+      query = query.eq('session_id', getSessionId());
+    }
+
+    const { data, error } = await query.limit(limit * 3); // Fetch more to filter duplicates effectively
+
+    if (error) throw error;
+    if (!data) return [];
+
+    // Filter duplicates and map to RecentlyViewedItem
+    const seen = new Set<string>();
+    const items: RecentlyViewedItem[] = [];
+
+    for (const event of data) {
+      if (items.length >= limit) break;
+
+      let type: 'hero' | 'match' | 'player' = 'hero';
+      let entityId: string | number = '';
+      let title = '';
+      let subtitle = '';
+
+      const metadata = event.metadata || {};
+
+      if (event.event_type.includes('hero')) {
+        type = 'hero';
+        entityId = metadata.heroId || metadata.hero_id;
+        title = metadata.heroName || metadata.name || 'Unknown Hero';
+        subtitle = 'Hero Profile';
+      } else if (event.event_type.includes('match')) {
+        type = 'match';
+        entityId = metadata.matchId || metadata.match_id;
+        title = `Match ${entityId}`;
+        subtitle = metadata.isLive ? 'Live Match' : 'Match Details';
+      } else if (event.event_type.includes('player') || event.event_type === 'profile_view') {
+        type = 'player';
+        entityId = metadata.accountId || metadata.account_id || metadata.profileId;
+        title = metadata.name || metadata.personaname || `Player ${entityId}`;
+        subtitle = metadata.section ? `Player ${metadata.section}` : 'Player Profile';
+      }
+
+      const key = `${type}_${entityId}`;
+      if (entityId && !seen.has(key)) {
+        seen.add(key);
+        items.push({
+          id: event.id!,
+          type,
+          entityId,
+          title,
+          subtitle,
+          timestamp: event.created_at!,
+        });
+      }
+    }
+
+    return items;
+  } catch (err) {
+    console.warn('Error fetching recently viewed:', err);
+    return [];
   }
 }
 

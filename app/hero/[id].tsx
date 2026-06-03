@@ -13,7 +13,7 @@ export default function HeroScreen() {
 
   useEffect(() => {
     if (hero) {
-      trackHeroView();
+      trackHeroView(hero.id, hero.localized_name);
     }
   }, [hero]);
 
@@ -29,7 +29,6 @@ export default function HeroScreen() {
           },
           headerTitleStyle: { color: 'white', fontFamily: 'Outfit-Bold' },
           headerTintColor: 'white',
-          headerBackTitleVisible: false,
         }} 
       />
       

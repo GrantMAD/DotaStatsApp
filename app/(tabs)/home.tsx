@@ -21,6 +21,8 @@ import { useHeroStats, useProMatches, useLiveGames, usePlayerProfile } from '../
 import { useActivityFeed } from '../../src/hooks/useActivityFeed';
 import ActivityFeedItem from '../../src/components/ActivityFeedItem';
 import AppLogo from '../../src/components/AppLogo';
+import RecentlyViewed from '../../src/components/RecentlyViewed';
+import { RecentlyViewedItem } from '../../src/services/analytics';
 import { ICON_MAP } from '../../src/services/iconMap';
 import { queryClient } from '../../src/services/queryClient';
 import Skeleton from '../../src/components/Skeleton';
@@ -327,6 +329,16 @@ export default function HomeScreen() {
     router.push(`/profile/${accountId}`);
   }, [router]);
 
+  const handlePressRecentItem = useCallback((item: RecentlyViewedItem) => {
+    if (item.type === 'hero') {
+      openHeroModal(Number(item.entityId));
+    } else if (item.type === 'match') {
+      openMatchById(Number(item.entityId));
+    } else if (item.type === 'player') {
+      openPlayerDetails(item.entityId);
+    }
+  }, [openHeroModal, openMatchById, openPlayerDetails]);
+
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await Promise.all([
@@ -474,6 +486,12 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* Recently Viewed */}
+          <RecentlyViewed 
+            onPressItem={handlePressRecentItem} 
+            refreshTrigger={isRefreshing ? 1 : 0} 
+          />
+
           {hasError ? (
             <ErrorCard 
               message="We couldn't load the latest Dota data. Check your connection and try again."
@@ -485,7 +503,7 @@ export default function HomeScreen() {
               {session && (
                 <>
                   <SectionHeader 
-                    icon="people" 
+                    icon="FRIENDS" 
                     title="Friends Activity" 
                     description="Recent achievements and matches from your friends."
                     color="#22c55e" 
@@ -550,7 +568,7 @@ export default function HomeScreen() {
 
               {/* ─── Section 0: Hero Meta Tier List ─── */}
               <SectionHeader 
-                icon="analytics" 
+                icon="META" 
                 title="Hero Meta Tier List" 
                 description="Calculated based on win rates and pick frequency in your rank."
                 color="#8b5cf6" 
@@ -613,7 +631,7 @@ export default function HomeScreen() {
 
               {/* ─── Section 1: Top Win Rate Heroes ─── */}
               <SectionHeader 
-                icon="trophy" 
+                icon="WIN" 
                 title="Highest Win Rate" 
                 description="Heroes with the highest win probability in public matches today."
                 color="#f59e0b" 
@@ -644,7 +662,7 @@ export default function HomeScreen() {
 
               {/* ─── Section 2: Most Picked Heroes ─── */}
               <SectionHeader 
-                icon="flame" 
+                icon="FLAME" 
                 title="Most Picked" 
                 description="The most popular heroes being played in public matches right now."
                 color="#ef4444" 
@@ -675,7 +693,7 @@ export default function HomeScreen() {
 
               {/* ─── Section 3: Pro Scene ─── */}
               <SectionHeader 
-                icon="star" 
+                icon="PRO" 
                 title="Pro Scene — Top Picks" 
                 description="Most picked heroes in professional tournament matches."
                 color="#8b5cf6" 
@@ -706,7 +724,7 @@ export default function HomeScreen() {
 
               {/* Pro Bans */}
               <SectionHeader 
-                icon="ban" 
+                icon="BAN" 
                 title="Pro Scene — Most Banned" 
                 description="The most feared heroes that pro teams consistently ban."
                 color="#ef4444" 
@@ -749,7 +767,7 @@ export default function HomeScreen() {
 
               {/* Recent Pro Matches */}
               <SectionHeader 
-                icon="game-controller" 
+                icon="MATCH" 
                 title="Recent Pro Matches" 
                 description="Latest results from professional tournaments and leagues."
                 color="#3b82f6" 
@@ -784,7 +802,7 @@ export default function HomeScreen() {
               {liveGames.length > 0 && (
                 <>
                   <SectionHeader 
-                    icon="radio" 
+                    icon="GLOBE" 
                     title="Live High-MMR Games" 
                     description="Ongoing high-level public matches from top players."
                     color="#ef4444" 

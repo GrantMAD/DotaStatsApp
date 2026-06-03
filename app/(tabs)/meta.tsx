@@ -12,6 +12,7 @@ import { BracketLeaderboards } from '../../src/components/meta/BracketLeaderboar
 import { CommunityDistribution } from '../../src/components/meta/CommunityDistribution';
 import { ScenarioFunFacts } from '../../src/components/meta/ScenarioFunFacts';
 import { ProVsPubMeta } from '../../src/components/meta/ProVsPubMeta';
+import { trackOpenDotaMetaInteraction } from '../../src/services/analytics';
 
 export default function MetaScreen() {
   const [activeTab, setActiveTab] = useState<'items' | 'lanes' | 'ranks' | 'pro' | 'community' | 'insights'>('items');

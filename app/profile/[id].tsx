@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { PlayerOverviewContent } from '../../src/components/PlayerOverviewContent';
 import { usePlayerProfile, usePlayerWinLoss } from '../../src/hooks/useOpenDota';
 import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
+import { trackProfileView } from '../../src/services/analytics';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
@@ -13,6 +14,12 @@ export default function ProfileScreen() {
   
   const { data: profile, isLoading: profileLoading, refetch: refetchProfile } = usePlayerProfile(id as string);
   const { data: wl, isLoading: wlLoading, refetch: refetchWl } = usePlayerWinLoss(id as string);
+
+  React.useEffect(() => {
+    if (profile?.profile) {
+      trackProfileView(id as string);
+    }
+  }, [profile, id]);
 
   const loading = profileLoading || wlLoading;
   const isPrivate = profile && !profile.last_match_time;
@@ -33,7 +40,6 @@ export default function ProfileScreen() {
           },
           headerTitleStyle: { color: 'white', fontFamily: 'Outfit-Bold' },
           headerTintColor: 'white',
-          headerBackTitleVisible: false,
         }} 
       />
       

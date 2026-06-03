@@ -10,7 +10,7 @@ export default function MatchScreen() {
 
   useEffect(() => {
     if (id) {
-      trackMatchView();
+      trackMatchView(id as string);
     }
   }, [id]);
 
@@ -26,7 +26,6 @@ export default function MatchScreen() {
           },
           headerTitleStyle: { color: 'white', fontFamily: 'Outfit-Bold' },
           headerTintColor: 'white',
-          headerBackTitleVisible: false,
         }} 
       />
       <MatchOverviewContent 

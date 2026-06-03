@@ -30,7 +30,7 @@ const ActivityFeedItem: React.FC<Props> = ({ item, onPressPlayer, onPressMatch }
       case 'win_streak': return { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)", icon: "flame", label: "Win Streak" };
       case 'mvp': return { color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)", icon: "medal", label: "MVP" };
       case 'rank_up': return { color: "#22c55e", bg: "rgba(34, 197, 94, 0.1)", icon: "trending-up", label: "Rank Up" };
-      default: return { color: "#9ca3af", bg: "rgba(156, 163, 175, 0.1)", icon: item.details.win ? "checkmark-circle" : "close-circle", label: "Recent Match" };
+      default: return { color: "#9ca3af", bg: "rgba(156, 163, 175, 0.1)", icon: item.details.win ? "check-circle" : "close-circle", label: "Recent Match" };
     }
   };
 
