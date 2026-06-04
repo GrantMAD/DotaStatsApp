@@ -251,7 +251,24 @@ function ProBanItem({ hero, index, onPress }: { hero: ProcessedHero; index: numb
   );
 }
 
+function SubSectionHeader({ icon, title, description, color }: { icon: string; title: string; description: string; color: string }) {
+  return (
+    <View style={{ paddingHorizontal: 24, marginTop: 16, marginBottom: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+        <Ionicons name={icon as any} size={14} color={color} style={{ marginRight: 6 }} />
+        <Text style={{ color: color, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.5 }}>
+          {title}
+        </Text>
+      </View>
+      <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '500', fontStyle: 'italic' }}>
+        {description}
+      </Text>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
+// ... (rest of the hooks and state unchanged)
   const router = useRouter();
   const { session, steamAccountId } = useSupabaseAuth();
   const { setMenuVisible } = useMenu();
@@ -486,11 +503,96 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Recently Viewed */}
-          <RecentlyViewed 
-            onPressItem={handlePressRecentItem} 
-            refreshTrigger={isRefreshing ? 1 : 0} 
-          />
+          {/* ─── Social & Activity Hub ─── */}
+          {session && (
+            <>
+              <SectionHeader 
+                icon="PRO" 
+                title="Social & Activity Hub" 
+                description="Your personal history and friend highlights in one place."
+                color="#8b5cf6" 
+              />
+
+              {/* Friends Activity Row */}
+              <SubSectionHeader 
+                icon="people" 
+                title="Friend Highlights" 
+                description="See what your network has been up to lately."
+                color="#22c55e" 
+              />
+              
+              <View style={{ paddingHorizontal: 24, marginBottom: 12 }}>
+                <View style={{ 
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+                  paddingHorizontal: 10, 
+                  paddingVertical: 4, 
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: 'rgba(34, 197, 94, 0.2)',
+                  alignSelf: 'flex-start'
+                }}>
+                  <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    {newHighlightsCount} New Highlights in last 24h
+                  </Text>
+                </View>
+              </View>
+
+              {loadingActivity ? (
+                <ActivityFeedSkeleton />
+              ) : (
+                <FlatList
+                  data={activities}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 20 }}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item, index }) => (
+                    <Animated.View entering={FadeInDown.delay(Math.min(index, 5) * 80).springify()}>
+                      <ActivityFeedItem 
+                        item={item} 
+                        onPressPlayer={openPlayerDetails} 
+                        onPressMatch={openMatchById} 
+                      />
+                    </Animated.View>
+                  )}
+                  ListEmptyComponent={
+                    <View style={{
+                      width: 200,
+                      height: 60,
+                      backgroundColor: '#1e1e2e',
+                      borderRadius: 12,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: '#2a2a3e',
+                      borderStyle: 'dashed',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Ionicons name="people-outline" size={16} color="#4b5563" style={{ marginRight: 8 }} />
+                      <Text style={{ color: '#4b5563', fontSize: 11, fontFamily: 'Outfit_600SemiBold' }}>
+                        No recent activity
+                      </Text>
+                    </View>
+                  }
+                />
+              )}
+
+              {/* Quick Access Row */}
+              <SubSectionHeader 
+                icon="time" 
+                title="Quick Access" 
+                description="Jump back into your recent research."
+                color="#94a3b8" 
+              />
+              <RecentlyViewed 
+                onPressItem={handlePressRecentItem} 
+                refreshTrigger={isRefreshing ? 1 : 0} 
+                compact
+                hideHeader
+              />
+            </>
+          )}
 
           {hasError ? (
             <ErrorCard 
@@ -499,73 +601,6 @@ export default function HomeScreen() {
             />
           ) : (
             <>
-              {/* ─── Section Activity Feed ─── */}
-              {session && (
-                <>
-                  <SectionHeader 
-                    icon="FRIENDS" 
-                    title="Friends Activity" 
-                    description="Recent achievements and matches from your friends."
-                    color="#22c55e" 
-                  />
-                  <View style={{ paddingHorizontal: 24, marginBottom: 12 }}>
-                    <View style={{ 
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)', 
-                      paddingHorizontal: 10, 
-                      paddingVertical: 4, 
-                      borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor: 'rgba(34, 197, 94, 0.2)',
-                      alignSelf: 'flex-start'
-                    }}>
-                      <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                        {newHighlightsCount} New Highlights in last 24h
-                      </Text>
-                    </View>
-                  </View>
-                  {loadingActivity ? (
-                    <ActivityFeedSkeleton />
-                  ) : (
-                    <FlatList
-                      data={activities}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ paddingHorizontal: 20 }}
-                      keyExtractor={(item) => item.id}
-                      renderItem={({ item, index }) => (
-                        <Animated.View entering={FadeInDown.delay(Math.min(index, 5) * 80).springify()}>
-                          <ActivityFeedItem 
-                            item={item} 
-                            onPressPlayer={openPlayerDetails} 
-                            onPressMatch={openMatchById} 
-                          />
-                        </Animated.View>
-                      )}
-                      ListEmptyComponent={
-                        <View style={{
-                          width: 200,
-                          height: 60,
-                          backgroundColor: '#1e1e2e',
-                          borderRadius: 12,
-                          padding: 12,
-                          borderWidth: 1,
-                          borderColor: '#2a2a3e',
-                          borderStyle: 'dashed',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <Ionicons name="people-outline" size={16} color="#4b5563" style={{ marginRight: 8 }} />
-                          <Text style={{ color: '#4b5563', fontSize: 11, fontFamily: 'Outfit_600SemiBold' }}>
-                            No recent activity
-                          </Text>
-                        </View>
-                      }
-                    />
-                  )}
-                </>
-              )}
-
               {/* ─── Section 0: Hero Meta Tier List ─── */}
               <SectionHeader 
                 icon="META" 
