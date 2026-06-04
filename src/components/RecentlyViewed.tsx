@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, ScrollView, Image, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getRecentlyViewed, RecentlyViewedItem } from '../services/analytics';
 import { getHeroImageUrl } from '../services/constants';
@@ -17,6 +17,7 @@ interface Props {
 export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compact = false, hideHeader = false }: Props) {
   const [items, setItems] = useState<RecentlyViewedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'hero' | 'match' | 'player'>('all');
 
   useEffect(() => {
     loadRecentItems();
@@ -29,6 +30,18 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
     setLoading(false);
   };
 
+  const filteredItems = useMemo(() => {
+    if (filter === 'all') return items;
+    return items.filter(item => item.type === filter);
+  }, [items, filter]);
+
+  const counts = useMemo(() => ({
+    all: items.length,
+    hero: items.filter(i => i.type === 'hero').length,
+    match: items.filter(i => i.type === 'match').length,
+    player: items.filter(i => i.type === 'player').length,
+  }), [items]);
+
   if (loading && items.length === 0) {
     return (
       <View style={{ height: compact ? 60 : 80, justifyContent: 'center', alignItems: 'center' }}>
@@ -40,6 +53,34 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
   if (items.length === 0) {
     return null;
   }
+
+  const TabButton = ({ type, label }: { type: 'all' | 'hero' | 'match' | 'player', label: string }) => (
+    <TouchableOpacity
+      onPress={() => setFilter(type)}
+      style={{
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        marginRight: 8,
+        backgroundColor: filter === type ? '#8b5cf6' : 'rgba(255, 255, 255, 0.05)',
+      }}
+    >
+      <Text style={{ 
+        color: filter === type ? '#fff' : '#94a3b8', 
+        fontSize: 10, 
+        fontWeight: '900',
+        textTransform: 'uppercase',
+      }}>
+        {label} ({counts[type]})
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const getBorderColor = (type: string) => {
+    if (type === 'hero') return '#f59e0b';
+    if (type === 'match') return '#6366f1';
+    return '#10b981';
+  };
 
   return (
     <View style={{ marginTop: hideHeader ? 0 : 24 }}>
@@ -73,6 +114,15 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
         </View>
       )}
 
+      {compact && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, marginBottom: 12 }}>
+          <TabButton type="all" label="All" />
+          <TabButton type="hero" label="Heroes" />
+          <TabButton type="match" label="Matches" />
+          <TabButton type="player" label="Players" />
+        </ScrollView>
+      )}
+
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
@@ -80,7 +130,7 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
         snapToInterval={compact ? 172 : 212}
         decelerationRate="fast"
       >
-        {items.map((item, index) => (
+        {filteredItems.map((item, index) => (
           <Animated.View 
             key={item.id} 
             entering={FadeInRight.delay(index * 80)}
@@ -89,19 +139,14 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
               <View style={{
                 width: compact ? 160 : 200,
                 height: compact ? 48 : 64,
-                backgroundColor: compact ? 'rgba(255, 255, 255, 0.05)' : '#161625',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
                 borderRadius: compact ? 12 : 16,
                 marginRight: 12,
                 padding: compact ? 8 : 10,
                 borderWidth: 1,
-                borderColor: compact ? 'rgba(255, 255, 255, 0.05)' : '#252538',
+                borderColor: compact ? `${getBorderColor(item.type)}40` : '#252538',
                 flexDirection: 'row',
                 alignItems: 'center',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-                elevation: compact ? 0 : 4
               }}>
                 {/* Visual Icon Section */}
                 <View style={{ position: 'relative', marginRight: compact ? 8 : 12 }}>
@@ -123,34 +168,11 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
                          resizeMode="cover"
                        />
                      ) : item.type === 'match' ? (
-                       <Ionicons name="stats-chart" size={compact ? 14 : 20} color="#8b5cf6" />
+                       <Ionicons name="stats-chart" size={compact ? 14 : 20} color={getBorderColor('match')} />
                      ) : (
-                       <Ionicons name="person" size={compact ? 14 : 20} color="#2dd4bf" />
+                       <Ionicons name="person" size={compact ? 14 : 20} color={getBorderColor('player')} />
                      )}
                    </View>
-                   
-                   {/* Small Status Type Indicator */}
-                   {!compact && (
-                     <View style={{
-                       position: 'absolute',
-                       bottom: -2,
-                       right: -2,
-                       backgroundColor: '#0f172a',
-                       borderRadius: 6,
-                       width: 14,
-                       height: 14,
-                       alignItems: 'center',
-                       justifyContent: 'center',
-                       borderWidth: 1,
-                       borderColor: '#2a2a3e'
-                     }}>
-                       <Ionicons 
-                         name={item.type === 'hero' ? 'flash' : item.type === 'match' ? 'trophy' : 'people'} 
-                         size={8} 
-                         color={item.type === 'hero' ? '#fbbf24' : item.type === 'match' ? '#8b5cf6' : '#2dd4bf'} 
-                       />
-                     </View>
-                   )}
                 </View>
 
                 {/* Content Section */}
@@ -164,8 +186,6 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
                     </Text>
                   </View>
                 </View>
-
-                {!compact && <Ionicons name="chevron-forward" size={14} color="#2a2a3e" style={{ marginLeft: 4 }} />}
               </View>
             </PressableScale>
           </Animated.View>
