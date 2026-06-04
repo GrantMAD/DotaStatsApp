@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import {
   View, Text, Image, TouchableOpacity, TextInput,
-  ScrollView, FlatList, ActivityIndicator, RefreshControl,
+  ScrollView, FlatList, ActivityIndicator, RefreshControl, TouchableWithoutFeedback, Keyboard,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -30,7 +30,7 @@ import PressableScale from '../../src/components/PressableScale';
 import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
 import { useMenu } from './_layout';
-import { trackScreenView } from '../../src/services/analytics';
+import { trackScreenView, getRecentSearches } from '../../src/services/analytics';
 import { useModals } from '../../src/context/ModalContext';
 import { calculateTierList, getBracketFromRankTier, BRACKET_NAMES, TierHero } from '../../src/services/tierList';
 import ErrorBoundary from '../../src/components/ErrorBoundary';
@@ -302,6 +302,8 @@ export default function HomeScreen() {
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isHistoryVisible, setIsHistoryVisible] = useState(false);
 
   // Pro Bans Expand State
   const [isBansExpanded, setIsBansExpanded] = useState(false);
@@ -318,10 +320,18 @@ export default function HomeScreen() {
   const sTier = useMemo(() => tierList.filter(h => h.tier === 'S'), [tierList]);
   const aTier = useMemo(() => tierList.filter(h => h.tier === 'A').slice(0, 10), [tierList]);
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) return;
-    router.push({ pathname: '/search', params: { q: searchQuery.trim() } });
+  const handleSearch = (query: string = searchQuery) => {
+    if (!query.trim()) return;
+    router.push({ pathname: '/search', params: { q: query.trim() } });
     setSearchQuery('');
+    setIsHistoryVisible(false);
+    Keyboard.dismiss();
+  };
+
+  const loadRecentSearches = async () => {
+    const searches = await getRecentSearches(5);
+    setRecentSearches(searches);
+    setIsHistoryVisible(true);
   };
 
   const openHeroModal = useCallback((heroId: number) => {
@@ -395,113 +405,141 @@ export default function HomeScreen() {
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#8b5cf6" />
           }
         >
-          {/* Header Content Area */}
-          <View style={{ paddingTop: 20, paddingHorizontal: 24 }}>
-            <AppLogo size={48} showText />
-            <Text style={{ color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 20, marginTop: 10 }}>
-              Hero stats, pro matches, and performance insights
-            </Text>
+          <TouchableWithoutFeedback onPress={() => setIsHistoryVisible(false)}>
+            {/* Header Content Area */}
+            <View style={{ paddingTop: 20, paddingHorizontal: 24 }}>
+              <AppLogo size={48} showText />
+              <Text style={{ color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 20, marginTop: 10 }}>
+                Hero stats, pro matches, and performance insights
+              </Text>
 
-            {/* Login / Signed-in indicator */}
-            {!session ? (
-              <PressableScale onPress={() => router.push('/sign-in')} style={{ width: '100%', marginBottom: 16 }}>
-                <View style={{
-                  backgroundColor: '#8b5cf6',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                }}>
-                  <Ionicons name="log-in" size={20} color="#fff" style={{ marginRight: 10 }} />
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign In</Text>
-                </View>
-              </PressableScale>
-            ) : !steamAccountId ? (
-              <PressableScale 
-                onPress={() => router.push('/profile')}
-                style={{ width: '100%', marginBottom: 16 }}
-              >
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#1E1E2E',
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: '#eab308',
-                  borderStyle: 'dashed',
-                }}>
-                  <Ionicons name="link" size={20} color="#eab308" style={{ marginRight: 10 }} />
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Link Steam Account</Text>
-                  <Ionicons name="chevron-forward" size={16} color="#eab308" style={{ marginLeft: 8 }} />
-                </View>
-              </PressableScale>
-            ) : (
-              <PressableScale 
-                onPress={() => router.push('/profile')}
-                style={{ width: '100%', marginBottom: 16 }}
-              >
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#1E1E2E',
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: '#22c55e',
-                  borderStyle: 'dashed',
-                }}>
-                  <Ionicons name="person-circle" size={20} color="#22c55e" style={{ marginRight: 10 }} />
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>View My Profile</Text>
-                  <Ionicons name="chevron-forward" size={16} color="#22c55e" style={{ marginLeft: 8 }} />
-                </View>
-              </PressableScale>
-            )}
+              {/* Login / Signed-in indicator */}
+              {!session ? (
+                <PressableScale onPress={() => router.push('/sign-in')} style={{ width: '100%', marginBottom: 16 }}>
+                  <View style={{
+                    backgroundColor: '#8b5cf6',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                  }}>
+                    <Ionicons name="log-in" size={20} color="#fff" style={{ marginRight: 10 }} />
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Sign In</Text>
+                  </View>
+                </PressableScale>
+              ) : !steamAccountId ? (
+                <PressableScale 
+                  onPress={() => router.push('/profile')}
+                  style={{ width: '100%', marginBottom: 16 }}
+                >
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#1E1E2E',
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#eab308',
+                    borderStyle: 'dashed',
+                  }}>
+                    <Ionicons name="link" size={20} color="#eab308" style={{ marginRight: 10 }} />
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Link Steam Account</Text>
+                    <Ionicons name="chevron-forward" size={16} color="#eab308" style={{ marginLeft: 8 }} />
+                  </View>
+                </PressableScale>
+              ) : (
+                <PressableScale 
+                  onPress={() => router.push('/profile')}
+                  style={{ width: '100%', marginBottom: 16 }}
+                >
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#1E1E2E',
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#22c55e',
+                    borderStyle: 'dashed',
+                  }}>
+                    <Ionicons name="person-circle" size={20} color="#22c55e" style={{ marginRight: 10 }} />
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>View My Profile</Text>
+                    <Ionicons name="chevron-forward" size={16} color="#22c55e" style={{ marginLeft: 8 }} />
+                  </View>
+                </PressableScale>
+              )}
 
-            {/* Search bar */}
-            <View style={{ width: '100%' }}>
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#1e1e2e',
-                padding: 12,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: '#2a2a3e',
-              }}>
-                <Ionicons name="search" size={18} color="#555" style={{ marginRight: 10 }} />
-                <TextInput
-                  placeholder="Search for players, heroes..."
-                  placeholderTextColor="#555"
-                  style={{ flex: 1, color: '#fff', fontSize: 14 }}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  onSubmitEditing={handleSearch}
-                  returnKeyType="search"
-                  autoCorrect={false}
-                />
-                {searchQuery.trim().length > 0 && (
-                  <PressableScale 
-                    onPress={handleSearch}
-                    style={{
-                      backgroundColor: '#8b5cf6',
-                      width: 32,
-                      height: 32,
-                      borderRadius: 8,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginLeft: 10
-                    }}
-                  >
-                    <Ionicons name="arrow-forward" size={18} color="#fff" />
-                  </PressableScale>
+              {/* Search bar */}
+              <View style={{ width: '100%' }}>
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#1e1e2e',
+                  padding: 12,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#2a2a3e',
+                }}>
+                  <Ionicons name="search" size={18} color="#555" style={{ marginRight: 10 }} />
+                  <TextInput
+                    placeholder="Search for players, heroes..."
+                    placeholderTextColor="#555"
+                    style={{ flex: 1, color: '#fff', fontSize: 14 }}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    onFocus={() => loadRecentSearches()}
+                    onBlur={() => setTimeout(() => setIsHistoryVisible(false), 200)}
+                    onSubmitEditing={() => handleSearch()}
+                    returnKeyType="search"
+                    autoCorrect={false}
+                  />
+                  {searchQuery.trim().length > 0 && (
+                    <PressableScale 
+                      onPress={() => handleSearch()}
+                      style={{
+                        backgroundColor: '#8b5cf6',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginLeft: 10
+                      }}
+                    >
+                      <Ionicons name="arrow-forward" size={18} color="#fff" />
+                    </PressableScale>
+                  )}
+                </View>
+
+                {isHistoryVisible && recentSearches.length > 0 && (
+                  <View style={{
+                    backgroundColor: '#1E1E2E',
+                    borderRadius: 12,
+                    marginTop: 8,
+                    padding: 8
+                  }}>
+                    <Text style={{ color: '#6b7280', fontSize: 10, fontFamily: 'Outfit_800ExtraBold', textTransform: 'uppercase', marginBottom: 8, paddingHorizontal: 8 }}>Recent Searches</Text>
+                    {recentSearches.map((item, index) => (
+                      <TouchableOpacity 
+                        key={index}
+                        onPress={() => {
+                          setSearchQuery(item);
+                          handleSearch(item);
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
+                      >
+                        <Ionicons name="time-outline" size={16} color="#6b7280" />
+                        <Text style={{ color: '#fff', fontFamily: 'Outfit_400Regular', marginLeft: 8 }}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 )}
               </View>
             </View>
-          </View>
+          </TouchableWithoutFeedback>
 
           {/* ─── Social & Activity Hub ─── */}
           {session && (
@@ -859,12 +897,10 @@ export default function HomeScreen() {
                   />
                 </>
               )}
-
-          </>
-        )}
-      </ScrollView>
-    </ErrorBoundary>
+            </>
+          )}
+        </ScrollView>
+      </ErrorBoundary>
     </LinearGradient>
   );
 }
-

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, FlatList, TouchableOpacity, Image, ActivityIndicator,
   Modal, Pressable, StyleSheet
@@ -20,7 +20,7 @@ import {
 } from '../../src/services/types';
 import { useMenu } from './_layout';
 import { getHeroImageUrl } from '../../src/services/constants';
-import { trackScreenView, trackOpenDotaPlayerSearch } from '../../src/services/analytics';
+import { trackScreenView, trackOpenDotaPlayerSearch, getRecentSearches } from '../../src/services/analytics';
 import { useQueryClient } from '@tanstack/react-query';
 import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
@@ -63,6 +63,8 @@ export default function SearchScreen() {
   const [query, setQuery] = useState(q || '');
   const [activeQuery, setActiveQuery] = useState(q || '');
   const [searchMode, setSearchMode] = useState<'global' | 'steam'>('global');
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isHistoryVisible, setIsHistoryVisible] = useState(false);
 
   const steamAccountIdToUse = steamAccountId ?? steamLocalAccountId;
   const steamNotLinked = !steamAccountId && !steamLocalAccountId;
@@ -111,8 +113,6 @@ export default function SearchScreen() {
   const results = searchMode === 'global' ? globalResults : steamFriendsResults;
   const searching = searchMode === 'global' ? searchingGlobal : loadingPeers;
 
-  // debug logging removed
-
   // Force-refetch persisted/possibly-cached peers when switching to Steam mode
   React.useEffect(() => {
     if (searchMode !== 'steam' || !steamAccountIdToUse) return;
@@ -134,6 +134,7 @@ export default function SearchScreen() {
         // This runs when the screen is blurred (navigated away)
         setQuery('');
         setActiveQuery('');
+        setIsHistoryVisible(false);
       };
     }, [])
   );
@@ -172,9 +173,16 @@ export default function SearchScreen() {
     checkAppUsers();
   }, [globalResults, peersArr, searchMode]);
 
-  const handleSearch = () => {
-    if (!query.trim()) return;
-    setActiveQuery(query);
+  const handleSearch = (searchQuery: string = query) => {
+    if (!searchQuery.trim()) return;
+    setActiveQuery(searchQuery);
+    setIsHistoryVisible(false);
+  };
+
+  const loadRecentSearches = async () => {
+    const searches = await getRecentSearches(5);
+    setRecentSearches(searches);
+    setIsHistoryVisible(true);
   };
 
   const renderResult = ({ item, index }: { item: any, index: number }) => {
@@ -388,7 +396,8 @@ export default function SearchScreen() {
                   placeholderTextColor="#6b7280"
                   value={query}
                   onChangeText={setQuery}
-                  onSubmitEditing={searchMode === 'global' ? handleSearch : undefined}
+                  onFocus={() => loadRecentSearches()}
+                  onSubmitEditing={searchMode === 'global' ? () => handleSearch() : undefined}
                   returnKeyType={searchMode === 'global' ? "search" : "done"}
                   autoCorrect={false}
                 />
@@ -404,7 +413,7 @@ export default function SearchScreen() {
 
                 {searchMode === 'global' && (
                   <TouchableOpacity
-                    onPress={handleSearch}
+                    onPress={() => handleSearch()}
                     style={{
                       backgroundColor: '#8b5cf6',
                       width: 40,
@@ -419,6 +428,30 @@ export default function SearchScreen() {
                   </TouchableOpacity>
                 )}
               </View>
+
+              {isHistoryVisible && recentSearches.length > 0 && searchMode === 'global' && (
+                <View style={{
+                  backgroundColor: '#1E1E2E',
+                  borderRadius: 12,
+                  marginBottom: 16,
+                  padding: 8
+                }}>
+                  <Text style={{ color: '#6b7280', fontSize: 10, fontFamily: 'Outfit_800ExtraBold', textTransform: 'uppercase', marginBottom: 8, paddingHorizontal: 8 }}>Recent Searches</Text>
+                  {recentSearches.map((item, index) => (
+                    <TouchableOpacity 
+                      key={index}
+                      onPress={() => {
+                        setQuery(item);
+                        handleSearch(item);
+                      }}
+                      style={{ flexDirection: 'row', alignItems: 'center', padding: 8 }}
+                    >
+                      <Ionicons name="time-outline" size={16} color="#6b7280" />
+                      <Text style={{ color: '#fff', fontFamily: 'Outfit_400Regular', marginLeft: 8 }}>{item}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
               {searchMode === 'steam' && (
                 <View style={{
@@ -444,7 +477,7 @@ export default function SearchScreen() {
                 </View>
               )}
 
-              {!results.length && !searching && !matchingHeroes.length && !matchingMatchId && (
+              {!results.length && !searching && !matchingHeroes.length && !matchingMatchId && !isHistoryVisible && (
                 <View style={{ paddingVertical: 80, justifyContent: 'center', alignItems: 'center' }}>
                   <View style={{
                     width: 100,
@@ -566,7 +599,7 @@ export default function SearchScreen() {
                 <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
                 <Text className="text-red-500 text-center mt-4 font-semibold text-lg">Search Error</Text>
                 <Text className="text-gray-400 text-center mt-2">{(error as any).message || 'An error occurred'}</Text>
-                <PressableScale onPress={handleSearch} className="mt-6 bg-zinc-800 px-6 py-2 rounded-lg">
+                <PressableScale onPress={() => handleSearch()} className="mt-6 bg-zinc-800 px-6 py-2 rounded-lg">
                   <Text className="text-white font-bold">Try Again</Text>
                 </PressableScale>
              </View>

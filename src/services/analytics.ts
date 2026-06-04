@@ -204,6 +204,54 @@ export async function getRecentlyViewed(limit: number = 10): Promise<RecentlyVie
 }
 
 /**
+ * Fetch recent searches for the current user or session
+ */
+export async function getRecentSearches(limit: number = 5): Promise<string[]> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let query = supabase
+      .from('analytics_events')
+      .select('metadata')
+      .in('event_type', ['search', 'opendota_player_search'])
+      .order('created_at', { ascending: false });
+
+    if (user) {
+      query = query.eq('user_id', user.id);
+    } else {
+      query = query.eq('session_id', getSessionId());
+    }
+
+    const { data, error } = await query.limit(limit * 5); // Fetch extra to filter uniques
+
+    if (error) throw error;
+    if (!data) return [];
+
+    const uniqueSearches = new Set<string>();
+    const results: string[] = [];
+
+    for (const event of data) {
+      if (results.length >= limit) break;
+
+      const metadata = event.metadata || {};
+      const queryStr = metadata.query;
+
+      if (queryStr && typeof queryStr === 'string' && !uniqueSearches.has(queryStr)) {
+        uniqueSearches.add(queryStr);
+        results.push(queryStr);
+      }
+    }
+
+    return results;
+  } catch (err) {
+    console.warn('Error fetching recent searches:', err);
+    return [];
+  }
+}
+
+/**
  * Submit pending events to Supabase
  */
 export async function submitPendingEvents(): Promise<void> {
