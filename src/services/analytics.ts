@@ -252,6 +252,73 @@ export async function getRecentSearches(limit: number = 5): Promise<string[]> {
 }
 
 /**
+ * Fetch community trending data (heroes and searches)
+ * Aggregates data from the last 48 hours
+ */
+export async function getCommunityTrending(): Promise<{ 
+  heroes: Array<{ id: number, name: string, count: number }>, 
+  searches: string[] 
+}> {
+  try {
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+    const { data: events, error } = await supabase
+      .from('analytics_events')
+      .select('event_type, metadata')
+      .in('event_type', ['hero_view', 'opendota_hero_view', 'search', 'opendota_player_search'])
+      .gte('created_at', fortyEightHoursAgo);
+
+    if (error) throw error;
+    if (!events) return { heroes: [], searches: [] };
+
+    // Aggregate Hero Views
+    const heroCounts: Record<number, { id: number, name: string, count: number }> = {};
+    // Aggregate Searches
+    const searchCounts: Record<string, number> = {};
+
+    events.forEach((event) => {
+      const metadata = event.metadata || {};
+      
+      if (event.event_type.includes('hero')) {
+        const heroId = metadata.heroId || metadata.hero_id;
+        const heroName = metadata.heroName || metadata.name;
+        
+        if (heroId) {
+          if (!heroCounts[heroId]) {
+            heroCounts[heroId] = { id: heroId, name: heroName || `Hero ${heroId}`, count: 0 };
+          }
+          heroCounts[heroId].count++;
+        }
+      } else if (event.event_type.includes('search')) {
+        const query = metadata.query;
+        if (query && typeof query === 'string' && query.trim().length > 1) {
+          const normalizedQuery = query.trim().toLowerCase();
+          searchCounts[normalizedQuery] = (searchCounts[normalizedQuery] || 0) + 1;
+        }
+      }
+    });
+
+    // Sort and limit
+    const trendingHeroes = Object.values(heroCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    const trendingSearches = Object.entries(searchCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([query]) => query);
+
+    return {
+      heroes: trendingHeroes,
+      searches: trendingSearches,
+    };
+  } catch (err) {
+    console.warn('Error fetching community trending:', err);
+    return { heroes: [], searches: [] };
+  }
+}
+
+/**
  * Submit pending events to Supabase
  */
 export async function submitPendingEvents(): Promise<void> {

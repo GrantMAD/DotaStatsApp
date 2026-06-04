@@ -13,11 +13,14 @@ import { CommunityDistribution } from '../../src/components/meta/CommunityDistri
 import { ScenarioFunFacts } from '../../src/components/meta/ScenarioFunFacts';
 import { ProVsPubMeta } from '../../src/components/meta/ProVsPubMeta';
 import { trackOpenDotaMetaInteraction } from '../../src/services/analytics';
+import { useHeroStats } from '../../src/hooks/useOpenDota';
+import CommunityTrendsSection from '../../src/components/CommunityTrendsSection';
 
 export default function MetaScreen() {
   const [activeTab, setActiveTab] = useState<'items' | 'lanes' | 'ranks' | 'pro' | 'community' | 'insights'>('items');
   const { setMenuVisible } = useMenu();
   const { session } = useSupabaseAuth();
+  const { data: heroesData = [] } = useHeroStats();
 
   React.useEffect(() => {
     trackOpenDotaMetaInteraction(activeTab);
@@ -129,7 +132,14 @@ export default function MetaScreen() {
           {activeTab === 'lanes' && <LaneRoleInsights />}
           {activeTab === 'ranks' && <BracketLeaderboards />}
           {activeTab === 'pro' && <ProVsPubMeta />}
-          {activeTab === 'community' && <CommunityDistribution />}
+          {activeTab === 'community' && (
+            <View>
+              <CommunityDistribution />
+              <View style={{ marginTop: 20, paddingTop: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' }}>
+                <CommunityTrendsSection initialHeroesData={heroesData} />
+              </View>
+            </View>
+          )}
           {activeTab === 'insights' && <ScenarioFunFacts />}
         </View>
 

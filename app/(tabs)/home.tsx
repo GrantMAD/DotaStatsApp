@@ -22,6 +22,7 @@ import { useActivityFeed } from '../../src/hooks/useActivityFeed';
 import ActivityFeedItem from '../../src/components/ActivityFeedItem';
 import AppLogo from '../../src/components/AppLogo';
 import RecentlyViewed from '../../src/components/RecentlyViewed';
+import CommunityTrendsSection from '../../src/components/CommunityTrendsSection';
 import { RecentlyViewedItem } from '../../src/services/analytics';
 import { ICON_MAP } from '../../src/services/iconMap';
 import { queryClient } from '../../src/services/queryClient';
@@ -629,6 +630,8 @@ export default function HomeScreen() {
                 compact
                 hideHeader
               />
+
+              <CommunityTrendsSection initialHeroesData={heroesData} />
             </>
           )}
 
