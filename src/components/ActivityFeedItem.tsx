@@ -26,8 +26,8 @@ const ActivityFeedItem: React.FC<Props> = ({ item, onPressPlayer, onPressMatch }
       case 'aegis_snatch': return { color: "#22d3ee", bg: "rgba(34, 211, 238, 0.1)", icon: "shield-alert", label: "Aegis Snatched" };
       case 'rapier': return { color: "#fbbf24", bg: "rgba(251, 191, 36, 0.1)", icon: "sword", label: "Divine Rapier" };
       case 'godlike': return { color: "#a855f7", bg: "rgba(168, 85, 247, 0.1)", icon: "crown", label: "Godlike Streak" };
-      case 'benchmark': return { color: "#60a5fa", bg: "rgba(96, 165, 250, 0.1)", icon: "award", label: "Elite Performance" };
-      case 'win_streak': return { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)", icon: "flame", label: "Win Streak" };
+      case 'benchmark': return { color: "#60a5fa", bg: "rgba(96, 165, 250, 0.1)", icon: "trophy", label: "Elite Performance" };
+      case 'win_streak': return { color: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)", icon: "fire", label: "Win Streak" };
       case 'mvp': return { color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)", icon: "medal", label: "MVP" };
       case 'rank_up': return { color: "#22c55e", bg: "rgba(34, 197, 94, 0.1)", icon: "trending-up", label: "Rank Up" };
       default: return { color: "#9ca3af", bg: "rgba(156, 163, 175, 0.1)", icon: item.details.win ? "check-circle" : "close-circle", label: "Recent Match" };

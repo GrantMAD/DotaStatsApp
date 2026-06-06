@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { useOpenDota } from '../../src/hooks/useOpenDota';
-import { getHeroImageUrl } from '../../src/services/apiUtils';
+import { openDotaApi } from '../../src/services/opendota';
+import { getHeroImageUrl } from '../../src/services/constants';
 import { PlayerSelectModal } from '../../src/components/PlayerSelectModal';
-import { CompareStatRow } from '../../src/components/CompareStatRow';
+import CompareStatRow from '../../src/components/CompareStatRow';
 import { trackComparisonView } from '../../src/services/analytics';
 
 const { width } = Dimensions.get('window');
@@ -15,8 +15,6 @@ export default function CompareScreen() {
   const [p2, setP2] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectingFor, setSelectingFor] = useState<'p1' | 'p2' | null>(null);
-
-  const { getPlayerDetails, getPlayerWinLoss, getPlayerHeroes } = useOpenDota();
 
   const [data1, setData1] = useState<any>(null);
   const [data2, setData2] = useState<any>(null);
@@ -33,12 +31,12 @@ export default function CompareScreen() {
     setLoading(true);
     try {
       const [details1, wl1, heroes1, details2, wl2, heroes2] = await Promise.all([
-        getPlayerDetails(p1.account_id),
-        getPlayerWinLoss(p1.account_id),
-        getPlayerHeroes(p1.account_id),
-        getPlayerDetails(p2.account_id),
-        getPlayerWinLoss(p2.account_id),
-        getPlayerHeroes(p2.account_id),
+        openDotaApi.getPlayerProfile(p1.account_id),
+        openDotaApi.getPlayerWinLoss(p1.account_id),
+        openDotaApi.getPlayerHeroes(p1.account_id),
+        openDotaApi.getPlayerProfile(p2.account_id),
+        openDotaApi.getPlayerWinLoss(p2.account_id),
+        openDotaApi.getPlayerHeroes(p2.account_id),
       ]);
 
       setData1({ details: details1, wl: wl1, heroes: heroes1 });
@@ -138,29 +136,21 @@ export default function CompareScreen() {
               
               <CompareStatRow 
                 label="WIN RATE"
-                val1={winRate1 + '%'}
-                val2={winRate2 + '%'}
-                percent1={Number(winRate1)}
-                percent2={Number(winRate2)}
-                isBetter={Number(winRate1) > Number(winRate2)}
+                val1={winRate1}
+                val2={winRate2}
+                unit="%"
               />
 
               <CompareStatRow 
                 label="RANK TIER"
                 val1={data1.details?.rank_tier || '??'}
                 val2={data2.details?.rank_tier || '??'}
-                percent1={((data1.details?.rank_tier || 0) / 80) * 100}
-                percent2={((data2.details?.rank_tier || 0) / 80) * 100}
-                isBetter={(data1.details?.rank_tier || 0) > (data2.details?.rank_tier || 0)}
               />
 
               <CompareStatRow 
                 label="TOTAL GAMES"
                 val1={data1.wl.win + data1.wl.lose}
                 val2={data2.wl.win + data2.wl.lose}
-                percent1={Math.min(((data1.wl.win + data1.wl.lose) / 5000) * 100, 100)}
-                percent2={Math.min(((data2.wl.win + data2.wl.lose) / 5000) * 100, 100)}
-                isBetter={(data1.wl.win + data1.wl.lose) > (data2.wl.win + data2.wl.lose)}
               />
             </View>
 

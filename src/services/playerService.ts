@@ -42,20 +42,13 @@ export async function searchPlayers(query: string): Promise<SearchResult[]> {
     }
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
-
   try {
-    return await fetchFromOpenDota<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`, {
-      signal: controller.signal
-    });
+    return await fetchFromOpenDota<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`);
   } catch (error: any) {
-    if (error.name === 'AbortError') {
+    if (error.status === 408) {
       throw new Error('Search timed out. Try using a Steam ID for instant results.');
     }
     throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
 }
 
