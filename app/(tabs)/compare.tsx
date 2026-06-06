@@ -7,6 +7,8 @@ import { getHeroImageUrl } from '../../src/services/constants';
 import { PlayerSelectModal } from '../../src/components/PlayerSelectModal';
 import CompareStatRow from '../../src/components/CompareStatRow';
 import { trackComparisonView } from '../../src/services/analytics';
+import { useSteamAuth } from '../../src/hooks/useSteamAuth';
+import { useSupabaseAuth } from '../../src/context/SupabaseAuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -15,6 +17,9 @@ export default function CompareScreen() {
   const [p2, setP2] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectingFor, setSelectingFor] = useState<'p1' | 'p2' | null>(null);
+  const { accountId: steamLocalAccountId } = useSteamAuth();
+  const { steamAccountId: supabaseSteamId } = useSupabaseAuth();
+  const myAccountId = supabaseSteamId ?? steamLocalAccountId;
 
   const [data1, setData1] = useState<any>(null);
   const [data2, setData2] = useState<any>(null);
@@ -60,6 +65,29 @@ export default function CompareScreen() {
     setSelectingFor(null);
   };
 
+  const handleAddMe = async (target: 'p1' | 'p2') => {
+    if (!myAccountId) return;
+    setLoading(true);
+    try {
+      const profile = await openDotaApi.getPlayerProfile(myAccountId);
+      if (profile && profile.profile) {
+        const playerObj = {
+          account_id: myAccountId,
+          personaname: profile.profile.personaname,
+          avatarfull: profile.profile.avatarfull
+        };
+        if (target === 'p1') setP1(playerObj);
+        else setP2(playerObj);
+      }
+    } catch (error) {
+      console.error('Error adding self to comparison:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isMeInComparison = (p1?.account_id?.toString() === myAccountId) || (p2?.account_id?.toString() === myAccountId);
+
   const winRate1 = data1?.wl ? (data1.wl.win / (data1.wl.win + data1.wl.lose) * 100).toFixed(1) : '0';
   const winRate2 = data2?.wl ? (data2.wl.win / (data2.wl.win + data2.wl.lose) * 100).toFixed(1) : '0';
 
@@ -73,27 +101,39 @@ export default function CompareScreen() {
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Selection Area */}
         <View className="flex-row p-4 gap-4">
-          <TouchableOpacity 
-            onPress={() => handleOpenSelect('p1')}
-            className="flex-1 aspect-square bg-zinc-900 rounded-3xl border border-zinc-800 items-center justify-center overflow-hidden"
-          >
+          <View className="flex-1 aspect-square bg-zinc-900 rounded-3xl border border-zinc-800 items-center justify-center overflow-hidden">
             {p1 ? (
-              <>
+              <TouchableOpacity 
+                onPress={() => handleOpenSelect('p1')}
+                className="w-full h-full"
+              >
                 <Image source={{ uri: p1.avatarfull }} className="w-full h-full absolute opacity-40" />
                 <View className="bg-black/40 w-full h-full items-center justify-center p-4">
                   <Image source={{ uri: p1.avatarfull }} className="w-16 h-16 rounded-2xl border-2 border-white/20 mb-2" />
                   <Text className="text-white font-black text-center text-xs" numberOfLines={1}>{p1.personaname}</Text>
                 </View>
-              </>
+              </TouchableOpacity>
             ) : (
-              <>
-                <View className="w-16 h-16 rounded-2xl bg-zinc-800 items-center justify-center mb-2">
+              <View className="items-center justify-center">
+                <TouchableOpacity 
+                  onPress={() => handleOpenSelect('p1')}
+                  className="w-16 h-16 rounded-2xl bg-zinc-800 items-center justify-center mb-2"
+                >
                   <Ionicons name="add" size={32} color="#555" />
-                </View>
-                <Text className="text-zinc-500 font-bold text-[10px] uppercase">Select Player 1</Text>
-              </>
+                </TouchableOpacity>
+                <Text className="text-zinc-500 font-bold text-[10px] uppercase mb-3">Select Player 1</Text>
+                {myAccountId && !isMeInComparison && (
+                  <TouchableOpacity 
+                    onPress={() => handleAddMe('p1')}
+                    className="bg-purple-600 px-4 py-2 rounded-xl flex-row items-center shadow-lg shadow-purple-500/40"
+                  >
+                    <Ionicons name="person" size={14} color="white" className="mr-2" />
+                    <Text className="text-white font-black text-[10px] uppercase tracking-widest">Add Me</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </TouchableOpacity>
+          </View>
 
           <View className="items-center justify-center">
             <View className="w-10 h-10 rounded-full bg-purple-500 items-center justify-center shadow-lg shadow-purple-500/50">
@@ -101,27 +141,39 @@ export default function CompareScreen() {
             </View>
           </View>
 
-          <TouchableOpacity 
-            onPress={() => handleOpenSelect('p2')}
-            className="flex-1 aspect-square bg-zinc-900 rounded-3xl border border-zinc-800 items-center justify-center overflow-hidden"
-          >
+          <View className="flex-1 aspect-square bg-zinc-900 rounded-3xl border border-zinc-800 items-center justify-center overflow-hidden">
             {p2 ? (
-              <>
+              <TouchableOpacity 
+                onPress={() => handleOpenSelect('p2')}
+                className="w-full h-full"
+              >
                 <Image source={{ uri: p2.avatarfull }} className="w-full h-full absolute opacity-40" />
                 <View className="bg-black/40 w-full h-full items-center justify-center p-4">
                   <Image source={{ uri: p2.avatarfull }} className="w-16 h-16 rounded-2xl border-2 border-white/20 mb-2" />
                   <Text className="text-white font-black text-center text-xs" numberOfLines={1}>{p2.personaname}</Text>
                 </View>
-              </>
+              </TouchableOpacity>
             ) : (
-              <>
-                <View className="w-16 h-16 rounded-2xl bg-zinc-800 items-center justify-center mb-2">
+              <View className="items-center justify-center">
+                <TouchableOpacity 
+                  onPress={() => handleOpenSelect('p2')}
+                  className="w-16 h-16 rounded-2xl bg-zinc-800 items-center justify-center mb-2"
+                >
                   <Ionicons name="add" size={32} color="#555" />
-                </View>
-                <Text className="text-zinc-500 font-bold text-[10px] uppercase">Select Player 2</Text>
-              </>
+                </TouchableOpacity>
+                <Text className="text-zinc-500 font-bold text-[10px] uppercase mb-3">Select Player 2</Text>
+                {myAccountId && !isMeInComparison && (
+                  <TouchableOpacity 
+                    onPress={() => handleAddMe('p2')}
+                    className="bg-purple-600 px-4 py-2 rounded-xl flex-row items-center shadow-lg shadow-purple-500/40"
+                  >
+                    <Ionicons name="person" size={14} color="white" className="mr-2" />
+                    <Text className="text-white font-black text-[10px] uppercase tracking-widest">Add Me</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
 
         {loading ? (

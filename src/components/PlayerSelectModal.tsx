@@ -16,7 +16,7 @@ import { usePlayerProfile } from '../hooks/useOpenDota';
 interface PlayerSelectModalProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (accountId: string) => void;
+  onSelect: (player: { account_id: string; personaname: string; avatarfull: string }) => void;
   title?: string;
 }
 
@@ -29,14 +29,22 @@ function PlayerSelectItem({
   accountId: string; 
   steamName: string; 
   isFriend: boolean; 
-  onSelect: (accountId: string) => void;
+  onSelect: (player: { account_id: string; personaname: string; avatarfull: string }) => void;
 }) {
   const { data: profile, isLoading } = usePlayerProfile(accountId);
   const avatarUrl = profile?.profile?.avatarfull;
 
+  const handleSelect = () => {
+    onSelect({
+      account_id: accountId,
+      personaname: profile?.profile?.personaname || steamName,
+      avatarfull: avatarUrl || ''
+    });
+  };
+
   return (
     <TouchableOpacity 
-      onPress={() => onSelect(accountId)}
+      onPress={handleSelect}
       className="p-4 mx-4 mb-2 flex-row items-center bg-white/5 rounded-xl border border-transparent active:border-purple-500/50 active:bg-white/10"
     >
       {avatarUrl ? (

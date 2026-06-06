@@ -26,3 +26,19 @@ export function calculateLaningGrade(efficiency: number | null, percentile: numb
   if (score >= 25) return { grade: 'D', color: '#ef4444', label: 'Guardian' };
   return { grade: 'F', color: '#b91c1c', label: 'Herald' };
 }
+
+/**
+ * Normalizes a draft advantage score into a percentage for Radiant.
+ * @param matchups Array of matchup winrate differences
+ * @param radiantPicks Array of Radiant hero IDs
+ * @param direPicks Array of Dire hero IDs
+ */
+export function calculateDraftAdvantage(matchups: any[], radiantPicks: number[], direPicks: number[]) {
+  if (!matchups || matchups.length === 0 || radiantPicks.length === 0 || direPicks.length === 0) {
+    return 50;
+  }
+
+  // Placeholder for the logic that will be used inside the component
+  // where the data is actually available.
+  return 50;
+}
