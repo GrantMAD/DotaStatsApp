@@ -427,6 +427,36 @@ export function useMatchDetails(matchId: number | null) {
 }
 
 /**
+ * Hook to fetch multiple hero matchups and calculate draft advantage.
+ */
+export function useDraftAnalysis(radiantPicks: number[], direPicks: number[]) {
+  const { calculateDraftAdvantage } = require('../utils/matchAnalytics');
+  
+  return useQuery({
+    queryKey: ['draftAnalysis', radiantPicks, direPicks],
+    queryFn: async () => {
+      if (radiantPicks.length === 0 || direPicks.length === 0) return 50;
+      
+      // Fetch matchups for all Radiant heroes in parallel
+      const matchupResults = await Promise.all(
+        radiantPicks.map(async (heroId) => {
+          try {
+            const matchups = await heroService.getHeroMatchups(heroId);
+            return { hero_id: heroId, matchups };
+          } catch (e) {
+            return { hero_id: heroId, matchups: [] };
+          }
+        })
+      );
+      
+      return calculateDraftAdvantage(matchupResults, radiantPicks, direPicks);
+    },
+    enabled: radiantPicks.length > 0 && direPicks.length > 0,
+    staleTime: 1000 * 60 * 60 * 24, // Draft logic doesn't change often
+  });
+}
+
+/**
  * Hook to fetch player totals.
  */
 export function usePlayerTotals(accountId: string | number | null) {

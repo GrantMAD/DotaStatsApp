@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,7 @@ import { Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-ico
 import { LineChart } from "react-native-chart-kit";
 import {
   MatchDetails,
-  PickBan,
-  MatchObjective
+  PickBan
 } from '../services/types';
 import { requestMatchParse } from '../services/matchService';
 import { GAME_MODES } from '../services/apiUtils';
@@ -23,18 +22,15 @@ import {
   getHeroImageUrl,
   getItemImageUrl,
   getItemImageUrlByName,
-  LOBBY_TYPES,
-  REGIONS,
   HEROES
 } from '../services/constants';
 import { getChatWheelPhrase } from '../services/chatwheel';
 import * as Linking from 'expo-linking';
-import { useMatchDetails, usePlayerPeers } from '../hooks/useOpenDota';
+import { useMatchDetails, usePlayerPeers, useDraftAnalysis } from '../hooks/useOpenDota';
 import { useSupabaseAuth } from '../context/SupabaseAuthContext';
 import { trackMatchSnapshot } from '../services/analytics';
 import { MatchOverviewSkeleton } from './Skeleton';
 import GlassModal from './GlassModal';
-import MeshGradient from './MeshGradient';
 import PressableScale from './PressableScale';
 import { calculateLaningGrade } from '../utils/matchAnalytics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -458,19 +454,9 @@ function MatchTimeline({ match }: { match: MatchDetails }) {
   );
 }
 
-const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode: number }) => {
+const DraftDisplay = ({ picksBans, gameMode, draftAdvantage }: { picksBans: PickBan[], gameMode: number, draftAdvantage: number }) => {
   const radiantPicks = picksBans.filter(pb => pb.team === 0 && pb.is_pick).sort((a, b) => a.order - b.order);
   const direPicks = picksBans.filter(pb => pb.team === 1 && pb.is_pick).sort((a, b) => a.order - b.order);
-
-  const radiantHeroIds = radiantPicks.map(p => p.hero_id);
-  const direHeroIds = direPicks.map(p => p.hero_id);
-
-  const draftAdvantage = useMemo(() => {
-    if (radiantHeroIds.length === 0 || direHeroIds.length === 0) return 50;
-    const seed = radiantHeroIds.reduce((a, b) => a + b, 0) - direHeroIds.reduce((a, b) => a + b, 0);
-    const mockAdvantage = 50 + (seed % 15);
-    return Math.min(Math.max(mockAdvantage, 30), 70);
-  }, [radiantHeroIds, direHeroIds]);
 
   const allBans = picksBans.filter(pb => !pb.is_pick).sort((a, b) => a.order - b.order);
   const radiantBans = allBans.filter(pb => pb.team === 0);
@@ -479,7 +465,7 @@ const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode:
   const isStructuredDraft = gameMode === 2 || gameMode === 16;
 
   return (
-    <View className="bg-[#2a2a2a] p-5 rounded-2xl mb-6 border border-zinc-800 shadow-xl overflow-hidden">
+    <View className="bg-[#2a2a2a] p-5 rounded-2xl mb-6 border border-zinc-800 shadow-xl overflow-hidden relative">
       <View className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-win/20 via-transparent to-loss/20 opacity-30" />
       
       <Text className="text-gray-500 uppercase tracking-[0.3em] text-[9px] font-black mb-6 text-center">Strategic Draft Analysis</Text>
@@ -528,13 +514,15 @@ const DraftDisplay = ({ picksBans, gameMode }: { picksBans: PickBan[], gameMode:
       </View>
 
       {/* Draft Flavor Text */}
-      <View className="flex-row items-center justify-center bg-zinc-900/50 py-1.5 px-4 rounded-full self-center border border-white/5">
-        <FontAwesome5 
-          name={draftAdvantage > 55 ? "trending-up" : draftAdvantage < 45 ? "trending-down" : "balance-scale"} 
-          size={10} 
-          color={draftAdvantage > 55 ? "#10b981" : draftAdvantage < 45 ? "#ef4444" : "#71717a"} 
+      <View className="flex-row items-center justify-center bg-zinc-900/80 py-2.5 px-5 rounded-full self-center border border-white/10 shadow-lg">
+        <MaterialCommunityIcons 
+          name={draftAdvantage > 55 ? "trending-up" : draftAdvantage < 45 ? "trending-down" : "scale-balance"} 
+          size={14} 
+          color={draftAdvantage > 55 ? "#10b981" : draftAdvantage < 45 ? "#ef4444" : "#a1a1aa"} 
         />
-        <Text className="text-[8px] font-black uppercase tracking-widest ml-2 text-gray-400">
+        <Text className={`text-[10px] font-black uppercase tracking-[0.1em] ml-2 ${
+          draftAdvantage > 55 ? "text-win" : draftAdvantage < 45 ? "text-loss" : "text-gray-400"
+        }`}>
           {draftAdvantage > 55 ? "Radiant Draft Advantage" : draftAdvantage < 45 ? "Dire Draft Advantage" : "Balanced Composition"}
         </Text>
       </View>
@@ -562,6 +550,19 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
   const currentUserId = steamAccountId ? steamAccountId.toString() : null;
   const { data: matchData, isLoading: loading } = useMatchDetails(visible ? matchId : null);
   const { data: userPeers = [] } = usePlayerPeers(visible ? currentUserId : null);
+
+  const radiantPicks = useMemo(() => 
+    matchData?.picks_bans?.filter(pb => pb.team === 0 && pb.is_pick).map(p => p.hero_id) || [], 
+    [matchData]
+  );
+  const direPicks = useMemo(() => 
+    matchData?.picks_bans?.filter(pb => pb.team === 1 && pb.is_pick).map(p => p.hero_id) || [], 
+    [matchData]
+  );
+
+  const { data: draftAdvantageResult, isLoading: draftLoading } = useDraftAnalysis(radiantPicks, direPicks);
+  const draftAdvantage = draftAdvantageResult || 50;
+
   const [activeTab, setActiveTab] = useState<MatchTab>('Scoreboard');
   const [isParsing, setIsParsing] = useState(false);
   const [parseRequested, setParseRequested] = useState(false);
@@ -1053,7 +1054,7 @@ export function MatchOverviewModal({ visible, matchId, onClose, onPushPlayer }: 
                     )}
                   </View>
                 )}
-                {matchData.picks_bans && <DraftDisplay picksBans={matchData.picks_bans} gameMode={matchData.game_mode} />}
+                {matchData.picks_bans && <DraftDisplay picksBans={matchData.picks_bans} gameMode={matchData.game_mode} draftAdvantage={draftAdvantage} />}
                 <View className="mb-6">
                   <LinearGradient colors={['rgba(16, 185, 129, 0.15)', 'transparent']} start={{x:0, y:0.5}} end={{x:1, y:0.5}} className="px-4 py-2 rounded-t-xl border-l-2 border-win mb-1">
                      <Text className="text-win font-bold uppercase text-[10px] tracking-widest italic">Radiant Dominion</Text>
