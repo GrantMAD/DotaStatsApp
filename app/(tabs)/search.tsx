@@ -26,6 +26,7 @@ import GlassHeader from '../../src/components/GlassHeader';
 import NotificationBell from '../../src/components/NotificationBell';
 import PressableScale from '../../src/components/PressableScale';
 import Skeleton from '../../src/components/Skeleton';
+import { IntelligenceBadge } from '../../src/components/IntelligenceBadge';
 
 function SearchSkeleton() {
   return (
@@ -363,7 +364,7 @@ export default function SearchScreen() {
                     fontFamily: 'Outfit_700Bold',
                     fontSize: 12,
                     marginLeft: 8,
-                    color: searchMode === 'steam' ? 'white' : '#9ca3af'
+                    color: searchMode === 'steam' ? 'white' : "#9ca3af"
                   }}>
                     STEAM FRIENDS
                   </Text>
@@ -520,9 +521,7 @@ export default function SearchScreen() {
               {/* Hero Results Section */}
               {matchingHeroes.length > 0 && searchMode === 'global' && (
                 <View style={{ marginTop: 20 }}>
-                  <Text style={{ color: '#8b5cf6', fontSize: 12, fontFamily: 'Outfit_800ExtraBold', marginBottom: 12, letterSpacing: 1 }}>
-                    MATCHING HEROES
-                  </Text>
+                  <IntelligenceBadge type="hero" className="self-start mb-3" />
                   {matchingHeroes.map(hero => (
                     <TouchableOpacity 
                       key={hero.id} 
@@ -554,9 +553,7 @@ export default function SearchScreen() {
               {/* Match ID Section */}
               {matchingMatchId && searchMode === 'global' && (
                 <View style={{ marginTop: 20 }}>
-                  <Text style={{ color: '#3b82f6', fontSize: 12, fontFamily: 'Outfit_800ExtraBold', marginBottom: 12, letterSpacing: 1 }}>
-                    MATCH ID
-                  </Text>
+                  <IntelligenceBadge type="match" className="self-start mb-3" />
                   <TouchableOpacity 
                     onPress={() => router.push(`/match/${matchingMatchId}`)}
                     style={{ 
@@ -583,9 +580,7 @@ export default function SearchScreen() {
 
               {/* Players Header */}
               {results.length > 0 && (
-                <Text style={{ color: '#22c55e', fontSize: 12, fontFamily: 'Outfit_800ExtraBold', marginTop: 24, marginBottom: 12, letterSpacing: 1 }}>
-                  PLAYERS
-                </Text>
+                <IntelligenceBadge type="player" className="self-start mt-6 mb-3" />
               )}
             </View>
           }

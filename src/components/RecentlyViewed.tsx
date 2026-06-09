@@ -6,6 +6,7 @@ import { getHeroImageUrl } from '../services/constants';
 import Animated, { FadeInRight } from 'react-native-reanimated';
 import PressableScale from './PressableScale';
 import { formatDistanceToNow } from 'date-fns';
+import { IntelligenceBadge } from './IntelligenceBadge';
 
 interface Props {
   onPressItem: (item: RecentlyViewedItem) => void;
@@ -76,12 +77,6 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
     </TouchableOpacity>
   );
 
-  const getBorderColor = (type: string) => {
-    if (type === 'hero') return '#f59e0b';
-    if (type === 'match') return '#6366f1';
-    return '#10b981';
-  };
-
   return (
     <View style={{ marginTop: hideHeader ? 0 : 24 }}>
       {!hideHeader && (
@@ -144,7 +139,7 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
                 marginRight: 12,
                 padding: compact ? 8 : 10,
                 borderWidth: 1,
-                borderColor: compact ? `${getBorderColor(item.type)}40` : '#252538',
+                borderColor: '#252538',
                 flexDirection: 'row',
                 alignItems: 'center',
               }}>
@@ -168,23 +163,23 @@ export default function RecentlyViewed({ onPressItem, refreshTrigger = 0, compac
                          resizeMode="cover"
                        />
                      ) : item.type === 'match' ? (
-                       <Ionicons name="stats-chart" size={compact ? 14 : 20} color={getBorderColor('match')} />
+                       <Ionicons name="stats-chart" size={compact ? 14 : 20} color="#6366f1" />
                      ) : (
-                       <Ionicons name="person" size={compact ? 14 : 20} color={getBorderColor('player')} />
+                       <Ionicons name="person" size={compact ? 14 : 20} color="#10b981" />
                      )}
                    </View>
                 </View>
 
                 {/* Content Section */}
                 <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <IntelligenceBadge 
+                    type={item.type as 'hero' | 'match' | 'player'} 
+                    showIcon={false}
+                    className="self-start mb-1"
+                  />
                   <Text style={{ color: '#fff', fontSize: compact ? 11 : 12, fontWeight: '800' }} numberOfLines={1}>
                     {item.title}
                   </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                    <Text style={{ color: '#64748b', fontSize: compact ? 9 : 10, fontWeight: '600' }} numberOfLines={1}>
-                      {formatDistanceToNow(new Date(item.timestamp), { addSuffix: false })} ago
-                    </Text>
-                  </View>
                 </View>
               </View>
             </PressableScale>
