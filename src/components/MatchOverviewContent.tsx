@@ -17,7 +17,7 @@ import {
   MatchDetails,
   PickBan
 } from '../services/types';
-import { requestMatchParse } from '../services/matchService';
+import { requestMatchParse, getParseStatus } from '../services/matchService';
 import { GAME_MODES } from '../services/apiUtils';
 import {
   getHeroImageUrl,
@@ -34,8 +34,11 @@ import { MatchOverviewSkeleton } from './Skeleton';
 import PressableScale from './PressableScale';
 import { calculateLaningGrade } from '../utils/matchAnalytics';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
 
 type MatchTab = 'Scoreboard' | 'Highlights' | 'Economy' | 'Timeline' | 'Chat';
+type ParseStatus = 'idle' | 'queued' | 'parsing' | 'done' | 'failed';
 
 interface MatchOverviewContentProps {
   matchId: number | string | null;
@@ -421,7 +424,7 @@ const DraftDisplay = ({ picksBans, gameMode, draftAdvantage }: { picksBans: Pick
 export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, isStandalone }: MatchOverviewContentProps) {
   const { steamAccountId } = useSupabaseAuth();
   const currentUserId = steamAccountId ? steamAccountId.toString() : null;
-  const { data: matchData, isLoading: loading } = useMatchDetails(matchId ? Number(matchId) : null);
+  const { data: matchData, isLoading: loading, refetch } = useMatchDetails(matchId ? Number(matchId) : null);
   const { data: userPeers = [] } = usePlayerPeers(currentUserId);
 
   const radiantPicks = useMemo(() => 
@@ -438,7 +441,7 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
 
   const [activeTab, setActiveTab] = useState<MatchTab>('Scoreboard');
   const [isParsing, setIsParsing] = useState(false);
-  const [parseRequested, setParseRequested] = useState(false);
+  const [parseStatus, setParseStatus] = useState<ParseStatus>('idle');
   const [showChatWheel, setShowChatWheel] = useState(true);
 
   useEffect(() => {
@@ -456,33 +459,168 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
     }
   }, [activeTab, matchId]);
 
+  // Effect to automatically refetch when parsing is "done"
+  useEffect(() => {
+    if (parseStatus === 'done') {
+      const timer = setTimeout(() => {
+        refetch();
+        // Wait a bit then reset to idle so the banner disappears if version is now present
+        setTimeout(() => setParseStatus('idle'), 2000);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [parseStatus, refetch]);
+
+  // Polling logic for parse job
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout;
+
+    if (parseStatus === 'queued' || parseStatus === 'parsing') {
+      const checkStatus = async () => {
+        try {
+          const jobId = await AsyncStorage.getItem(`parse_job_${matchId}`);
+          if (!jobId) {
+            setParseStatus('idle');
+            return;
+          }
+
+          const status = await getParseStatus(jobId);
+          if (!status || status.state === 'completed' || status.complete) {
+            setParseStatus('done');
+            await AsyncStorage.removeItem(`parse_job_${matchId}`);
+            Toast.show({
+              type: 'success',
+              text1: 'Match parsing complete!',
+              text2: 'Detailed statistics are now available.'
+            });
+          } else if (status.state === 'active') {
+            setParseStatus('parsing');
+          }
+        } catch (e) {
+          console.error('Error checking parse status:', e);
+        }
+      };
+
+      pollInterval = setInterval(checkStatus, 5000);
+
+      // 5 minute timeout to prevent infinite polling
+      timeoutId = setTimeout(() => {
+        clearInterval(pollInterval);
+        if (parseStatus !== 'done') {
+          setParseStatus('failed');
+          Toast.show({
+            type: 'error',
+            text1: 'Parsing timed out',
+            text2: 'OpenDota may be busy. Please try again later.'
+          });
+        }
+      }, 300000);
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [parseStatus, matchId]);
+
   const handleRequestParse = async () => {
     if (!matchId || isParsing) return;
     setIsParsing(true);
     try {
       const result = await requestMatchParse(Number(matchId));
-      if (result) setParseRequested(true);
-    } catch (e) { console.error(e); }
+      if (result && result.job) {
+        setParseStatus('queued');
+        await AsyncStorage.setItem(`parse_job_${matchId}`, result.job.jobId);
+        Toast.show({
+          type: 'info',
+          text1: 'Parse request submitted',
+          text2: 'Waiting for OpenDota to process replay data...'
+        });
+      }
+    } catch (e) { 
+      console.error(e); 
+      Toast.show({
+        type: 'error',
+        text1: 'Request failed',
+        text2: 'Failed to submit parse request to OpenDota.'
+      });
+    }
     finally { setIsParsing(false); }
   };
 
   const renderParseInstructions = (message: string) => (
-    <View className="bg-[#2a2a2a] p-8 rounded-2xl border border-zinc-800 items-center justify-center">
-      <View className="bg-zinc-800/50 p-4 rounded-full mb-4">
-        <Ionicons name="analytics-outline" size={32} color="#8b5cf6" />
+    <View style={{ 
+      backgroundColor: parseStatus === 'idle' ? 'rgba(245, 158, 11, 0.05)' : 
+                     (parseStatus === 'queued' || parseStatus === 'parsing') ? 'rgba(139, 92, 246, 0.05)' :
+                     parseStatus === 'done' ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+      borderColor: parseStatus === 'idle' ? 'rgba(245, 158, 11, 0.1)' :
+                  (parseStatus === 'queued' || parseStatus === 'parsing') ? 'rgba(139, 92, 246, 0.1)' :
+                  parseStatus === 'done' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+      borderWidth: 1,
+      padding: 12,
+      borderRadius: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12
+    }}>
+      <View style={{ 
+        backgroundColor: parseStatus === 'idle' ? 'rgba(245, 158, 11, 0.1)' :
+                        (parseStatus === 'queued' || parseStatus === 'parsing') ? 'rgba(139, 92, 246, 0.1)' :
+                        parseStatus === 'done' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+        padding: 8,
+        borderRadius: 10
+      }}>
+        {parseStatus === 'idle' && <Ionicons name="analytics-outline" size={18} color="#f59e0b" />}
+        {(parseStatus === 'queued' || parseStatus === 'parsing') && <ActivityIndicator size="small" color="#8b5cf6" />}
+        {parseStatus === 'done' && <Ionicons name="checkmark-circle-outline" size={18} color="#22c55e" />}
+        {parseStatus === 'failed' && <Ionicons name="alert-circle-outline" size={18} color="#ef4444" />}
       </View>
-      <Text className="text-white font-bold text-center mb-2">Parsed Data Required</Text>
-      <Text className="text-gray-400 text-center text-xs mb-6 px-4">{message}</Text>
-      {!parseRequested ? (
-        <TouchableOpacity onPress={handleRequestParse} disabled={isParsing} className="bg-gamingAccent px-6 py-3 rounded-xl flex-row items-center">
-          <Ionicons name="cloud-upload-outline" size={18} color="white" />
-          <Text className="text-white font-bold ml-2">Request Parse</Text>
+
+      <View style={{ flex: 1 }}>
+        <Text style={{ 
+          color: parseStatus === 'idle' ? '#f59e0b' :
+                 (parseStatus === 'queued' || parseStatus === 'parsing') ? '#8b5cf6' :
+                 parseStatus === 'done' ? '#22c55e' : '#ef4444',
+          fontWeight: '900',
+          textTransform: 'uppercase',
+          fontSize: 10,
+          letterSpacing: 0.5,
+        }}>
+          {parseStatus === 'idle' && "Parse Required"}
+          {parseStatus === 'queued' && "Queued"}
+          {parseStatus === 'parsing' && "Analyzing"}
+          {parseStatus === 'done' && "Complete"}
+          {parseStatus === 'failed' && "Failed"}
+        </Text>
+        <Text style={{ color: '#9ca3af', fontSize: 10, fontWeight: '600' }} numberOfLines={1}>
+          {parseStatus === 'idle' && "Unlock economy & timeline logs"}
+          {parseStatus === 'queued' && "Waiting for OpenDota worker..."}
+          {parseStatus === 'parsing' && "Analyzing replay timings..."}
+          {parseStatus === 'done' && "Statistics updated."}
+          {parseStatus === 'failed' && "OpenDota is busy."}
+        </Text>
+      </View>
+
+      {parseStatus === 'idle' && (
+        <TouchableOpacity 
+          onPress={handleRequestParse} 
+          disabled={isParsing} 
+          style={{ backgroundColor: '#8b5cf6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+        >
+          <Text style={{ color: 'white', fontWeight: '900', fontSize: 10, textTransform: 'uppercase' }}>
+            {isParsing ? '...' : 'Parse'}
+          </Text>
         </TouchableOpacity>
-      ) : (
-        <View className="bg-green-500/10 border border-green-500/20 px-4 py-3 rounded-xl flex-row items-center">
-          <Ionicons name="checkmark-circle" size={18} color="#22c55e" />
-          <Text className="text-green-500 font-bold ml-2 text-xs">Parse Requested!</Text>
-        </View>
+      )}
+
+      {parseStatus === 'failed' && (
+        <TouchableOpacity 
+          onPress={() => setParseStatus('idle')} 
+          style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+        >
+          <Text style={{ color: '#ef4444', fontWeight: '900', fontSize: 10, textTransform: 'uppercase' }}>Retry</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -546,12 +684,29 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
           </View>
         </View>
 
+        {/* Global Parse Banner */}
+        {!matchData.version && (
+          <View className="px-4 mb-6">
+            {renderParseInstructions("Detailed statistics for this match are currently unavailable. Request a parse to unlock Economy, Timeline, and Chat logs.")}
+          </View>
+        )}
+
         <View className="flex-row border-b border-zinc-800 mb-6">
-          {(['Scoreboard', 'Highlights', 'Economy', 'Timeline', 'Chat'] as MatchTab[]).map(tab => (
-            <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)} className={`flex-1 py-3 items-center border-b-2 ${activeTab === tab ? 'border-gamingAccent' : 'border-transparent'}`}>
-              <Text className={`text-[10px] font-bold ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>{tab.toUpperCase()}</Text>       
-            </TouchableOpacity>
-          ))}
+          {(['Scoreboard', 'Highlights', 'Economy', 'Timeline', 'Chat'] as MatchTab[]).map(tab => {
+            const isLocked = ['Economy', 'Timeline', 'Chat'].includes(tab) && !matchData.version;
+            return (
+              <TouchableOpacity 
+                key={tab} 
+                onPress={() => setActiveTab(tab)} 
+                className={`flex-1 py-3 items-center border-b-2 ${activeTab === tab ? 'border-gamingAccent' : 'border-transparent'} ${isLocked ? 'opacity-40' : ''}`}
+              >
+                <View className="flex-row items-center gap-1">
+                  <Text className={`text-[10px] font-bold ${activeTab === tab ? 'text-white' : 'text-gray-500'}`}>{tab.toUpperCase()}</Text>
+                  {isLocked && <Ionicons name="lock-closed" size={8} color="#6b7280" />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View className="px-4">
@@ -619,13 +774,25 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
                     style={{ borderRadius: 16 }}
                   />
                 </View>
-              ) : renderParseInstructions("Economy data requires parsed match.")}
+              ) : (
+                <View className="py-20 items-center justify-center bg-zinc-900/40 rounded-3xl border border-dashed border-zinc-800">
+                  <Ionicons name="lock-closed" size={48} color="#3f3f46" />
+                  <Text className="text-gray-500 font-bold mt-4">Economy data is locked</Text>
+                  <Text className="text-gray-600 text-[10px] mt-1 uppercase tracking-widest">Request parse at the top to unlock</Text>
+                </View>
+              )}
             </View>
           )}
 
           {activeTab === 'Timeline' && (
             <View>
-               {matchData.version ? <MatchTimeline match={matchData} /> : renderParseInstructions("Timeline data requires parsed match.")}     
+               {matchData.version ? <MatchTimeline match={matchData} /> : (
+                 <View className="py-20 items-center justify-center bg-zinc-900/40 rounded-3xl border border-dashed border-zinc-800">
+                   <Ionicons name="lock-closed" size={48} color="#3f3f46" />
+                   <Text className="text-gray-500 font-bold mt-4">Timeline data is locked</Text>
+                   <Text className="text-gray-600 text-[10px] mt-1 uppercase tracking-widest">Request parse at the top to unlock</Text>
+                 </View>
+               )}     
             </View>
           )}
 
@@ -640,10 +807,17 @@ export default function MatchOverviewContent({ matchId, onPushPlayer, onClose, i
                       </Text>
                     ))}
                  </View>
-               ) : renderParseInstructions("Chat data requires parsed match.")}
+               ) : (
+                 <View className="py-20 items-center justify-center bg-zinc-900/40 rounded-3xl border border-dashed border-zinc-800">
+                   <Ionicons name="lock-closed" size={48} color="#3f3f46" />
+                   <Text className="text-gray-500 font-bold mt-4">Chat data is locked</Text>
+                   <Text className="text-gray-600 text-[10px] mt-1 uppercase tracking-widest">Request parse at the top to unlock</Text>
+                 </View>
+               )}
             </View>
           )}
         </View>
+
       </ScrollView>
     </View>
   );

@@ -18,6 +18,13 @@ export async function requestMatchParse(matchId: number): Promise<{ job: { jobId
 }
 
 /**
+ * Checks the status of a parse job.
+ */
+export async function getParseStatus(jobId: string): Promise<any> {
+  return await fetchFromOpenDota<any>(`/request/${jobId}`);
+}
+
+/**
  * Fetches current live games.
  */
 export async function getLiveGames(): Promise<LiveGame[]> {
