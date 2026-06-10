@@ -114,6 +114,7 @@ export interface MatchDetails {
   chat?: ChatMessage[];
   picks_bans?: PickBan[];
   objectives?: MatchObjective[];
+  kill_log?: { time: number; key: string }[];
   players: {
     account_id: number;
     personaname: string;
@@ -142,6 +143,7 @@ export interface MatchDetails {
     benchmarks?: {
       gold_per_min: { raw: number; pct: number };
       xp_per_min: { raw: number; pct: number };
+      kills_per_min: { raw: number; pct: number };
       hero_damage_per_min: { raw: number; pct: number };
       hero_healing_per_min: { raw: number; pct: number };
       tower_damage: { raw: number; pct: number };
